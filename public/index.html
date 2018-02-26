@@ -10,14 +10,18 @@
 				ws.onmessage = function(x) {
 					console.log(x.data);
 					var m = "<- Pong " + parseInt((x.data.substring(8)) - 1);
-					$('#msg').html("<p>" + x.data + "</p><p>" + m + "</p>");
-					ws.send(m);
+					$('#msg').append("<p>" + x.data + "</p>");
 				};
+				$("#target").click(function() {
+					var d = new Date();
+					ws.send(d.toString());
+				});
 			});
 		</script>
 	</head>
 	<body>
 		<h1>This is where the magic happens!</h1>
+		<p id="target">Click me!</p>
 		<div id='msg'></div>
 	</body>
 </html>

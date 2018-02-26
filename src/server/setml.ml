@@ -27,29 +27,12 @@ let handler
                 Printf.eprintf "[RECV] CLOSE\n%!"
             | _ ->
                 Printf.eprintf "[RECV] %s: %s\n%!" (Websocket_cohttp_lwt.Frame.Opcode.to_string f.opcode) f.content;
+                CCVector.iter begin fun send ->
+                    Lwt.ignore_result (Lwt.wrap1 send @@ Some (Frame.create ~content:f.content ()))
+                end clients
     )
     >>= fun (resp, body, frames_out_fn) ->
-    (* send a message to the client every second *)
-    let _ =
-        let num_ref = ref 10 in
-        let rec go () =
-            if !num_ref > 0 then
-                let msg = Printf.sprintf "-> Ping %d" !num_ref in
-                Lwt_io.eprintf "[SEND] %s\n%!" msg
-                >>= fun () ->
-                Lwt.wrap1 frames_out_fn @@
-                    Some (Frame.create ~content:msg ())
-                >>= fun () ->
-                Lwt.return (num_ref := !num_ref - 1)
-                >>= fun () ->
-                Lwt_unix.sleep 1.
-                >>= go
-            else
-                Lwt_io.eprintf "[INFO] Test done\n%!"
-                >>= Lwt.return
-        in
-        go ()
-    in
+    CCVector.push clients frames_out_fn;
     Lwt.return (resp, (body :> Cohttp_lwt.Body.t))
   | (`GET, _) ->
     File_server.serve ~info:"Served by Cohttp/Lwt" ~docroot:"./public" ~index:"index.html" uri path
