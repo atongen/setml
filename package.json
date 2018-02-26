@@ -2,25 +2,24 @@
   "name": "setml",
   "version": "0.1.0",
   "scripts": {
-    "clean": "bsb -clean",
-    "clean:all": "bsb -clean-world",
-    "build:bsb": "bsb -make-world",
-    "build:js": "rollup -c",
-    "serve": "serve release",
-    "build": "run-s build:bsb build:js"
+    "build": "bsb -make-world",
+    "start": "bsb -make-world -w",
+    "clean": "bsb -clean-world",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "webpack": "webpack -w"
   },
   "keywords": [
-    "set"
+    "BuckleScript"
   ],
+  "author": "",
   "license": "MIT",
+  "dependencies": {
+    "react": "^15.4.2",
+    "react-dom": "^15.4.2",
+    "reason-react": ">=0.3.0"
+  },
   "devDependencies": {
-    "bs-platform": "^2.1.0",
-    "bucklescript-tea": "^0.7.0",
-    "npm-run-all": "^4.1.2",
-    "pixi": "^0.3.1",
-    "rollup": "^0.52.1",
-    "rollup-plugin-node-resolve": "^3.0.0",
-    "rollup-plugin-uglify": "^3.0.0",
-    "serve": "^6.4.1"
+    "bs-platform": "^2.2.0",
+    "webpack": "^3.8.1"
   }
 }

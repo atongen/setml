@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>Pure Reason Example</title>
+		<meta charset="utf-8">
+		<script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+		<script>
+			$(window).on('load', function(){
+				ws = new WebSocket('ws://localhost:7777/ws');
+				ws.onmessage = function(x) {
+					console.log(x.data);
+					var m = "<- Pong " + parseInt((x.data.substring(8)) - 1);
+					$('#msg').html("<p>" + x.data + "</p><p>" + m + "</p>");
+					ws.send(m);
+				};
+			});
+		</script>
+	</head>
+	<body>
+		<h1>This is where the magic happens!</h1>
+		<div id='msg'></div>
+	</body>
+</html>
