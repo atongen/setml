@@ -12,6 +12,7 @@ let handler
   let uri = Cohttp.Request.uri req in
   let path = Uri.path uri in
   let meth = Cohttp.Request.meth req in
+  let headers = Cohttp.Request.headers req in
   Lwt_io.eprintf "[CONN] %s\n%!" (Cohttp.Connection.to_string @@ snd conn)
   >>= fun _ ->
   Lwt_io.eprintf "[REQ] (%s,%s)\n%!" (Cohttp.Code.string_of_method meth) path
