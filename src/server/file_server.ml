@@ -26,16 +26,16 @@ let method_filter meth (res,body) = match meth with
   | `HEAD -> Lwt.return (res,`Empty)
   | _ -> Lwt.return (res,body)
 
-let serve_file ~docroot ~uri =
+let serve_file ~docroot ~uri ~headers =
   let fname = Server.resolve_local_file ~docroot ~uri in
-  Server.respond_file ~fname ()
+  Server.respond_file ~fname ~headers ()
 
 let ls_dir dir =
   Lwt_stream.to_list
     (Lwt_stream.filter ((<>) ".")
        (Lwt_unix.files_of_directory dir))
 
-let serve ~info ~docroot ~index uri path =
+let serve ~info ~docroot ~index ~headers uri path =
   let file_name = Server.resolve_local_file ~docroot ~uri in
   Lwt.catch (fun () ->
     Lwt_unix.stat file_name
@@ -47,7 +47,7 @@ let serve ~info ~docroot ~index uri path =
       then Server.respond_redirect ~uri:(Uri.with_path uri (path^"/")) ()
       else match Sys.file_exists (file_name / index) with
       | true -> let uri = Uri.with_path uri (path / index) in
-                serve_file ~docroot ~uri
+                serve_file ~docroot ~uri ~headers
       | false ->
         ls_dir file_name
         >>= Lwt_list.map_s (fun f ->
@@ -63,7 +63,7 @@ let serve ~info ~docroot ~index uri path =
         let body = html_of_listing uri path (sort listing) info in
         Server.respond_string ~status:`OK ~body ()
     end
-    | `File -> serve_file ~docroot ~uri
+    | `File -> serve_file ~docroot ~uri ~headers
     | _ ->
       Server.respond_string ~status:`Forbidden
         ~body:(html_of_forbidden_unnormal path info)

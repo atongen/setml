@@ -25,11 +25,16 @@ PKG lwt.log
 PKG lwt.unix
 PKG lwt_ssl
 PKG magic-mime
+PKG nocrypto
+PKG nocrypto.lwt
 PKG ocplib-endian
 PKG re
 PKG re.emacs
 PKG re.posix
 PKG result
+PKG session
+PKG session-cohttp
+PKG session-cohttp-lwt
 PKG sexplib
 PKG sexplib.0
 PKG ssl
