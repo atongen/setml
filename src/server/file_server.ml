@@ -71,7 +71,7 @@ let serve ~info ~docroot ~index ~headers uri path =
   ) (function
   | Unix.Unix_error(Unix.ENOENT, "stat", p) as e ->
     if p = file_name
-    then Server.respond_string ~status:`Not_found
+    then Server.respond_string ~status:`Not_found ~headers
       ~body:(html_of_not_found path info)
       ()
     else Lwt.fail e

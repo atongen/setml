@@ -2,21 +2,9 @@ open Lwt
 open Websocket
 open Websocket_cohttp_lwt
 
-module Session = struct
-  module Backend = struct
-    include Session.Lift.IO(Lwt)(Session.Memory)
-    let create () = Session.Memory.create ()
-  end
-  include Session_cohttp_lwt.Make(Backend)
-
-  let increment t session =
-    let value = string_of_int (1 + int_of_string session.value) in
-    set t ~value session
-end
-
 let clients = CCVector.create ()
-let cookie = "__setml_session"
-let session_store = Session.Backend.create ()
+let session_backend = Sess.Backend.create ()
+let cookie_key = "__setml_session"
 
 let handler
     (conn : Conduit_lwt_unix.flow * Cohttp.Connection.t)
@@ -27,14 +15,18 @@ let handler
   let path = Uri.path uri in
   let meth = Cohttp.Request.meth req in
   let req_headers = Cohttp.Request.headers req in
+
+  Sess.of_header_or_create session_backend cookie_key Sess.default req_headers >>= fun session ->
+  let headers = Cohttp.Header.of_list (Sess.to_cookie_hdrs cookie_key session) in
+  let header_val = session.Sess.value in
+
   Lwt_io.eprintf "[CONN] %s\n%!" (Cohttp.Connection.to_string @@ snd conn)
   >>= fun _ ->
   Lwt_io.eprintf "[REQ] (%s,%s)\n%!" (Cohttp.Code.string_of_method meth) path
   >>= fun _ ->
-  Session.of_header_or_create session_store cookie "0" req_headers >>= fun session ->
-    Session.increment session_store session >>= fun () ->
-    let headers = Cohttp.Header.of_list (Session.to_cookie_hdrs cookie session) in
-    let header_val = session.Session.value in
+  Lwt_io.eprintf "[HEADERS] %s\n%!" (Cohttp.Header.to_string req_headers)
+  >>= fun _ ->
+
   match (meth, path) with
   | (`GET, "/ws") ->
     Cohttp_lwt.Body.drain_body body
@@ -57,6 +49,7 @@ let handler
     File_server.serve ~info:"Served by Cohttp/Lwt" ~docroot:"./public" ~index:"index.html" ~headers:headers uri path
   | (_, _) ->
     Cohttp_lwt_unix.Server.respond_string
+        ~headers:headers
         ~status:`Not_found
         ~body:(Sexplib.Sexp.to_string_hum (Cohttp.Request.sexp_of_t req))
         ()
