@@ -3,8 +3,12 @@ open Websocket
 open Websocket_cohttp_lwt
 
 let clients = CCVector.create ()
-let session_backend = Sess.Backend.create ()
 let cookie_key = "__setml_session"
+let session_default = "0"
+let id_counter = ref 0
+let next_id () =
+    id_counter := !id_counter + 1;
+    string_of_int !id_counter
 
 let handler
     (conn : Conduit_lwt_unix.flow * Cohttp.Connection.t)
@@ -16,9 +20,16 @@ let handler
   let meth = Cohttp.Request.meth req in
   let req_headers = Cohttp.Request.headers req in
 
-  Sess.of_header_or_create session_backend cookie_key Sess.default req_headers >>= fun session ->
+  (*
+  Sess.of_header_or_create session_backend session_default cookie_key req_headers >>= fun session ->
+  if session.Sess.value = session_default then
+    Sess.set ~value:(next_id ()) session_backend
+  else
   let headers = Cohttp.Header.of_list (Sess.to_cookie_hdrs cookie_key session) in
   let header_val = session.Sess.value in
+  *)
+  let headers = Cohttp.Header.of_list [] in
+  let header_val = "wow" in
 
   Lwt_io.eprintf "[CONN] %s\n%!" (Cohttp.Connection.to_string @@ snd conn)
   >>= fun _ ->
@@ -66,5 +77,4 @@ let start_server host port () =
 
 (* main *)
 let () =
-    Nocrypto_entropy_lwt.initialize () |> ignore;
     Lwt_main.run (start_server "localhost" 7777 ())

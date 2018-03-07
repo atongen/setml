@@ -32,9 +32,6 @@ PKG re
 PKG re.emacs
 PKG re.posix
 PKG result
-PKG session
-PKG session-cohttp
-PKG session-cohttp-lwt
 PKG sexplib
 PKG sexplib.0
 PKG ssl
