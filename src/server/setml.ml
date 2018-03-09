@@ -10,6 +10,8 @@ let next_id () =
     id_counter := !id_counter + 1;
     string_of_int !id_counter
 
+let session = Session.make "super secret!" cookie_key
+
 let handler
     (conn : Conduit_lwt_unix.flow * Cohttp.Connection.t)
     (req  : Cohttp_lwt_unix.Request.t)
@@ -56,6 +58,26 @@ let handler
     >>= fun (resp, body, frames_out_fn) ->
     CCVector.push clients frames_out_fn;
     Lwt.return (resp, (body :> Cohttp_lwt.Body.t))
+  | (`GET, "/ok") -> begin
+    let input = "abcd1234abcd1234efgh5678efgh5678 non 16" in
+    let enc = Session.encrypt_and_sign session input in
+    match Session.verify_and_decrypt session enc with
+    | Ok(_, dec) -> begin
+        Cohttp_lwt_unix.Server.respond_string
+            ~headers:headers
+            ~status:`OK
+            ~body:("<p>input: " ^ input ^ ",<br/>enc: " ^ enc ^ ",<br/>dec: " ^ dec ^ "</p>")
+            ()
+      end
+    | Error(msg) -> begin
+        Cohttp_lwt_unix.Server.respond_string
+            ~headers:headers
+            ~status:`OK
+            ~body:("<p>input: " ^ input ^ ",<br/>enc: " ^ enc ^ ",<br/>error: " ^ msg ^ "</p>")
+            ()
+
+      end
+    end
   | (`GET, _) ->
     File_server.serve ~info:"Served by Cohttp/Lwt" ~docroot:"./public" ~index:"index.html" ~headers:headers uri path
   | (_, _) ->
