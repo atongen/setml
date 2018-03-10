@@ -10,7 +10,7 @@ let next_id () =
     id_counter := !id_counter + 1;
     string_of_int !id_counter
 
-let session = Session.make "super secret!" cookie_key
+let session = Crypto.make "super secret!"
 
 let handler
     (conn : Conduit_lwt_unix.flow * Cohttp.Connection.t)
@@ -60,8 +60,8 @@ let handler
     Lwt.return (resp, (body :> Cohttp_lwt.Body.t))
   | (`GET, "/ok") -> begin
     let input = "abcd1234abcd1234efgh5678efgh5678 non 16" in
-    let enc = Session.encrypt_and_sign session input in
-    match Session.verify_and_decrypt session enc with
+    let enc = Crypto.encrypt_and_sign session input in
+    match Crypto.verify_and_decrypt session enc with
     | Ok(_, dec) -> begin
         Cohttp_lwt_unix.Server.respond_string
             ~headers:headers

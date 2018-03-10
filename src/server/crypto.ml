@@ -1,7 +1,4 @@
 type t = {
-    secret: string;
-    cookie_key: string;
-    salt: string;
     encryption_key: Nocrypto.Cipher_block.AES.CBC.key;
     authentication_key: Cstruct.t
 }
@@ -21,16 +18,13 @@ let hmac secret salt value =
   |> Cstruct.of_string
   |> Nocrypto.Hash.mac `SHA256 ~key:(derive_key secret salt)
 
-let make ?salt:(s="session-salt") secret cookie_key =
+let make ?salt:(s="session-salt") secret =
   let encryption_key =
     let digest = hmac secret s "encryption key" in
     Cstruct.sub digest 0 16
     |> Nocrypto.Cipher_block.AES.CBC.of_secret in
   let authentication_key = hmac secret s "authentication key" in
   {
-    secret;
-    cookie_key;
-    salt = s;
     encryption_key;
     authentication_key;
   }
@@ -98,15 +92,3 @@ let encrypt_and_sign_with_iv session iv msg =
 
 let encrypt_and_sign session msg =
   encrypt_and_sign_with_iv session (create_iv ()) msg
-
-(*
-let decode_request_headers (session: t) (headers: Cohttp.Header.t) =
-    let cookies = Cohttp.Cookie.Cookie_hdr.extract headers in
-    try
-      let signed_and_encrypted = List.assoc session.cookie_key cookies in
-      match verify_and_decrypt session signed_and_encrypted with
-      | Ok(niv, msg) -> ""
-      | Error(msg) -> msg
-    with Not_found -> ""
-        (* CCHashtbl.of_list [("session_id", gen_session_id ())] *)
-*)

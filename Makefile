@@ -8,7 +8,6 @@ build_server:
 		-pkg websocket.lwt \
 		-pkg websocket-lwt.cohttp \
 		-use-ocamlfind \
-			src/server/session.cmi \
-			src/server/cohttp_server.cmi \
+			src/server/crypto.cmi \
 			src/server/file_server.cmi \
 			src/server/setml.native
