@@ -51,9 +51,8 @@ let decrypt session msg =
   let open Nocrypto.Cipher_block.AES.CBC in
   let (iv, data) = Cstruct.split msg 16 in (* aes cbs block length is 16 bytes *)
   let decrypted = decrypt ~key:session.encryption_key ~iv data in
-  let (_, msg) = Cstruct.split decrypted 16 in (* discard 16 byte block padding *)
-  let niv = next_iv ~iv data in
-  (niv, Cstruct.to_string msg)
+  let (niv, result) = Cstruct.split decrypted 16 in (* discard 16 byte block padding *)
+  (niv, Cstruct.to_string result)
 
 let signature session msg =
   msg |> Nocrypto.Hash.mac `SHA256 ~key:session.authentication_key
