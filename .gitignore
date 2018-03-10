@@ -1,6 +1,7 @@
 *.byte
 *.native
 *.mo
-/_build/
+.merlin
+/_build
 /node_modules
-/setml.native
+/bin

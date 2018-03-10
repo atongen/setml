@@ -1,0 +1,19 @@
+(jbuild_version 1)
+
+(executable
+ ((name setml)
+  (libraries (
+    containers
+    lwt
+    nocrypto
+    websocket
+    websocket.lwt
+    websocket-lwt.cohttp))
+  (public_name setml)
+  (modules (setml crypto file_server))
+  (package setml)))
+
+(alias
+ ((name    runtest)
+  (deps    (setml-test.exe))
+  (action  (run ${<}))))

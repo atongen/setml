@@ -1,0 +1,17 @@
+opam-version: "1.2"
+name: "setml"
+version: "0.1.0"
+maintainer: "Andrew Tongen <atongen@gmail.com>"
+authors: "Andrew Tongen <atongen@gmail.com>"
+homepage: "https://github.com/atongen/setml"
+bug-reports: "https://github.com/atongen/setml"
+license: "MIT"
+dev-repo: "https://github.com/atongen/setml"
+
+build: [
+  ["jbuilder" "build" "-p" name "-j" jobs]
+]
+
+depends: [
+  "jbuilder" {build & >= "1.0+beta14"}
+]

@@ -1,0 +1,10 @@
+lib: [
+  "_build/install/default/lib/setml/META" {"META"}
+  "_build/install/default/lib/setml/opam" {"opam"}
+]
+bin: [
+  "_build/install/default/bin/setml" {"setml"}
+]
+doc: [
+  "_build/install/default/doc/setml/README.md"
+]
