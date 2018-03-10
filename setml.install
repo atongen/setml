@@ -4,6 +4,7 @@ lib: [
 ]
 bin: [
   "_build/install/default/bin/setml" {"setml"}
+  "_build/install/default/bin/test" {"test"}
 ]
 doc: [
   "_build/install/default/doc/setml/README.md"

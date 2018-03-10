@@ -29,16 +29,27 @@ let make ?salt:(s="session-salt") secret =
     authentication_key;
   }
 
-let padded_data msg block_size =
+let add_pad msg block_size =
   let len = Cstruct.len msg in
   let new_len = ((len / block_size) + 1) * block_size in
   let t = Cstruct.create new_len in
   (Cstruct.blit msg 0 t 0 len; t)
 
+let rec strip_pad msg =
+  let l = Cstruct.len msg in
+  if l == 0 then
+    Cstruct.empty
+  else
+    let c = Cstruct.get_char msg (l-1) |> Char.code in
+    if c == 0 then
+      strip_pad (Cstruct.set_len msg (l-1))
+    else
+      msg
+
 let encrypt session iv msg =
   let open Nocrypto.Cipher_block.AES.CBC in
   let key = session.encryption_key in
-  let encrypted = encrypt ~key ~iv (padded_data msg 16) in
+  let encrypted = encrypt ~key ~iv (add_pad msg 16) in
   Cstruct.concat [iv; encrypted]
 
 let decrypt session msg =
@@ -46,7 +57,7 @@ let decrypt session msg =
   let (iv, data) = Cstruct.split msg 16 in (* aes cbs block length is 16 bytes *)
   let decrypted = decrypt ~key:session.encryption_key ~iv data in
   let (niv, result) = Cstruct.split decrypted 16 in (* discard 16 byte block padding *)
-  (niv, Cstruct.to_string result)
+  (niv, result |> strip_pad |> Cstruct.to_string)
 
 let signature session msg =
   msg |> Nocrypto.Hash.mac `SHA256 ~key:session.authentication_key

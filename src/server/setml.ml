@@ -97,6 +97,5 @@ let start_server host port () =
     ~mode:(`TCP (`Port port))
     (Cohttp_lwt_unix.Server.make ~callback:handler ~conn_closed ())
 
-(* main *)
 let () =
-    Lwt_main.run (start_server "localhost" 7777 ())
+  Lwt_main.run (start_server "localhost" 7777 ())

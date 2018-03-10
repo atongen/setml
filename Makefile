@@ -17,7 +17,7 @@ utop: all
 
 # Build and run tests
 test: all
-	./bin/setml test
+	./bin/test
 
 # Clean up
 clean:

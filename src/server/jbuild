@@ -1,19 +1,37 @@
 (jbuild_version 1)
 
+(library
+ ((name crypto)
+  (modules (crypto))
+  (libraries (nocrypto))))
+
 (executable
  ((name setml)
+  (public_name setml)
+  (modules (
+    setml
+    file_server))
   (libraries (
+    crypto
     containers
     lwt
-    nocrypto
     websocket
     websocket.lwt
     websocket-lwt.cohttp))
-  (public_name setml)
-  (modules (setml crypto file_server))
   (package setml)))
 
+(executable
+  ((name test)
+   (public_name test)
+   (modules (test))
+   (libraries (
+     crypto
+     nocrypto
+     nocrypto.unix
+     oUnit))
+   (package setml)))
+
 (alias
- ((name    runtest)
-  (deps    (setml-test.exe))
-  (action  (run ${<}))))
+ ((name runtest)
+  (deps (test.exe))
+  (action (run ${<}))))
