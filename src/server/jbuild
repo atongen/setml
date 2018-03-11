@@ -1,9 +1,16 @@
 (jbuild_version 1)
 
 (library
- ((name crypto)
-  (modules (crypto))
-  (libraries (nocrypto))))
+ ((name lib)
+  (modules (
+    crypto
+    session))
+  (libraries (
+    nocrypto
+    nocrypto.unix
+    yojson
+    cohttp
+    hex))))
 
 (executable
  ((name setml)
@@ -12,8 +19,7 @@
     setml
     file_server))
   (libraries (
-    crypto
-    containers
+    lib
     lwt
     websocket
     websocket.lwt
@@ -25,9 +31,7 @@
    (public_name test)
    (modules (test))
    (libraries (
-     crypto
-     nocrypto
-     nocrypto.unix
+     lib
      oUnit))
    (package setml)))
 

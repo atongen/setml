@@ -3,6 +3,8 @@ type t = {
     authentication_key: Cstruct.t
 }
 
+let init () = Nocrypto_entropy_unix.initialize ()
+
 let derive_key secret salt =
   Nocrypto.Hash.mac `SHA256
     ~key:(Cstruct.of_string secret)
@@ -83,6 +85,9 @@ let create_iv () =
   let value = string_of_float (Unix.gettimeofday ()) in
   let digest = hmac secret salt value in
   Cstruct.sub digest 0 16
+
+let random_hex () =
+  create_iv () |> Hex.of_cstruct |> Hex.to_string
 
 let verify_and_decrypt session msg =
   let decoded = Cstruct.of_string msg |> Nocrypto.Base64.decode in

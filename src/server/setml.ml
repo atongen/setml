@@ -2,7 +2,9 @@ open Lwt
 open Websocket
 open Websocket_cohttp_lwt
 
-let clients = CCVector.create ()
+open Lib
+
+(*let clients = CCVector.create () *)
 let cookie_key = "__setml_session"
 let session_default = "0"
 let id_counter = ref 0
@@ -31,7 +33,6 @@ let handler
   let header_val = session.Sess.value in
   *)
   let headers = Cohttp.Header.of_list [] in
-  let header_val = "wow" in
 
   Lwt_io.eprintf "[CONN] %s\n%!" (Cohttp.Connection.to_string @@ snd conn)
   >>= fun _ ->
@@ -51,12 +52,14 @@ let handler
                 Printf.eprintf "[RECV] CLOSE\n%!"
             | _ ->
                 Printf.eprintf "[RECV] %s: %s\n%!" (Websocket_cohttp_lwt.Frame.Opcode.to_string f.opcode) f.content;
+                (*
                 CCVector.iter begin fun send ->
                     Lwt.ignore_result (Lwt.wrap1 send @@ Some (Frame.create ~content:(header_val ^ ": " ^ f.content) ()))
                 end clients
+                *)
     )
     >>= fun (resp, body, frames_out_fn) ->
-    CCVector.push clients frames_out_fn;
+    (*CCVector.push clients frames_out_fn; *)
     Lwt.return (resp, (body :> Cohttp_lwt.Body.t))
   | (`GET, "/ok") -> begin
     let input = "abcd1234abcd1234efgh5678efgh5678 non 16" in

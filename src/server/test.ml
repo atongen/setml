@@ -1,4 +1,5 @@
 open OUnit2
+open Lib
 
 let cases_of f =
   List.map @@ fun params -> test_case (f params)
@@ -13,7 +14,6 @@ let to_list s =
 let char_code_string c = string_of_int (Char.code c)
 
 let char_list_to_string cl =
-    (*let c = String.concat "', '" (List.map (String.make 1) cl) in*)
     let c = String.concat "', '" ((List.map char_code_string) cl) in
     "['" ^ c ^ "']"
 
@@ -76,5 +76,5 @@ let suite =
   ]
 
 let _ =
-  let () = Nocrypto_entropy_unix.initialize () in
+  Crypto.init ();
   OUnit2.run_test_tt_main suite
