@@ -20,6 +20,7 @@
     file_server))
   (libraries (
     lib
+    containers
     lwt
     websocket
     websocket.lwt

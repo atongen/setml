@@ -4,15 +4,13 @@ open Websocket_cohttp_lwt
 
 open Lib
 
-(*let clients = CCVector.create () *)
-let cookie_key = "__setml_session"
-let session_default = "0"
+let clients = CCVector.create ()
 let id_counter = ref 0
 let next_id () =
     id_counter := !id_counter + 1;
-    string_of_int !id_counter
+    !id_counter
 
-let session = Crypto.make "super secret!"
+let crypto = Crypto.make "super secret!"
 
 let handler
     (conn : Conduit_lwt_unix.flow * Cohttp.Connection.t)
@@ -23,22 +21,11 @@ let handler
   let path = Uri.path uri in
   let meth = Cohttp.Request.meth req in
   let req_headers = Cohttp.Request.headers req in
-
-  (*
-  Sess.of_header_or_create session_backend session_default cookie_key req_headers >>= fun session ->
-  if session.Sess.value = session_default then
-    Sess.set ~value:(next_id ()) session_backend
-  else
-  let headers = Cohttp.Header.of_list (Sess.to_cookie_hdrs cookie_key session) in
-  let header_val = session.Sess.value in
-  *)
-  let headers = Cohttp.Header.of_list [] in
+  let headers = Cohttp.Header.init () in
 
   Lwt_io.eprintf "[CONN] %s\n%!" (Cohttp.Connection.to_string @@ snd conn)
   >>= fun _ ->
   Lwt_io.eprintf "[REQ] (%s,%s)\n%!" (Cohttp.Code.string_of_method meth) path
-  >>= fun _ ->
-  Lwt_io.eprintf "[HEADERS] %s\n%!" (Cohttp.Header.to_string req_headers)
   >>= fun _ ->
 
   match (meth, path) with
@@ -52,34 +39,38 @@ let handler
                 Printf.eprintf "[RECV] CLOSE\n%!"
             | _ ->
                 Printf.eprintf "[RECV] %s: %s\n%!" (Websocket_cohttp_lwt.Frame.Opcode.to_string f.opcode) f.content;
-                (*
                 CCVector.iter begin fun send ->
-                    Lwt.ignore_result (Lwt.wrap1 send @@ Some (Frame.create ~content:(header_val ^ ": " ^ f.content) ()))
+                    Lwt.ignore_result (Lwt.wrap1 send @@ Some (Frame.create ~content:(f.content) ()))
                 end clients
-                *)
     )
     >>= fun (resp, body, frames_out_fn) ->
-    (*CCVector.push clients frames_out_fn; *)
+    CCVector.push clients frames_out_fn;
     Lwt.return (resp, (body :> Cohttp_lwt.Body.t))
-  | (`GET, "/ok") -> begin
-    let input = "abcd1234abcd1234efgh5678efgh5678 non 16" in
-    let enc = Crypto.encrypt_and_sign session input in
-    match Crypto.verify_and_decrypt session enc with
-    | Ok(_, dec) -> begin
+  | (`POST, "/games/5") ->
+      Cohttp_lwt_unix.Server.respond_redirect ~uri:(Uri.of_string "/games/5") ()
+  | (`GET, "/games/5") -> begin
+      match (Lib.Session.of_header crypto req_headers) with
+      | Ok (session) -> begin
         Cohttp_lwt_unix.Server.respond_string
-            ~headers:headers
             ~status:`OK
-            ~body:("<p>input: " ^ input ^ ",<br/>enc: " ^ enc ^ ",<br/>dec: " ^ dec ^ "</p>")
+            ~body:("<p>player_id: " ^ (string_of_int session.player_id) ^ "</p>")
             ()
-      end
-    | Error(msg) -> begin
-        Cohttp_lwt_unix.Server.respond_string
-            ~headers:headers
-            ~status:`OK
-            ~body:("<p>input: " ^ input ^ ",<br/>enc: " ^ enc ^ ",<br/>error: " ^ msg ^ "</p>")
-            ()
-
-      end
+        end
+      | Error (exn) -> begin
+          match exn with
+          | Not_found -> begin
+              let session = Session.make (next_id ()) in
+              let cookie_key, header_val = Session.to_header session crypto in
+              let headers = Cohttp.Header.add headers cookie_key header_val in
+              Cohttp_lwt_unix.Server.respond_redirect ~headers ~uri:(Uri.of_string "/games/5") ()
+            end
+          | _ -> begin
+            Cohttp_lwt_unix.Server.respond_string
+                ~status:`Internal_server_error
+                ~body:("<p>Error!</p>")
+                ()
+            end
+        end
     end
   | (`GET, _) ->
     File_server.serve ~info:"Served by Cohttp/Lwt" ~docroot:"./public" ~index:"index.html" ~headers:headers uri path
