@@ -3,14 +3,21 @@
 (library
  ((name lib)
   (modules (
+    route
+    clients
     crypto
     session))
   (libraries (
+    cohttp
+    containers
+    hex
     nocrypto
     nocrypto.unix
+    str
     yojson
-    cohttp
-    hex))))
+    websocket
+    websocket.lwt
+    websocket-lwt.cohttp))))
 
 (executable
  ((name setml)
@@ -20,7 +27,6 @@
     file_server))
   (libraries (
     lib
-    containers
     lwt
     websocket
     websocket.lwt

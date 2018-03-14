@@ -126,7 +126,10 @@ let ls_dir dir =
     (Lwt_stream.filter ((<>) ".")
        (Lwt_unix.files_of_directory dir))
 
-let serve ~info ~docroot ~index ~headers uri path =
+let serve ~info ~docroot ~index ?headers uri path =
+  let headers = match headers with
+  | Some(h) -> h
+  | None -> Cohttp.Header.init () in
   let file_name = Server.resolve_local_file ~docroot ~uri in
   Lwt.catch (fun () ->
     Lwt_unix.stat file_name
