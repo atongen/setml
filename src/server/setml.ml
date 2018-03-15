@@ -37,31 +37,30 @@ let handler
     match of_req req with
     | Game_create ->
         Cohttp_lwt_unix.Server.respond_redirect ~uri:(Uri.of_string "/games/abcd") ()
-    | Game_show (game_id) -> begin
+    | Game_show (game_id) -> (
         match (Session.of_header crypto req_headers) with
-        | Ok (session) -> begin
-            Cohttp_lwt_unix.Server.respond_string
-                ~status:`OK
-                ~body:("<p>player_id: " ^ (string_of_int session.player_id) ^ ", game_id: " ^ game_id ^ "</p>")
-                ()
-            end
+        | Ok (session) ->
+            ignore (print_endline "show game");
+            File_server.serve_file ~headers:headers ~docroot:"./public" ~uri:(Uri.of_string "/game.html")
         | Error (exn) -> begin
             match exn with
             | Not_found -> begin
                 let session = Session.make (next_id ()) in
                 let cookie_key, header_val = Session.to_header session crypto in
                 let headers = Cohttp.Header.add headers cookie_key header_val in
-                Cohttp_lwt_unix.Server.respond_redirect ~headers ~uri:(Uri.of_string "/games/5") ()
-                end
+                ignore (print_endline "added cookie, redirecting");
+                Cohttp_lwt_unix.Server.respond_redirect ~headers ~uri:(Uri.of_string ("/games/" ^ game_id)) ()
+            end
             | _ -> begin
+                ignore (print_endline "invalid cookie");
                 Cohttp_lwt_unix.Server.respond_string
                     ~status:`Internal_server_error
                     ~body:("<p>Error!</p>")
                     ()
-                end
             end
         end
-    | Ws_show (game_id) ->
+    )
+    | Ws_show (game_id) -> (
         match get_player_id crypto req_headers with
         | Some(player_id) -> begin
             Cohttp_lwt.Body.drain_body body
@@ -73,7 +72,7 @@ let handler
                         Printf.eprintf "[RECV] CLOSE\n%!"
                     | _ ->
                         Printf.eprintf "[RECV] %s: %s\n%!" (Websocket_cohttp_lwt.Frame.Opcode.to_string f.opcode) f.content;
-                        Clients.game_send clients game_id "Player " ^ string_of_int player_id ^ ": " ^ f.content
+                        Clients.game_send clients game_id ("Player " ^ string_of_int player_id ^ ": " ^ f.content)
             )
             >>= fun (resp, body, frames_out_fn) ->
             Clients.add clients game_id player_id frames_out_fn;
@@ -85,6 +84,7 @@ let handler
                 ~body:("<p>Error!</p>")
                 ()
         end
+    )
     | Static ->
         File_server.serve ~info:"Served by Cohttp/Lwt" ~docroot:"./public" ~index:"index.html" uri path
     | Not_found ->

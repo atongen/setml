@@ -117,7 +117,10 @@ let method_filter meth (res,body) = match meth with
   | `HEAD -> Lwt.return (res,`Empty)
   | _ -> Lwt.return (res,body)
 
-let serve_file ~docroot ~uri ~headers =
+let serve_file ?headers ~docroot ~uri =
+  let headers = match headers with
+  | Some(h) -> h
+  | None -> Cohttp.Header.init () in
   let fname = Server.resolve_local_file ~docroot ~uri in
   Server.respond_file ~fname ~headers ()
 
@@ -126,7 +129,7 @@ let ls_dir dir =
     (Lwt_stream.filter ((<>) ".")
        (Lwt_unix.files_of_directory dir))
 
-let serve ~info ~docroot ~index ?headers uri path =
+let serve ?headers ~info ~docroot ~index uri path =
   let headers = match headers with
   | Some(h) -> h
   | None -> Cohttp.Header.init () in

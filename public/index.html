@@ -3,25 +3,9 @@
 	<head>
 		<title>Pure Reason Example</title>
 		<meta charset="utf-8">
-		<script src="/jquery.min.js"></script>
-		<script>
-			$(window).on('load', function(){
-				ws = new WebSocket('ws://localhost:7777/ws');
-				ws.onmessage = function(x) {
-					console.log(x.data);
-					var m = "<- Pong " + parseInt((x.data.substring(8)) - 1);
-					$('#msg').append("<p>" + x.data + "</p>");
-				};
-				$("#target").click(function() {
-					var d = new Date();
-					ws.send(d.toString());
-				});
-			});
-		</script>
 	</head>
 	<body>
-		<h1>This is where the magic happens!</h1>
-		<p id="target">Click me!</p>
-		<div id='msg'></div>
+		<h1>SetML</h1>
+		<p><a href="/games/abcd">Play a game!</a></p>
 	</body>
 </html>

@@ -19,7 +19,7 @@ let of_req req =
         Game_create
     else if n == 2 && String.equal parts.(0) "games" && meth == `GET then
         Game_show (parts.(1))
-    else if n == 2 && String.equal parts.(0) "ws" && meth == `GET then
+    else if n == 3 && String.equal parts.(0) "games" && String.equal parts.(2) "ws" && meth == `GET then
         Ws_show (parts.(1))
     else if meth == `GET then
         Static
