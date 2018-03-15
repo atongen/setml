@@ -12,6 +12,11 @@ let next_id () =
 
 let crypto = Crypto.make "super secret!"
 
+let get_player_id crypto headers =
+    match (Session.of_header crypto headers) with
+    | Ok (session) -> Some(session.player_id)
+    | Error (_) -> None
+
 let handler
     (conn : Conduit_lwt_unix.flow * Cohttp.Connection.t)
     (req  : Cohttp_lwt_unix.Request.t)
@@ -30,37 +35,14 @@ let handler
 
     let open Route in
     match of_req req with
-    | Ws_show ->
-        Cohttp_lwt.Body.drain_body body
-        >>= fun () ->
-        Websocket_cohttp_lwt.upgrade_connection req (fst conn) (
-            fun f ->
-                match f.opcode with
-                | Opcode.Close ->
-                    Printf.eprintf "[RECV] CLOSE\n%!"
-                | _ ->
-                    Printf.eprintf "[RECV] %s: %s\n%!" (Websocket_cohttp_lwt.Frame.Opcode.to_string f.opcode) f.content;
-                    Clients.broadcast clients f.content
-
-                    (*
-                    CCVector.iter begin fun send ->
-                        (*Lwt.ignore_result (Lwt.wrap1 send @@ Some (Frame.create ~content:(f.content) ())) *)
-                        send @@ Some (Frame.create ~content:(f.content) ())
-                    end clients
-                    *)
-        )
-        >>= fun (resp, body, frames_out_fn) ->
-        (* CCVector.push clients frames_out_fn; *)
-        Clients.add clients 1 1 frames_out_fn;
-        Lwt.return (resp, (body :> Cohttp_lwt.Body.t))
     | Game_create ->
-        Cohttp_lwt_unix.Server.respond_redirect ~uri:(Uri.of_string "/games/5") ()
+        Cohttp_lwt_unix.Server.respond_redirect ~uri:(Uri.of_string "/games/abcd") ()
     | Game_show (game_id) -> begin
-        match (Lib.Session.of_header crypto req_headers) with
+        match (Session.of_header crypto req_headers) with
         | Ok (session) -> begin
             Cohttp_lwt_unix.Server.respond_string
                 ~status:`OK
-                ~body:("<p>player_id: " ^ (string_of_int session.player_id) ^ "</p>")
+                ~body:("<p>player_id: " ^ (string_of_int session.player_id) ^ ", game_id: " ^ game_id ^ "</p>")
                 ()
             end
         | Error (exn) -> begin
@@ -78,6 +60,30 @@ let handler
                     ()
                 end
             end
+        end
+    | Ws_show (game_id) ->
+        match get_player_id crypto req_headers with
+        | Some(player_id) -> begin
+            Cohttp_lwt.Body.drain_body body
+            >>= fun () ->
+            Websocket_cohttp_lwt.upgrade_connection req (fst conn) (
+                fun f ->
+                    match f.opcode with
+                    | Opcode.Close ->
+                        Printf.eprintf "[RECV] CLOSE\n%!"
+                    | _ ->
+                        Printf.eprintf "[RECV] %s: %s\n%!" (Websocket_cohttp_lwt.Frame.Opcode.to_string f.opcode) f.content;
+                        Clients.game_send clients game_id "Player " ^ string_of_int player_id ^ ": " ^ f.content
+            )
+            >>= fun (resp, body, frames_out_fn) ->
+            Clients.add clients game_id player_id frames_out_fn;
+            Lwt.return (resp, (body :> Cohttp_lwt.Body.t))
+        end
+        | None -> begin
+            Cohttp_lwt_unix.Server.respond_string
+                ~status:`Internal_server_error
+                ~body:("<p>Error!</p>")
+                ()
         end
     | Static ->
         File_server.serve ~info:"Served by Cohttp/Lwt" ~docroot:"./public" ~index:"index.html" uri path

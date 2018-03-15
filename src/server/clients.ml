@@ -6,8 +6,11 @@ module ConnKey = struct
 
     let make x y: t = (x, y)
 
-    let hash x = 0
-    let equal a b = false
+    let hash (x: t) =
+        GameKey.hash (fst x) + PlayerKey.hash (snd x)
+    let equal (a: t) (b: t) =
+        GameKey.equal (fst a) (fst b) &&
+        PlayerKey.equal (snd a) (snd b)
 end
 module ConnTable = CCHashtbl.Make(ConnKey)
 
@@ -32,12 +35,24 @@ let make ?n:(m=32) () =
 let send conn content =
     Lwt.ignore_result (Lwt.wrap1 conn @@ Some (Websocket_cohttp_lwt.Frame.create ~content ()))
 
+let send_key clients (key: ConnKey.t) content =
+    match ConnTable.get clients.conns key with
+    | Some(conn) -> send conn content
+    | None -> ()
+
 let broadcast_send clients content =
     ConnTable.values clients.conns (fun f -> send f content)
 
-let game_send clients game_id content = ()
+let game_send clients (game_id: GameKey.t) content =
+    match PlayersOfGameTable.get clients.players_of_game game_id with
+    | Some(player_ids) ->
+        PlayerSet.to_seq player_ids (fun player_id ->
+            let key = ConnKey.make game_id player_id in
+            send_key clients key content
+        )
+    | None -> ()
 
-let player_send clients player_id content = ()
+let player_send clients game_id player_id content = ()
 
 let games_of_player_send clients player_id content = ()
 
