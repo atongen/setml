@@ -7,14 +7,20 @@ open Lib
 let clients = Clients.make ()
 let id_counter = ref 0
 let next_id () =
-    id_counter := !id_counter + 1;
+    id_counter := (!id_counter + 1);
     !id_counter
 
-let crypto = Crypto.make "super secret!"
+let current_id () = !id_counter
+
+let crypto = Crypto.make "t8sK8LqFLn6Ixt9H6TMiS9HRs6BfcLyw6aXHi02omeOIp7mLYqSIlxtPgxXiETvpentbHMPkGYpiqW8nR9rJmeVU4aEEyzMbzDqIRznNSiqPnDb0Dp9PNerGuODpaeza"
+
+let expiration = `Max_age (Int64.of_int (10 * 365 * 24 * 60 * 60))
 
 let get_player_id crypto headers =
     match (Session.of_header crypto headers) with
-    | Ok (session) -> Some(session.player_id)
+    | Ok (session) ->
+        ignore (print_endline ("Decoded player id " ^ (string_of_int session.player_id) ^ " from cookie"));
+        Some(session.player_id)
     | Error (_) -> None
 
 let handler
@@ -40,24 +46,13 @@ let handler
     | Game_show (game_id) -> (
         match (Session.of_header crypto req_headers) with
         | Ok (session) ->
-            ignore (print_endline "show game");
-            File_server.serve_file ~headers:headers ~docroot:"./public" ~uri:(Uri.of_string "/game.html")
-        | Error (exn) -> begin
-            match exn with
-            | Not_found -> begin
-                let session = Session.make (next_id ()) in
-                let cookie_key, header_val = Session.to_header session crypto in
-                let headers = Cohttp.Header.add headers cookie_key header_val in
-                ignore (print_endline "added cookie, redirecting");
-                Cohttp_lwt_unix.Server.respond_redirect ~headers ~uri:(Uri.of_string ("/games/" ^ game_id)) ()
-            end
-            | _ -> begin
-                ignore (print_endline "invalid cookie");
-                Cohttp_lwt_unix.Server.respond_string
-                    ~status:`Internal_server_error
-                    ~body:("<p>Error!</p>")
-                    ()
-            end
+            File_server.serve_file ~docroot:"./public" ~uri:(Uri.of_string "/game.html") ~headers
+        | Error (_) -> begin
+            let session = Session.make (next_id ()) in
+            let cookie_key, header_val = Session.to_header ~expiration ~path:"/" session crypto in
+            let headers = Cohttp.Header.add headers cookie_key header_val in
+            ignore (print_endline ("Setting cookie for player " ^ string_of_int session.player_id ^ ", redirecting"));
+            Cohttp_lwt_unix.Server.respond_redirect ~headers ~uri:(Uri.of_string ("/games/" ^ game_id)) ()
         end
     )
     | Ws_show (game_id) -> (
@@ -65,17 +60,24 @@ let handler
         | Some(player_id) -> begin
             Cohttp_lwt.Body.drain_body body
             >>= fun () ->
+            ignore (print_endline ("Establish websocket for player " ^ string_of_int player_id ^ " in game " ^ game_id));
             Websocket_cohttp_lwt.upgrade_connection req (fst conn) (
                 fun f ->
                     match f.opcode with
                     | Opcode.Close ->
-                        Printf.eprintf "[RECV] CLOSE\n%!"
+                        Printf.eprintf "[RECV] CLOSE\n%!";
+                        ignore (print_endline ("Removing player " ^ (string_of_int player_id) ^ " from game " ^ game_id));
+                        Clients.remove clients game_id player_id;
+                        Clients.game_send clients game_id ("Player " ^ string_of_int player_id ^ " left!")
                     | _ ->
                         Printf.eprintf "[RECV] %s: %s\n%!" (Websocket_cohttp_lwt.Frame.Opcode.to_string f.opcode) f.content;
-                        Clients.game_send clients game_id ("Player " ^ string_of_int player_id ^ ": " ^ f.content)
+                        ignore (print_endline ("Sending from player " ^ (string_of_int player_id) ^ " to game " ^ game_id));
+                        Clients.game_send clients game_id ("From player " ^ (string_of_int player_id) ^ ": " ^ f.content)
             )
             >>= fun (resp, body, frames_out_fn) ->
+            ignore (print_endline ("Adding player " ^ (string_of_int player_id) ^ " to game " ^ game_id));
             Clients.add clients game_id player_id frames_out_fn;
+            Clients.game_send clients game_id ("Player " ^ string_of_int player_id ^ " joined!");
             Lwt.return (resp, (body :> Cohttp_lwt.Body.t))
         end
         | None -> begin
@@ -87,7 +89,7 @@ let handler
     )
     | Static ->
         File_server.serve ~info:"Served by Cohttp/Lwt" ~docroot:"./public" ~index:"index.html" uri path
-    | Not_found ->
+    | Route_not_found ->
         Cohttp_lwt_unix.Server.respond_string
             ~headers:headers
             ~status:`Not_found

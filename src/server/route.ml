@@ -3,7 +3,7 @@ type t =
     | Game_create
     | Game_show of string
     | Static
-    | Not_found
+    | Route_not_found
 
 let path_parts path =
     Str.split (Str.regexp "\/+") path
@@ -24,4 +24,4 @@ let of_req req =
     else if meth == `GET then
         Static
     else
-        Not_found
+        Route_not_found

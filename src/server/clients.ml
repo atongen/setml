@@ -72,3 +72,16 @@ let add clients game_id player_id send =
         | None -> Some(GameSet.of_list [game_id])
     ) ~k:player_id
 
+let remove clients game_id player_id =
+    let key = ConnKey.make game_id player_id in
+    ConnTable.remove clients.conns key;
+    PlayersOfGameTable.update clients.players_of_game ~f:(fun k v ->
+        match v with
+        | Some (set) -> Some(PlayerSet.remove player_id set)
+        | None -> Some(PlayerSet.of_list [])
+    ) ~k:game_id;
+    GamesOfPlayerTable.update clients.games_of_player ~f:(fun k v ->
+        match v with
+        | Some (set) -> Some(GameSet.remove game_id set)
+        | None -> Some(GameSet.of_list [])
+    ) ~k:player_id
