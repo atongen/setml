@@ -3,6 +3,7 @@
 (library
  ((name lib)
   (modules (
+    db
     route
     clients
     crypto
@@ -12,9 +13,9 @@
     cohttp
     containers
     cow
-    hex
     nocrypto
     nocrypto.unix
+    postgresql
     str
     yojson
     websocket

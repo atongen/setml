@@ -87,7 +87,17 @@ let create_iv () =
   Cstruct.sub digest 0 16
 
 let random_hex () =
-  create_iv () |> Hex.of_cstruct |> Hex.to_string
+  let r = create_iv () in
+  let n = Cstruct.len r in
+  let rec aux acc i =
+    let c = Cstruct.get_uint8 r i in
+    let h = Printf.sprintf "%.2x" c in
+    let v = acc ^ h in
+    if i >= n - 1 then v else aux v (i + 1)
+  in
+  aux "" 0
+
+
 
 let verify_and_decrypt session msg =
   let decoded = Cstruct.of_string msg |> Nocrypto.Base64.decode in
