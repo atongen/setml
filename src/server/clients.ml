@@ -25,19 +25,18 @@ type t = {
     players_of_game: PlayerSet.t PlayersOfGameTable.t;
 }
 
-let make ?n:(m=32) () =
-    {
-        conns = ConnTable.create m;
-        games_of_player = GamesOfPlayerTable.create m;
-        players_of_game = PlayersOfGameTable.create m;
-    }
+let make ?n:(m=32) () = {
+    conns = ConnTable.create m;
+    games_of_player = GamesOfPlayerTable.create m;
+    players_of_game = PlayersOfGameTable.create m;
+}
 
 let send conn content =
     Lwt.ignore_result (Lwt.wrap1 conn @@ Some (Websocket_cohttp_lwt.Frame.create ~content ()))
 
 let send_key clients (key: ConnKey.t) content =
     match ConnTable.get clients.conns key with
-    | Some(conn) -> send conn content
+    | Some (conn) -> send conn content
     | None -> ()
 
 let broadcast_send clients content =
@@ -45,18 +44,29 @@ let broadcast_send clients content =
 
 let game_send clients (game_id: GameKey.t) content =
     match PlayersOfGameTable.get clients.players_of_game game_id with
-    | Some(player_ids) ->
+    | Some (player_ids) ->
         PlayerSet.to_seq player_ids (fun player_id ->
             let key = ConnKey.make game_id player_id in
             send_key clients key content
         )
     | None -> ()
 
-let player_send clients game_id player_id content = ()
+let player_send clients (game_id: GameKey.t) (player_id: PlayerKey.t) content =
+    match GamesOfPlayerTable.get clients.games_of_player player_id with
+    | Some (game_ids) ->
+        GameSet.to_seq game_ids (fun game_id ->
+            let key = ConnKey.make game_id player_id in
+            send_key clients key content
+        )
+    | None -> ()
 
-let games_of_player_send clients player_id content = ()
-
-let games_of_player clients player_id = ()
+let games_of_player_send clients (player_id: PlayerKey.t) content =
+    match GamesOfPlayerTable.get clients.games_of_player player_id with
+    | Some (game_ids) ->
+        GameSet.to_seq game_ids (fun game_id ->
+            game_send clients game_id content
+        )
+    | None -> ()
 
 let add clients game_id player_id send =
     let key = ConnKey.make game_id player_id in

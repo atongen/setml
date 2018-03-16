@@ -6,10 +6,12 @@
     route
     clients
     crypto
-    session))
+    session
+    templates))
   (libraries (
     cohttp
     containers
+    cow
     hex
     nocrypto
     nocrypto.unix

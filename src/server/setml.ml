@@ -7,14 +7,14 @@ open Lib
 let clients = Clients.make ()
 let id_counter = ref 0
 let next_id () =
-    id_counter := (!id_counter + 1);
+    ignore (print_endline ("before id_counter: " ^ (string_of_int !id_counter)));
+    id_counter := !id_counter + 1;
+    ignore (print_endline ("after id_counter: " ^ (string_of_int !id_counter)));
     !id_counter
-
-let current_id () = !id_counter
 
 let crypto = Crypto.make "t8sK8LqFLn6Ixt9H6TMiS9HRs6BfcLyw6aXHi02omeOIp7mLYqSIlxtPgxXiETvpentbHMPkGYpiqW8nR9rJmeVU4aEEyzMbzDqIRznNSiqPnDb0Dp9PNerGuODpaeza"
 
-let expiration = `Max_age (Int64.of_int (10 * 365 * 24 * 60 * 60))
+let expiration = `Max_age (Int64.of_int (3 * 365 * 24 * 60 * 60))
 
 let get_player_id crypto headers =
     match (Session.of_header crypto headers) with
@@ -27,7 +27,6 @@ let handler
     (conn : Conduit_lwt_unix.flow * Cohttp.Connection.t)
     (req  : Cohttp_lwt_unix.Request.t)
     (body : Cohttp_lwt.Body.t) =
-    let open Frame in
     let uri = Cohttp.Request.uri req in
     let path = Uri.path uri in
     let meth = Cohttp.Request.meth req in
@@ -39,23 +38,28 @@ let handler
     Lwt_io.eprintf "[REQ] (%s,%s)\n%!" (Cohttp.Code.string_of_method meth) path
     >>= fun _ ->
 
-    let open Route in
-    match of_req req with
-    | Game_create ->
+    match Route.of_req req with
+    | Route.Game_create ->
         Cohttp_lwt_unix.Server.respond_redirect ~uri:(Uri.of_string "/games/abcd") ()
-    | Game_show (game_id) -> (
+    | Route.Game_show (game_id) -> (
         match (Session.of_header crypto req_headers) with
         | Ok (session) ->
-            File_server.serve_file ~docroot:"./public" ~uri:(Uri.of_string "/game.html") ~headers
+            ignore (print_endline ("Found cookie for player: " ^ Session.to_json session));
+            Cohttp_lwt_unix.Server.respond_string
+                ~status:`OK
+                ~body:(Templates.game game_id)
+                ()
         | Error (_) -> begin
-            let session = Session.make (next_id ()) in
+            let my_id = next_id () in
+            ignore (print_endline ("Got next id: " ^ string_of_int my_id));
+            let session = Session.make (my_id) in
             let cookie_key, header_val = Session.to_header ~expiration ~path:"/" session crypto in
             let headers = Cohttp.Header.add headers cookie_key header_val in
-            ignore (print_endline ("Setting cookie for player " ^ string_of_int session.player_id ^ ", redirecting"));
+            ignore (print_endline ("Setting cookie for player " ^ Session.to_json session ^ ", redirecting"));
             Cohttp_lwt_unix.Server.respond_redirect ~headers ~uri:(Uri.of_string ("/games/" ^ game_id)) ()
         end
     )
-    | Ws_show (game_id) -> (
+    | Route.Ws_show (game_id) -> (
         match get_player_id crypto req_headers with
         | Some(player_id) -> begin
             Cohttp_lwt.Body.drain_body body
@@ -64,7 +68,7 @@ let handler
             Websocket_cohttp_lwt.upgrade_connection req (fst conn) (
                 fun f ->
                     match f.opcode with
-                    | Opcode.Close ->
+                    | Frame.Opcode.Close ->
                         Printf.eprintf "[RECV] CLOSE\n%!";
                         ignore (print_endline ("Removing player " ^ (string_of_int player_id) ^ " from game " ^ game_id));
                         Clients.remove clients game_id player_id;
@@ -87,9 +91,9 @@ let handler
                 ()
         end
     )
-    | Static ->
+    | Route.Static ->
         File_server.serve ~info:"Served by Cohttp/Lwt" ~docroot:"./public" ~index:"index.html" uri path
-    | Route_not_found ->
+    | Route.Route_not_found ->
         Cohttp_lwt_unix.Server.respond_string
             ~headers:headers
             ~status:`Not_found
