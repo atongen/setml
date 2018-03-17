@@ -27,7 +27,7 @@ let sp v =
 let ae ~printer exp got _test_ctxt = assert_equal ~printer exp got
 let af msg _test_ctxt = assert_failure msg
 
-let crypto_tests =
+let crypto_encode_decode_tests =
   let case ~secret ~salt ~msg =
     (Crypto.make ~salt secret, msg)
   and check (crypt, msg) =
@@ -70,9 +70,32 @@ let crypto_tests =
                 "
   ]
 
+let crypto_chain_test =
+  (* mutually recursive encode/decode for testing next_iv from verify_and_decrypt *)
+  let rec encode c iv decoded n i =
+    let encoded = Crypto.encrypt_and_sign_with_iv c iv decoded in
+    decode c encoded n i
+  and decode c encoded n i =
+    match Crypto.verify_and_decrypt c encoded with
+    | Ok (niv, decoded) ->
+      if i < n then
+        encode c niv decoded n (i+1)
+      else
+        decoded
+    | Error (err) -> err
+  in
+  let crypto = Crypto.make ~salt:"pink himalayan" "CNel6FficD3OkLO4JlTvxgNEDCq0aEIW36NMCSVvGycg93vQjhsoMwoz8pSJ9wjFg5E874PL0jzcTQkuMNMU3wjxTDXbaOOMundoEuojHgmnQ9JqnvI3LHs603gJDiEq" in
+  let iv = Crypto.create_iv () in
+  let msg = "A super secret message!" in
+  let dec = encode crypto iv msg 100 0 in
+  test_case (ae ~printer:sp msg dec)
+
 let suite =
   "All" >::: [
-    "crypto" >::: crypto_tests
+    "crypto" >::: [
+      "encode/decode" >::: crypto_encode_decode_tests;
+      "chain" >::: [crypto_chain_test]
+    ]
   ]
 
 let _ =
