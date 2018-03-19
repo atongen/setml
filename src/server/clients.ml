@@ -54,7 +54,7 @@ let game_send clients (game_id: GameKey.t) content =
         )
     | None -> ()
 
-let player_send clients (game_id: GameKey.t) (player_id: PlayerKey.t) content =
+let player_send clients (player_id: PlayerKey.t) content =
     match GamesOfPlayerTable.get clients.games_of_player player_id with
     | Some (game_ids) ->
         GameSet.to_seq game_ids (fun game_id ->

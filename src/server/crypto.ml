@@ -97,8 +97,6 @@ let random_hex () =
   in
   aux "" 0
 
-
-
 let verify_and_decrypt session msg =
   let decoded = Cstruct.of_string msg |> Nocrypto.Base64.decode in
   match decoded with

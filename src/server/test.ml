@@ -133,7 +133,7 @@ let client_send_tests =
   CCList.iter (fun _ -> Clients.broadcast_send clients "broadcast") (0 --^ 3);
   CCList.iter (fun _ -> Clients.games_of_player_send clients 0 "games_of_player") (0 --^ 5);
   CCList.iter (fun _ -> Clients.game_send clients "d" "game") (0 --^ 7);
-  CCList.iter (fun _ -> Clients.player_send clients "a" 0 "player") (0 --^ 11);
+  CCList.iter (fun _ -> Clients.player_send clients 0 "player") (0 --^ 11);
 
   (* setup tests *)
   let case ~game_id ~player_id ~count =
