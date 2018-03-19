@@ -25,6 +25,7 @@ let sp v =
   "'" ^ v ^ "' (" ^ string_of_int l ^ ")"
 
 let ae ~printer exp got _test_ctxt = assert_equal ~printer exp got
+let ab msg got _test_ctxt = assert_bool msg got
 let af msg _test_ctxt = assert_failure msg
 
 let crypto_encode_decode_tests =
@@ -90,11 +91,86 @@ let crypto_chain_test =
   let dec = encode crypto iv msg 100 0 in
   test_case (ae ~printer:sp msg dec)
 
+module Counter = CCHashtbl.Make(Clients.ConnKey)
+
+let make_conn counter game_id player_id =
+  let key = Clients.ConnKey.make game_id player_id in
+  fun w -> Counter.incr counter key
+
+let client_in_game_tests =
+  let open CCList.Infix in
+  let clients = Clients.make () in
+  let counter = Counter.create 32 in
+  CCList.flat_map (fun player_id ->
+    let game_id = Crypto.random_hex () in
+    let conn = make_conn counter game_id player_id in
+    Clients.add clients game_id player_id conn;
+    [
+      test_case @@ ab "player in game" (Clients.in_game clients game_id player_id);
+      test_case @@ ab "not player" (not @@ Clients.in_game clients game_id (player_id + 45));
+      test_case @@ ab "not game" (not @@ Clients.in_game clients (Crypto.random_hex ()) player_id);
+      test_case @@ ab "neither" (not @@ Clients.in_game clients (Crypto.random_hex ()) (player_id + 90));
+    ]
+  ) (13 -- 57)
+
+let client_send_tests =
+  let open CCList.Infix in
+  let clients = Clients.make () in
+  let counter = Counter.create 16 in
+  let game_ids = CCArray.of_list ["a"; "b"; "c"; "d"] in
+  let add_player_id player_id =
+    let n = CCArray.length game_ids in
+    CCList.iter (fun i ->
+      let idx = (player_id + i) mod n in
+      let game_id = game_ids.(idx) in
+      let conn = make_conn counter game_id player_id in
+      Clients.add clients game_id player_id conn;
+    ) (0 -- 1)
+  in
+  (* add players to games *)
+  CCList.iter add_player_id (0 --^ 5);
+  (* send messages *)
+  CCList.iter (fun _ -> Clients.broadcast_send clients "broadcast") (0 --^ 3);
+  CCList.iter (fun _ -> Clients.games_of_player_send clients 0 "games_of_player") (0 --^ 5);
+  CCList.iter (fun _ -> Clients.game_send clients "d" "game") (0 --^ 7);
+  CCList.iter (fun _ -> Clients.player_send clients "a" 0 "player") (0 --^ 11);
+
+  (* setup tests *)
+  let case ~game_id ~player_id ~count =
+    let key = Clients.ConnKey.make game_id player_id in
+    (key, count)
+  and check (key, count) =
+    let got_count = Counter.get_or counter key ~default:0 in
+    ae ~printer:string_of_int count got_count in
+
+  let cases = ["a"; "b"; "c"; "d"; "e"] >>= (fun game_id ->
+    0 --^ 6 >|= (fun player_id ->
+      let count = match (game_id, player_id) with
+      | ("a", 0) -> 3+5+11
+      | ("a", 3) -> 3+5
+      | ("a", 4) -> 3+5
+      | ("b", 0) -> 3+5 (* why is this 11 short? *)
+      | ("b", 1) -> 3+5
+      | ("b", 4) -> 3+5
+      | ("c", 1) -> 3
+      | ("c", 2) -> 3
+      | ("d", 2) -> 3+7
+      | ("d", 3) -> 3+7
+      | (_, _) -> 0 in
+      case ~game_id ~player_id ~count
+    )
+  ) in
+  cases_of check cases
+
 let suite =
   "All" >::: [
     "crypto" >::: [
       "encode/decode" >::: crypto_encode_decode_tests;
       "chain" >::: [crypto_chain_test]
+    ];
+    "clients" >::: [
+      "in_game" >::: client_in_game_tests;
+      "send" >::: client_send_tests
     ]
   ]
 

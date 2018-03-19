@@ -68,17 +68,21 @@ let games_of_player_send clients (player_id: PlayerKey.t) content =
         )
     | None -> ()
 
+let in_game clients (game_id: GameKey.t) (player_id: PlayerKey.t) =
+    let key = ConnKey.make game_id player_id in
+    ConnTable.mem clients.conns key
+
 let add clients game_id player_id send =
     let key = ConnKey.make game_id player_id in
     ConnTable.add clients.conns key send;
     PlayersOfGameTable.update clients.players_of_game ~f:(fun k v ->
         match v with
-        | Some (set) -> Some(PlayerSet.add player_id set)
+        | Some (player_ids) -> Some(PlayerSet.add player_id player_ids)
         | None -> Some(PlayerSet.of_list [player_id])
     ) ~k:game_id;
     GamesOfPlayerTable.update clients.games_of_player ~f:(fun k v ->
         match v with
-        | Some (set) -> Some(GameSet.add game_id set)
+        | Some (game_ids) -> Some(GameSet.add game_id game_ids)
         | None -> Some(GameSet.of_list [game_id])
     ) ~k:player_id
 
@@ -87,11 +91,15 @@ let remove clients game_id player_id =
     ConnTable.remove clients.conns key;
     PlayersOfGameTable.update clients.players_of_game ~f:(fun k v ->
         match v with
-        | Some (set) -> Some(PlayerSet.remove player_id set)
+        | Some (player_ids) -> Some(PlayerSet.remove player_id player_ids)
         | None -> Some(PlayerSet.of_list [])
     ) ~k:game_id;
     GamesOfPlayerTable.update clients.games_of_player ~f:(fun k v ->
         match v with
-        | Some (set) -> Some(GameSet.remove game_id set)
+        | Some (player_ids) -> Some(GameSet.remove game_id player_ids)
         | None -> Some(GameSet.of_list [])
     ) ~k:player_id
+
+let add_or_replace clients game_id player_id send =
+    if in_game clients game_id player_id then remove clients game_id player_id;
+    add clients game_id player_id send
