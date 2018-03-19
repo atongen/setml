@@ -11,6 +11,9 @@ module ConnKey = struct
     let equal (a: t) (b: t) =
         GameKey.equal (fst a) (fst b) &&
         PlayerKey.equal (snd a) (snd b)
+
+    let to_string (x: t) =
+        "game_id: " ^ (fst x) ^ ", player_id: " ^ string_of_int (snd x)
 end
 module ConnTable = CCHashtbl.Make(ConnKey)
 
