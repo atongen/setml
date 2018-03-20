@@ -6,6 +6,10 @@ create table players (
     created_at timestamp without time zone default now()
 );
 
+--  1_679_616 is 5-char base-36 min (10000)
+-- 60_466_175 is 5-char base-36 max (zzzzz)
+-- 58_786_559 unique values
+-- formula is SELECT floor(random()*(max-min+1))+min;
 CREATE OR REPLACE FUNCTION make_game_id() RETURNS integer AS $$
 DECLARE
     new_game_id integer;
@@ -13,7 +17,7 @@ DECLARE
 BEGIN
     done := false;
     WHILE NOT done LOOP
-        new_game_id := floor(random()*(60466176)); -- 60,466,175 is max in 5 character base-36
+        new_game_id := floor(random()*(58786560))+1679616;
         done := NOT exists(SELECT 1 FROM games WHERE id=new_game_id);
     END LOOP;
     RETURN new_game_id;
