@@ -101,7 +101,7 @@ let client_in_game_tests =
   let open CCList.Infix in
   let clients = Clients.make () in
   let counter = Counter.create 32 in
-  CCList.flat_map (fun player_id ->
+  13 -- 57 >>= (fun player_id ->
     let game_id = Crypto.random_hex () in
     let conn = make_conn counter game_id player_id in
     Clients.add clients game_id player_id conn;
@@ -111,7 +111,7 @@ let client_in_game_tests =
       test_case @@ ab "not game" (not @@ Clients.in_game clients (Crypto.random_hex ()) player_id);
       test_case @@ ab "neither" (not @@ Clients.in_game clients (Crypto.random_hex ()) (player_id + 90));
     ]
-  ) (13 -- 57)
+  )
 
 let client_send_tests =
   let open CCList.Infix in
