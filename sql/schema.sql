@@ -28,7 +28,8 @@ drop table if exists games cascade;
 
 create table games (
     id integer not null primary key default make_game_id(),
-    created_at timestamp without time zone default now()
+    created_at timestamp without time zone default now(),
+    check (id >= 1679616 and id <= 60466175)
 );
 
 drop table if exists games_players cascade;
