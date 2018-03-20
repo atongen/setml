@@ -3,11 +3,13 @@
 (library
  ((name lib)
   (modules (
-    route
+    db
     clients
     crypto
+    route
     session
-    templates))
+    templates
+    util))
   (libraries (
     caqti
     caqti-lwt
