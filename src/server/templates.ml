@@ -21,3 +21,20 @@ let game_tpl game_id =
     )
 
 let game game_id = game_tpl game_id |> Html.to_string
+
+let error_tpl msg =
+    Html.(
+        html (list [
+            head (list [
+                title (string "Error!");
+                meta ~charset:"UTF-8" empty;
+            ]);
+
+            body (list [
+                h1 (string ("Error!"));
+                p (string msg)
+            ])
+        ])
+    )
+
+let error msg = error_tpl msg |> Html.to_string

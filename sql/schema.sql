@@ -35,9 +35,14 @@ create table games (
 drop table if exists games_players cascade;
 
 create table games_players (
-    game_id integer not null references games (id),
-    player_id integer not null references players (id),
+    game_id integer not null references games (id)
+        on delete cascade,
+    player_id integer not null references players (id)
+        on delete cascade,
     present boolean default true,
     created_at timestamp without time zone default now(),
     primary key (game_id, player_id)
 );
+
+create index idx_games_players_on_game_id on games_players using btree (game_id);
+create index idx_games_players_on_player_id on games_players using btree (player_id);
