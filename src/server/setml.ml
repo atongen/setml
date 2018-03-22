@@ -36,6 +36,12 @@ let render_not_found msg =
 let redirect ?headers uri =
     Cohttp_lwt_unix.Server.respond_redirect ?headers ~uri:(Uri.of_string uri) ()
 
+(* [wip] *)
+let (>>=?) m f =
+  m >>= function
+  | Ok x -> f x
+  | Error err -> render_error err
+
 let make_handler db =
     fun (conn : Conduit_lwt_unix.flow * Cohttp.Connection.t)
         (req  : Cohttp_lwt_unix.Request.t)
@@ -64,12 +70,14 @@ let make_handler db =
             | Error e -> render_error (Caqti_error.show e))
         | Route.Game_show (game_id) -> (
             match (Session.of_header crypto req_headers) with
-            | Ok (session) -> render_game game_id
+            | Ok (session) ->
+                ignore (Db.game_player_presence db game_id session.player_id true);
+                render_game game_id
             | Error (_) -> (
                 Db.create_player db >>= (function
                     | Ok player_id_opt -> (
                         match player_id_opt with
-                        | Some (player_id) ->
+                        | Some player_id ->
                             let session = Session.make (player_id) in
                             let cookie_key, header_val = Session.to_header ~expiration ~path:"/" session crypto in
                             let headers = Cohttp.Header.add headers cookie_key header_val in
@@ -85,13 +93,8 @@ let make_handler db =
                     fun f ->
                         match f.opcode with
                         | Frame.Opcode.Close ->
-                            Printf.eprintf "[RECV] CLOSE\n%!";
-                            ignore (print_endline ("Removing player " ^ (string_of_int player_id) ^ " from game " ^ game_id));
-                            Clients.remove clients game_id player_id;
-                            Clients.game_send clients game_id ("Player " ^ string_of_int player_id ^ " left!")
+                            ignore (Db.game_player_presence db game_id player_id false);
                         | _ ->
-                            Printf.eprintf "[RECV] %s: %s\n%!" (Websocket_cohttp_lwt.Frame.Opcode.to_string f.opcode) f.content;
-                            ignore (print_endline ("Sending from player " ^ (string_of_int player_id) ^ " to game " ^ game_id));
                             Clients.game_send clients game_id ("From player " ^ (string_of_int player_id) ^ ": " ^ f.content))
                 >>= fun (resp, body, frames_out_fn) ->
                 ignore (print_endline ("Adding player " ^ (string_of_int player_id) ^ " to game " ^ game_id));

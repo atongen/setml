@@ -9,3 +9,16 @@ let create_player_query =
 
 let create_player (module Db : Caqti_lwt.CONNECTION) =
     Db.find_opt create_player_query ()
+
+let game_player_present_query =
+    Caqti_request.exec Caqti_type.(tup3 int int bool)
+    {eos|
+    insert into games_players (game_id, player_id, present)
+    values (?, ?, ?)
+    on conflict (game_id, player_id)
+    do update set present = excluded.present;
+    |eos}
+
+let game_player_presence (module Db : Caqti_lwt.CONNECTION) game_id player_id present =
+    let game_id_int = Util.int_of_base36 game_id in
+    Db.exec game_player_present_query (game_id_int, player_id, present)
