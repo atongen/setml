@@ -40,7 +40,7 @@ let redirect ?headers uri =
 let (>>=?) m f =
   m >>= function
   | Ok x -> f x
-  | Error err -> render_error err
+  | Error e -> render_error (Caqti_error.show e)
 
 let make_handler db =
     fun (conn : Conduit_lwt_unix.flow * Cohttp.Connection.t)
@@ -60,13 +60,10 @@ let make_handler db =
         match Route.of_req req with
         | Route.Game_create ->
             Db.create_game db >>= (function
-            | Ok game_id_opt -> (
-                match game_id_opt with
-                | Some (game_id_int) ->
-                    let game_id = Util.base36_of_int game_id_int in
-                    ignore (print_endline ("Creating game " ^ game_id));
-                    redirect ("/games/" ^ game_id)
-                | None -> render_error "Unable to create game!")
+            | Ok game_id_int ->
+                let game_id = Util.base36_of_int game_id_int in
+                ignore (print_endline ("Creating game " ^ game_id));
+                redirect ("/games/" ^ game_id)
             | Error e -> render_error (Caqti_error.show e))
         | Route.Game_show (game_id) -> (
             match (Session.of_header crypto req_headers) with
@@ -75,14 +72,11 @@ let make_handler db =
                 render_game game_id
             | Error (_) -> (
                 Db.create_player db >>= (function
-                    | Ok player_id_opt -> (
-                        match player_id_opt with
-                        | Some player_id ->
-                            let session = Session.make (player_id) in
-                            let cookie_key, header_val = Session.to_header ~expiration ~path:"/" session crypto in
-                            let headers = Cohttp.Header.add headers cookie_key header_val in
-                            redirect ~headers ("/games/" ^ game_id)
-                        | None -> render_error "Unable to create player!")
+                    | Ok player_id ->
+                        let session = Session.make (player_id) in
+                        let cookie_key, header_val = Session.to_header ~expiration ~path:"/" session crypto in
+                        let headers = Cohttp.Header.add headers cookie_key header_val in
+                        redirect ~headers ("/games/" ^ game_id)
                     | Error e -> render_error (Caqti_error.show e))))
         | Route.Ws_show (game_id) -> (
             match session_player_id crypto req_headers with
