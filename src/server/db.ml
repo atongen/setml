@@ -1,11 +1,19 @@
+open Lwt.Infix
+
+let (>>=?) m f =
+  m >>= (function | Ok x -> f x | Error err -> Lwt.return (Error err))
+
 let create_game_query =
-    Caqti_request.find Caqti_type.unit Caqti_type.int "insert into games default values returning id"
+    Caqti_request.find Caqti_type.unit Caqti_type.int
+    "insert into games default values returning id"
 
 let create_game (module Db : Caqti_lwt.CONNECTION) =
-    Db.find create_game_query ()
+    Db.find create_game_query () >>=? fun game_id_int ->
+    Lwt.return_ok (Util.base36_of_int game_id_int)
 
 let create_player_query =
-    Caqti_request.find Caqti_type.unit Caqti_type.int "insert into players default values returning id"
+    Caqti_request.find Caqti_type.unit Caqti_type.int
+    "insert into players default values returning id"
 
 let create_player (module Db : Caqti_lwt.CONNECTION) =
     Db.find create_player_query ()
