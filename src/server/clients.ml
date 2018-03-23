@@ -34,8 +34,25 @@ let make ?n:(m=32) () = {
     players_of_game = PlayersOfGameTable.create m;
 }
 
-let send conn content =
-    Lwt.ignore_result (Lwt.wrap1 conn @@ Some (Websocket_cohttp_lwt.Frame.create ~content ()))
+let frame content = Some (Websocket_cohttp_lwt.Frame.create ~content ())
+
+let send_sync conn content = conn (frame content)
+
+let send_t conn content = Lwt.wrap1 conn (frame content)
+
+let send conn content = Lwt.async (fun () -> send_t conn content)
+
+let send_join clients keys content =
+    let open CCList.Infix in
+    let threads = keys >|= fun key ->
+        match ConnTable.get clients.conns key with
+        | Some (conn) -> send_t conn content
+        | None -> Lwt.return_unit
+    in
+    Lwt.join threads
+
+let send_join_async clients keys content =
+    Lwt.async (fun () -> send_join clients keys content)
 
 let send_key clients (key: ConnKey.t) content =
     match ConnTable.get clients.conns key with

@@ -22,24 +22,30 @@ let render_game game_id =
         ()
 
 let render_error msg =
-    Cohttp_lwt_unix.Server.respond_string
+    Cohttp_lwt_unix.Server.respond_error
         ~status:`Internal_server_error
         ~body:(Templates.error msg)
         ()
 
-let render_not_found msg =
-    Cohttp_lwt_unix.Server.respond_string
-        ~status:`Not_found
-        ~body:msg
-        ()
+let render_not_found () = Cohttp_lwt_unix.Server.respond_not_found ()
 
 let redirect ?headers uri =
     Cohttp_lwt_unix.Server.respond_redirect ?headers ~uri:(Uri.of_string uri) ()
 
+let log msg = Lwt_io.printlf "%s" msg
+
+(* render chain *)
 let (>>=?) m f =
   m >>= function
   | Ok x -> f x
-  | Error e -> render_error (Caqti_error.show e)
+  | Error e ->
+    Caqti_error.show e |> log >>= fun _ -> ();
+    render_error "Oh no!"
+
+let (>>=*) m f =
+    m >>= function
+    | Ok (x) -> f x
+    | Error (err) -> Caqti_error.show err |> log
 
 let make_handler db =
     fun (conn : Conduit_lwt_unix.flow * Cohttp.Connection.t)
@@ -63,7 +69,10 @@ let make_handler db =
             redirect ("/games/" ^ game_id))
         | Route.Game_show (game_id) -> (
             match (Session.of_header crypto req_headers) with
-            | Ok (session) -> render_game game_id
+            | Ok (session) ->
+                Db.game_exists db game_id >>=? (fun exists ->
+                    if exists then render_game game_id else render_not_found ()
+                )
             | Error (_) ->
                 Db.create_player db >>=? (fun player_id ->
                 let session = Session.make (player_id) in
@@ -79,19 +88,26 @@ let make_handler db =
                     fun f ->
                         match f.opcode with
                         | Frame.Opcode.Close ->
-                            ignore (Db.game_player_presence db game_id player_id false);
+                            (* websocket onclose *)
+                            ignore (
+                                Db.game_player_presence db game_id player_id false >>=* fun _ ->
+                                Clients.remove clients game_id player_id;
+                                log ("Player " ^ (string_of_int player_id) ^ " left game " ^ game_id);
+                            )
                         | _ ->
+                            (* websocket onmessage *)
                             Clients.game_send clients game_id ("From player " ^ (string_of_int player_id) ^ ": " ^ f.content))
                 >>= fun (resp, body, frames_out_fn) ->
-                ignore (print_endline ("Adding player " ^ (string_of_int player_id) ^ " to game " ^ game_id));
-                ignore (Db.game_player_presence db game_id player_id true);
+                (* websocket onopen *)
+                Db.game_player_presence db game_id player_id true >>=? fun _ ->
+                ignore (log ("Player " ^ (string_of_int player_id) ^ " joined game " ^ game_id));
                 Clients.add clients game_id player_id frames_out_fn;
                 Clients.game_send clients game_id ("Player " ^ string_of_int player_id ^ " joined!");
                 Lwt.return (resp, (body :> Cohttp_lwt.Body.t)))
             | None -> render_error "Unable to get player id from session!")
         | Route.Static ->
             File_server.serve ~info:"Served by Cohttp/Lwt" ~docroot:"./public" ~index:"index.html" uri path
-        | Route.Route_not_found -> render_not_found (Sexplib.Sexp.to_string_hum (Cohttp.Request.sexp_of_t req))
+        | Route.Route_not_found -> render_not_found ()
 
 let start_server host port () =
   let conn_closed (ch,_) =
