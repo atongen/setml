@@ -102,7 +102,6 @@ let make_handler db =
                 Db.game_player_presence db game_id player_id true >>=? fun _ ->
                 ignore (log ("Player " ^ (string_of_int player_id) ^ " joined game " ^ game_id));
                 Clients.add clients game_id player_id frames_out_fn;
-                Clients.game_send clients game_id ("Player " ^ string_of_int player_id ^ " joined!");
                 Lwt.return (resp, (body :> Cohttp_lwt.Body.t)))
             | None -> render_error "Unable to get player id from session!")
         | Route.Static ->
@@ -110,18 +109,25 @@ let make_handler db =
         | Route.Route_not_found -> render_not_found ()
 
 let start_server host port () =
-  let conn_closed (ch,_) =
-    Printf.eprintf "[SERV] connection %s closed\n%!"
-      (Sexplib.Sexp.to_string_hum (Conduit_lwt_unix.sexp_of_flow ch))
-  in
-  Lwt_io.eprintf "[SERV] Listening for HTTP on port %d\n%!" port >>= fun () ->
-  Caqti_lwt.connect (Uri.of_string "postgresql://atongen:at1234@localhost:5435/setml_development") >>= function
-  | Ok db ->
-    Cohttp_lwt_unix.Server.create
-        ~mode:(`TCP (`Port port))
-        (Cohttp_lwt_unix.Server.make ~callback:(make_handler db) ~conn_closed ())
-  | Error err ->
-    Lwt.return (print_endline ("Failed to connect to db!"))
+    let conn_closed (ch,_) =
+        Printf.eprintf "[SERV] connection %s closed\n%!"
+        (Sexplib.Sexp.to_string_hum (Conduit_lwt_unix.sexp_of_flow ch))
+    in
+    Lwt_io.eprintf "[SERV] Listening for HTTP on port %d\n%!" port >>= fun () ->
+    Caqti_lwt.connect (Uri.of_string "postgresql://atongen:at1234@localhost:5435/setml_development") >>= function
+    | Ok db ->
+        Cohttp_lwt_unix.Server.create
+            ~mode:(`TCP (`Port port))
+            (Cohttp_lwt_unix.Server.make ~callback:(make_handler db) ~conn_closed ())
+    | Error err ->
+        Lwt.return (print_endline ("Failed to connect to db!"))
+
+let start_pubsub () =
+    Pubsub.make "user=atongen password=at1234 port=5435 host=localhost dbname=setml_development" clients
+    |> Pubsub.start
 
 let () =
-  Lwt_main.run (start_server "localhost" 7777 ())
+    Lwt_main.run (Lwt.pick [
+        start_pubsub ();
+        start_server "localhost" 7777 ()
+    ])

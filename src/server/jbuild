@@ -6,6 +6,7 @@
     db
     clients
     crypto
+    pubsub
     route
     session
     templates
