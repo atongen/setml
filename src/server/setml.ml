@@ -47,7 +47,7 @@ let (>>=*) m f =
     | Ok (x) -> f x
     | Error (err) -> Caqti_error.show err |> log
 
-let make_handler db =
+let make_handler db pubsub =
     fun (conn : Conduit_lwt_unix.flow * Cohttp.Connection.t)
         (req  : Cohttp_lwt_unix.Request.t)
         (body : Cohttp_lwt.Body.t) ->
@@ -92,6 +92,7 @@ let make_handler db =
                             ignore (
                                 Db.game_player_presence db game_id player_id false >>=* fun _ ->
                                 Clients.remove clients game_id player_id;
+                                if not (Clients.game_has_players clients game_id) then Pubsub.unsubscribe pubsub game_id;
                                 log ("Player " ^ (string_of_int player_id) ^ " left game " ^ game_id);
                             )
                         | _ ->
@@ -101,6 +102,7 @@ let make_handler db =
                 (* websocket onopen *)
                 Db.game_player_presence db game_id player_id true >>=? fun _ ->
                 ignore (log ("Player " ^ (string_of_int player_id) ^ " joined game " ^ game_id));
+                Pubsub.subscribe pubsub game_id;
                 Clients.add clients game_id player_id frames_out_fn;
                 Lwt.return (resp, (body :> Cohttp_lwt.Body.t)))
             | None -> render_error "Unable to get player id from session!")
@@ -116,18 +118,13 @@ let start_server host port () =
     Lwt_io.eprintf "[SERV] Listening for HTTP on port %d\n%!" port >>= fun () ->
     Caqti_lwt.connect (Uri.of_string "postgresql://atongen:at1234@localhost:5435/setml_development") >>= function
     | Ok db ->
+        let pubsub = Pubsub.make "user=atongen password=at1234 port=5435 host=localhost dbname=setml_development" clients in
+        Lwt_preemptive.detach (fun f -> Pubsub.start f) pubsub;
         Cohttp_lwt_unix.Server.create
             ~mode:(`TCP (`Port port))
-            (Cohttp_lwt_unix.Server.make ~callback:(make_handler db) ~conn_closed ())
+            (Cohttp_lwt_unix.Server.make ~callback:(make_handler db pubsub) ~conn_closed ())
     | Error err ->
         Lwt.return (print_endline ("Failed to connect to db!"))
 
-let start_pubsub () =
-    Pubsub.make "user=atongen password=at1234 port=5435 host=localhost dbname=setml_development" clients
-    |> Pubsub.start
-
 let () =
-    Lwt_main.run (Lwt.pick [
-        start_pubsub ();
-        start_server "localhost" 7777 ()
-    ])
+    Lwt_main.run (start_server "localhost" 7777 ())

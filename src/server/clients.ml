@@ -44,12 +44,11 @@ let send conn content = Lwt.async (fun () -> send_t conn content)
 
 let send_join clients keys content =
     let open CCList.Infix in
-    let threads = keys >|= fun key ->
+    (keys >|= fun key ->
         match ConnTable.get clients.conns key with
         | Some (conn) -> send_t conn content
-        | None -> Lwt.return_unit
-    in
-    Lwt.join threads
+        | None -> Lwt.return_unit)
+    |> Lwt.join
 
 let send_join_async clients keys content =
     Lwt.async (fun () -> send_join clients keys content)
@@ -91,6 +90,11 @@ let games_of_player_send clients (player_id: PlayerKey.t) content =
 let in_game clients (game_id: GameKey.t) (player_id: PlayerKey.t) =
     let key = ConnKey.make game_id player_id in
     ConnTable.mem clients.conns key
+
+let game_has_players clients (game_id: GameKey.t) =
+    match PlayersOfGameTable.get clients.players_of_game game_id with
+    | Some (player_set) -> PlayerSet.cardinal player_set > 0
+    | None -> false
 
 let add clients game_id player_id send =
     let key = ConnKey.make game_id player_id in
