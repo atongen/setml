@@ -102,11 +102,9 @@ let make_handler db pubsub =
                 (* websocket onopen *)
                 Db.game_player_presence db game_id player_id true >>=? fun _ ->
                 ignore (log ("Player " ^ (string_of_int player_id) ^ " joined game " ^ game_id));
-                Pubsub.subscribe pubsub game_id >>= (function
-                | Ok _ ->
-                    Clients.add clients game_id player_id frames_out_fn;
-                    Lwt.return (resp, (body :> Cohttp_lwt.Body.t))
-                | Error _ -> render_error "Uh-oh!"))
+                Pubsub.subscribe pubsub game_id >>= fun () ->
+                Clients.add clients game_id player_id frames_out_fn;
+                Lwt.return (resp, (body :> Cohttp_lwt.Body.t)))
             | None -> render_error "Unable to get player id from session!")
         | Route.Static ->
             File_server.serve ~info:"Served by Cohttp/Lwt" ~docroot:"./public" ~index:"index.html" uri path
@@ -121,7 +119,7 @@ let start_server host port () =
     Caqti_lwt.connect (Uri.of_string "postgresql://atongen:at1234@localhost:5435/setml_development") >>= function
     | Ok db ->
         let pubsub = Pubsub.make "user=atongen password=at1234 port=5435 host=localhost dbname=setml_development" clients in
-        Lwt_preemptive.detach (fun f -> Pubsub.start f) pubsub;
+        Lwt_preemptive.detach Pubsub.start pubsub;
         Cohttp_lwt_unix.Server.create
             ~mode:(`TCP (`Port port))
             (Cohttp_lwt_unix.Server.make ~callback:(make_handler db pubsub) ~conn_closed ())

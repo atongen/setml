@@ -17,6 +17,7 @@
     caqti-driver-postgresql
     cohttp
     containers
+    containers.thread
     cow
     nocrypto
     nocrypto.unix
