@@ -16,7 +16,11 @@ let make ?(n=32) conninfo clients = {
 
 let handle_present pubsub game_id player_id present =
     let msg = if present then "joined" else "left" in
-    Clients.game_send pubsub.clients game_id ("Player " ^ string_of_int player_id ^ " " ^ msg ^ " the game.")
+    Lwt_preemptive.run_in_main (fun () ->
+        Lwt.return (
+            Clients.game_send pubsub.clients game_id ("Player " ^ string_of_int player_id ^ " " ^ msg ^ " the game.")
+        )
+    )
 
 let handle_notification pubsub payload =
     ignore (print_endline @@ "handle_notification: " ^ payload);
