@@ -92,7 +92,7 @@ let make_handler db pubsub =
                             ignore (
                                 Db.game_player_presence db game_id player_id false >>=* fun _ ->
                                 Clients.remove clients game_id player_id;
-                                (* if not (Clients.game_has_players clients game_id) then Pubsub.unsubscribe pubsub game_id; *)
+                                (*if not (Clients.game_has_players clients game_id) then Pubsub.unsubscribe pubsub game_id; *)
                                 log ("Player " ^ (string_of_int player_id) ^ " left game " ^ game_id);
                             )
                         | _ ->
@@ -102,8 +102,8 @@ let make_handler db pubsub =
                 (* websocket onopen *)
                 Db.game_player_presence db game_id player_id true >>=? fun _ ->
                 ignore (log ("Player " ^ (string_of_int player_id) ^ " joined game " ^ game_id));
-                Pubsub.subscribe pubsub game_id >>= fun () ->
                 Clients.add clients game_id player_id frames_out_fn;
+                Pubsub.subscribe pubsub game_id;
                 Lwt.return (resp, (body :> Cohttp_lwt.Body.t)))
             | None -> render_error "Unable to get player id from session!")
         | Route.Static ->

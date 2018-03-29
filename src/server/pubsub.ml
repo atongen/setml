@@ -1,6 +1,3 @@
-open Lwt
-open Lwt.Infix
-
 type action =
     | Subscribe of int
     | Unsubscribe of int
@@ -27,112 +24,89 @@ let handle_notification pubsub payload =
     | `Assoc ["type", `String "present"; "game_id", `Int game_id_int; "player_id", `Int player_id; "value", `Bool present] ->
         let game_id = Util.base36_of_int game_id_int in
         handle_present pubsub game_id player_id present
-    | _ -> ()
-
-let poll ?(read = false) ?(write = false) ?timeout fd =
-    let ident x = x in
-    let fold f = function None -> ident | Some x -> f x in
-    let choices =
-    [] |> (fun acc -> if read then Lwt_unix.wait_read fd :: acc else acc)
-        |> (fun acc -> if write then Lwt_unix.wait_write fd :: acc else acc)
-        |> fold (fun t acc -> Lwt_unix.timeout t :: acc) timeout in
-    if choices = [] then
-        Lwt.fail_invalid_arg "poll: No operation specified."
-    else
-        begin
-        Lwt.catch
-            (fun () -> Lwt.choose choices >|= fun _ -> false)
-            (function
-            | Lwt_unix.Timeout -> Lwt.return_true
-            | exn -> Lwt.fail exn)
-        end >>= fun timed_out ->
-        Lwt.return (Lwt_unix.readable fd, Lwt_unix.writable fd, timed_out)
-
-
-let get_next_result (conn: Postgresql.connection) =
-    let wrap_fd f fd = f (Lwt_unix.of_unix_file_descr fd) in
-    let aux fd =
-        let rec hold () =
-            conn#consume_input;
-            if conn#is_busy then
-                poll ~read:true fd >|= (fun _ -> ()) >>= hold
-            else
-                return (Ok conn#get_result) in
-        (try hold () with
-        | Postgresql.Error msg -> return (Error (msg))) in
-    wrap_fd aux (Obj.magic conn#socket)
-
-let get_result conn =
-    get_next_result conn >>=
-    (function
-    | Ok None ->
-        return (Error ("No response received after send"))
-    | Ok (Some _) ->
-        get_next_result conn >>=
-        (function
-        | Ok None -> return (Ok ())
-        | Ok (Some _) ->
-            return (Error ("More than one message received"))
-        | Error e -> return (Error (Postgresql.string_of_error e)))
-    | Error e -> return (Error (Postgresql.string_of_error e)))
-
-let get_next_notification pubsub =
-    let wrap_fd f fd = f (Lwt_unix.of_unix_file_descr fd) in
-    let aux fd =
-        let rec hold () =
-            pubsub.conn#consume_input;
-            if pubsub.conn#is_busy then
-                poll ~read:true fd >|= (fun _ -> ()) >>= hold
-            else
-                match pubsub.conn#notifies with
-                | Some { extra } -> return_ok (handle_notification pubsub extra)
-                | None -> return_ok ()
-                in
-        (try hold () with
-        | Postgresql.Error e -> return_error (Postgresql.string_of_error e)) in
-    wrap_fd aux (Obj.magic pubsub.conn#socket)
+    | _ -> print_endline @@ "Unknown notification type: " ^ payload
 
 let subscribe pubsub game_id =
-    Lwt.return (
-        let game_id_int = Util.int_of_base36 game_id in
-        let action = Subscribe game_id_int in
-        CCBlockingQueue.push pubsub.actions action
-    )
+    let game_id_int = Util.int_of_base36 game_id in
+    Subscribe game_id_int |>
+    CCBlockingQueue.push pubsub.actions
 
 let unsubscribe pubsub game_id =
-    Lwt.return (
-        let game_id_int = Util.int_of_base36 game_id in
-        let action = Unsubscribe game_id_int in
-        CCBlockingQueue.push pubsub.actions action
+    let game_id_int = Util.int_of_base36 game_id in
+    Unsubscribe game_id_int |>
+    CCBlockingQueue.push pubsub.actions
+
+let handle_result (conn: Postgresql.connection) (result: Postgresql.result) =
+    let open Postgresql in
+    let open Printf in
+    match result#status with
+    | Empty_query -> printf "Empty query\n"
+    | Command_ok -> printf "Command ok [%s]\n" result#cmd_status
+    | Tuples_ok ->
+        printf "Tuples ok\n";
+        printf "%i tuples with %i fields\n" result#ntuples result#nfields;
+        print_endline (String.concat ";" result#get_fnames_lst);
+        for tuple = 0 to result#ntuples - 1 do
+            for field = 0 to result#nfields - 1  do
+            printf "%s, " (result#getvalue tuple field)
+            done;
+            print_newline ()
+        done
+    | Copy_out -> printf "Copy out, not handled!\n"
+    | Copy_in -> printf "Copy in, not handled!\n"
+    | Bad_response -> printf "Bad response: %s\n" result#error; conn#reset
+    | Nonfatal_error -> printf "Non fatal error: %s\n" result#error
+    | Fatal_error -> printf "Fatal error: %s\n" result#error
+    | Copy_both -> printf "Copy in/out, not handled!\n"
+    | Single_tuple -> printf "Single tuple, not handled!\n"
+
+let rec flush_result pubsub =
+    match pubsub.conn#get_result with
+    | Some result ->
+        handle_result pubsub.conn result;
+        flush_result pubsub
+    | None -> ()
+
+let rec hold pubsub f =
+    let fd = Obj.magic pubsub.conn#socket in
+    pubsub.conn#consume_input;
+    if pubsub.conn#is_busy then
+        let _ = Unix.select [fd] [] [] 0.25 in hold pubsub f
+    else
+        f ()
+
+let get_notifications pubsub =
+    hold pubsub (fun () ->
+        let rec aux pubsub i =
+            match pubsub.conn#notifies with
+            | Some { Postgresql.Notification.name; pid; extra } ->
+                Printf.printf "Notication from backend %i: [%s] [%s]\n" pid name extra;
+                handle_notification pubsub extra;
+                aux pubsub (i + 1)
+            | None -> i
+        in aux pubsub 0
     )
 
-let handle_action pubsub = function
-    | Subscribe (game_id_int) ->
-        return (pubsub.conn#send_query @@ "listen game_" ^ string_of_int game_id_int ^ ";") >>=
-        fun () -> get_result pubsub.conn
-    | Unsubscribe (game_id_int) ->
-        return (pubsub.conn#send_query @@ "unlisten game_" ^ string_of_int game_id_int ^ ";") >>=
-        fun () -> get_result pubsub.conn
+let empty_query pubsub query =
+    ignore (print_endline ("query: " ^ query));
+    pubsub.conn#send_query @@ query;
+    hold pubsub (fun () -> flush_result pubsub)
+
+let handle_action pubsub action =
+    let query = match action with
+    | Subscribe (game_id_int) -> "listen game_" ^ string_of_int game_id_int ^ ";"
+    | Unsubscribe (game_id_int) -> "unlisten game_" ^ string_of_int game_id_int ^ ";"
+    in empty_query pubsub query
+
 let start pubsub =
     let rec aux () =
         match CCBlockingQueue.try_take pubsub.actions with
-        | Some (a) -> handle_action pubsub a >>= fun _ -> aux ()
-        | None -> get_next_notification pubsub >>= fun _ -> aux ()
+        | Some (action) ->
+            handle_action pubsub action;
+            aux ()
+        | None ->
+            let i = get_notifications pubsub in
+            if i = 0 then Unix.sleepf 0.25;
+            aux ()
     in
     aux ()
-
-(*
-let read_notifications pubsub =
-    let open Lwt.Infix in
-    let read_notification pubsub =
-        ignore (print_endline "Reading!");
-        pubsub.conn#consume_input;
-        match pubsub.conn#notifies with
-        | Some { extra } -> Lwt.return (Some (extra))
-        | None -> Lwt.return None
-    in
-    let rec aux () = read_notification pubsub
-        >>= Lwt.wrap2 handle_notification pubsub
-        >>= aux
-    in aux ()
-*)
