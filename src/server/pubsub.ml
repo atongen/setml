@@ -75,7 +75,8 @@ let rec hold pubsub f =
     let fd = Obj.magic pubsub.conn#socket in
     pubsub.conn#consume_input;
     if pubsub.conn#is_busy then
-        let _ = Unix.select [fd] [] [] 0.25 in hold pubsub f
+        let _ = Unix.select [fd] [] [] 0.25 in
+        hold pubsub f
     else
         f ()
 

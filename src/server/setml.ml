@@ -92,7 +92,7 @@ let make_handler db pubsub =
                             ignore (
                                 Db.game_player_presence db game_id player_id false >>=* fun _ ->
                                 Clients.remove clients game_id player_id;
-                                (*if not (Clients.game_has_players clients game_id) then Pubsub.unsubscribe pubsub game_id; *)
+                                if not (Clients.game_has_players clients game_id) then Pubsub.unsubscribe pubsub game_id;
                                 log ("Player " ^ (string_of_int player_id) ^ " left game " ^ game_id);
                             )
                         | _ ->
@@ -119,7 +119,7 @@ let start_server host port () =
     Caqti_lwt.connect (Uri.of_string "postgresql://atongen:at1234@localhost:5435/setml_development") >>= function
     | Ok db ->
         let pubsub = Pubsub.make "user=atongen password=at1234 port=5435 host=localhost dbname=setml_development" clients in
-        Lwt_preemptive.detach Pubsub.start pubsub;
+        ignore (Lwt_preemptive.detach Pubsub.start pubsub);
         Cohttp_lwt_unix.Server.create
             ~mode:(`TCP (`Port port))
             (Cohttp_lwt_unix.Server.make ~callback:(make_handler db pubsub) ~conn_closed ())
