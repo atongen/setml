@@ -6,12 +6,14 @@ type t = {
     conn: Postgresql.connection;
     clients: Clients.t;
     actions: action CCBlockingQueue.t;
+    delay: float;
 }
 
-let make ?(n=32) conninfo clients = {
+let make ?(n=32) ?(delay=0.25) conninfo clients = {
     conn = new Postgresql.connection ~conninfo ();
     clients;
-    actions = CCBlockingQueue.create n
+    actions = CCBlockingQueue.create n;
+    delay;
 }
 
 let handle_present pubsub game_id player_id present =
@@ -23,7 +25,6 @@ let handle_present pubsub game_id player_id present =
     )
 
 let handle_notification pubsub payload =
-    ignore (print_endline @@ "handle_notification: " ^ payload);
     match Yojson.Safe.from_string payload with
     | `Assoc ["type", `String "present"; "game_id", `Int game_id; "player_id", `Int player_id; "value", `Bool present] ->
         handle_present pubsub game_id player_id present
@@ -37,7 +38,7 @@ let unsubscribe pubsub game_id =
     Unsubscribe game_id |>
     CCBlockingQueue.push pubsub.actions
 
-let handle_result (conn: Postgresql.connection) (result: Postgresql.result) =
+let print_result (conn: Postgresql.connection) (result: Postgresql.result) =
     let open Postgresql in
     let open Printf in
     match result#status with
@@ -61,18 +62,19 @@ let handle_result (conn: Postgresql.connection) (result: Postgresql.result) =
     | Copy_both -> printf "Copy in/out, not handled!\n"
     | Single_tuple -> printf "Single tuple, not handled!\n"
 
-let rec flush_result pubsub =
-    match pubsub.conn#get_result with
-    | Some result ->
-        handle_result pubsub.conn result;
-        flush_result pubsub
+let rec flush_result conn =
+    match conn#get_result with
+    | Some result -> (
+        match result#status with
+        | Postgresql.Command_ok -> flush_result conn
+        | _ -> print_result conn result)
     | None -> ()
 
 let rec hold pubsub f =
     let fd = Obj.magic pubsub.conn#socket in
     pubsub.conn#consume_input;
     if pubsub.conn#is_busy then
-        let _ = Unix.select [fd] [] [] 0.25 in
+        let _ = Unix.select [fd] [] [] pubsub.delay in
         hold pubsub f
     else
         f ()
@@ -82,7 +84,6 @@ let get_notifications pubsub =
         let rec aux pubsub i =
             match pubsub.conn#notifies with
             | Some { Postgresql.Notification.name; pid; extra } ->
-                Printf.printf "Notication from backend %i: [%s] [%s]\n" pid name extra;
                 handle_notification pubsub extra;
                 aux pubsub (i + 1)
             | None -> i
@@ -90,9 +91,8 @@ let get_notifications pubsub =
     )
 
 let empty_query pubsub query =
-    ignore (print_endline ("query: " ^ query));
     pubsub.conn#send_query @@ query;
-    hold pubsub (fun () -> flush_result pubsub)
+    hold pubsub (fun () -> flush_result pubsub.conn)
 
 let handle_action pubsub action =
     let query = match action with
@@ -108,7 +108,7 @@ let start pubsub =
             aux ()
         | None ->
             let i = get_notifications pubsub in
-            if i = 0 then Unix.sleepf 0.25;
+            if i = 0 then Unix.sleepf pubsub.delay;
             aux ()
     in
     aux ()

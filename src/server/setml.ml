@@ -8,17 +8,10 @@ open Lib
 let clients = Clients.make ()
 let crypto = Crypto.make "t8sK8LqFLn6Ixt9H6TMiS9HRs6BfcLyw6aXHi02omeOIp7mLYqSIlxtPgxXiETvpentbHMPkGYpiqW8nR9rJmeVU4aEEyzMbzDqIRznNSiqPnDb0Dp9PNerGuODpaeza"
 
-let session_player_id crypto headers =
-    match (Session.of_header crypto headers) with
-    | Ok (session) -> Some(session.player_id)
-    | Error (_) -> None
-
-let expiration = `Max_age (Int64.of_int (10 * 365 * 24 * 60 * 60))
-
-let render_game game_id =
+let render_game game_id token =
     Cohttp_lwt_unix.Server.respond_string
         ~status:`OK
-        ~body:(Templates.game game_id)
+        ~body:(Templates.game game_id token)
         ()
 
 let render_error msg =
@@ -55,7 +48,7 @@ let make_handler db pubsub =
         let path = Uri.path uri in
         let meth = Cohttp.Request.meth req in
         let req_headers = Cohttp.Request.headers req in
-        let headers = Cohttp.Header.init () in
+        let session = Session.of_header_or_new crypto req_headers in
 
         Lwt_io.eprintf "[CONN] %s\n%!" (Cohttp.Connection.to_string @@ snd conn)
         >>= fun _ ->
@@ -67,19 +60,17 @@ let make_handler db pubsub =
             Db.create_game db >>=? (fun game_id ->
             redirect (Route.game_show_uri game_id))
         | Route.Game_show (game_id) -> (
-            match (Session.of_header crypto req_headers) with
-            | Ok (session) ->
+            match session.player_id with
+            | Some (_) ->
                 Db.game_exists db game_id >>=? (fun exists ->
-                    if exists then render_game game_id else render_not_found ()
+                    if exists then (render_game game_id session.token) else render_not_found ()
                 )
-            | Error (_) ->
+            | None ->
                 Db.create_player db >>=? (fun player_id ->
-                let session = Session.make (player_id) in
-                let cookie_key, header_val = Session.to_header ~expiration ~path:"/" session crypto in
-                let headers = Cohttp.Header.add headers cookie_key header_val in
+                let headers = Session.set_player_id_headers session crypto player_id in
                 redirect ~headers (Route.game_show_uri game_id)))
         | Route.Ws_show (game_id) -> (
-            match session_player_id crypto req_headers with
+            match session.player_id with
             | Some(player_id) -> (
                 Cohttp_lwt.Body.drain_body body
                 >>= fun () ->
@@ -89,7 +80,7 @@ let make_handler db pubsub =
                         | Frame.Opcode.Close ->
                             (* websocket onclose *)
                             ignore (
-                                Db.game_player_presence db game_id player_id false >>=* fun _ ->
+                                Db.game_player_presence db game_id player_id false >>=* fun () ->
                                 Clients.remove clients game_id player_id;
                                 if not (Clients.game_has_players clients game_id) then Pubsub.unsubscribe pubsub game_id;
                                 log ("Player " ^ (string_of_int player_id) ^ " left game " ^ string_of_int game_id);
@@ -99,7 +90,7 @@ let make_handler db pubsub =
                             Clients.game_send clients game_id ("From player " ^ (string_of_int player_id) ^ ": " ^ f.content))
                 >>= fun (resp, body, frames_out_fn) ->
                 (* websocket onopen *)
-                Db.game_player_presence db game_id player_id true >>=? fun _ ->
+                Db.game_player_presence db game_id player_id true >>=? fun () ->
                 ignore (log ("Player " ^ (string_of_int player_id) ^ " joined game " ^ string_of_int game_id));
                 Clients.add clients game_id player_id frames_out_fn;
                 Pubsub.subscribe pubsub game_id;
@@ -126,6 +117,10 @@ let start_server host port () =
         Lwt.return (print_endline ("Failed to connect to db!"))
 
 let () =
+    let random_generator = Nocrypto.Rng.create (module Nocrypto.Rng.Generators.Fortuna) in
+    Nocrypto_entropy_unix.initialize ();
+    Nocrypto_entropy_unix.reseed random_generator;
+
     let port = if Array.length Sys.argv = 2 then
         int_of_string Sys.argv.(1)
     else 7777
