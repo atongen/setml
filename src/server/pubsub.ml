@@ -25,19 +25,16 @@ let handle_present pubsub game_id player_id present =
 let handle_notification pubsub payload =
     ignore (print_endline @@ "handle_notification: " ^ payload);
     match Yojson.Safe.from_string payload with
-    | `Assoc ["type", `String "present"; "game_id", `Int game_id_int; "player_id", `Int player_id; "value", `Bool present] ->
-        let game_id = Util.base36_of_int game_id_int in
+    | `Assoc ["type", `String "present"; "game_id", `Int game_id; "player_id", `Int player_id; "value", `Bool present] ->
         handle_present pubsub game_id player_id present
     | _ -> print_endline @@ "Unknown notification type: " ^ payload
 
 let subscribe pubsub game_id =
-    let game_id_int = Util.int_of_base36 game_id in
-    Subscribe game_id_int |>
+    Subscribe game_id |>
     CCBlockingQueue.push pubsub.actions
 
 let unsubscribe pubsub game_id =
-    let game_id_int = Util.int_of_base36 game_id in
-    Unsubscribe game_id_int |>
+    Unsubscribe game_id |>
     CCBlockingQueue.push pubsub.actions
 
 let handle_result (conn: Postgresql.connection) (result: Postgresql.result) =
@@ -99,8 +96,8 @@ let empty_query pubsub query =
 
 let handle_action pubsub action =
     let query = match action with
-    | Subscribe (game_id_int) -> "listen game_" ^ string_of_int game_id_int ^ ";"
-    | Unsubscribe (game_id_int) -> "unlisten game_" ^ string_of_int game_id_int ^ ";"
+    | Subscribe (game_id) -> "listen game_" ^ string_of_int game_id ^ ";"
+    | Unsubscribe (game_id) -> "unlisten game_" ^ string_of_int game_id ^ ";"
     in empty_query pubsub query
 
 let start pubsub =

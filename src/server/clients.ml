@@ -1,4 +1,4 @@
-module GameKey = CCString
+module GameKey = CCInt
 module PlayerKey = CCInt
 
 module ConnKey = struct
@@ -6,14 +6,20 @@ module ConnKey = struct
 
     let make x y: t = (x, y)
 
+    (*
+     * Max game_id is 60_466_175
+     * Least power of 2 greater than max game_id is 2^26 = 67_108_864
+    *)
     let hash (x: t) =
-        GameKey.hash (fst x) + PlayerKey.hash (snd x)
+        CCInt.hash (fst x) +
+        CCInt.hash ((snd x) + 67_108_864)
+
     let equal (a: t) (b: t) =
         GameKey.equal (fst a) (fst b) &&
         PlayerKey.equal (snd a) (snd b)
 
     let to_string (x: t) =
-        "game_id: " ^ (fst x) ^ ", player_id: " ^ string_of_int (snd x)
+        "game_id: " ^ string_of_int (fst x) ^ ", player_id: " ^ string_of_int (snd x)
 end
 module ConnTable = CCHashtbl.Make(ConnKey)
 
@@ -122,7 +128,3 @@ let remove clients game_id player_id =
         | Some (player_ids) -> Some(GameSet.remove game_id player_ids)
         | None -> Some(GameSet.of_list [])
     ) ~k:player_id
-
-let add_or_replace clients game_id player_id send =
-    if in_game clients game_id player_id then remove clients game_id player_id;
-    add clients game_id player_id send

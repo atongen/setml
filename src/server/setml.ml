@@ -30,7 +30,7 @@ let render_error msg =
 let render_not_found () = Cohttp_lwt_unix.Server.respond_not_found ()
 
 let redirect ?headers uri =
-    Cohttp_lwt_unix.Server.respond_redirect ?headers ~uri:(Uri.of_string uri) ()
+    Cohttp_lwt_unix.Server.respond_redirect ?headers ~uri ()
 
 let log msg = Lwt_io.printlf "%s" msg
 
@@ -65,8 +65,7 @@ let make_handler db pubsub =
         match Route.of_req req with
         | Route.Game_create ->
             Db.create_game db >>=? (fun game_id ->
-            ignore (print_endline ("Creating game " ^ game_id));
-            redirect ("/games/" ^ game_id))
+            redirect (Route.game_show_uri game_id))
         | Route.Game_show (game_id) -> (
             match (Session.of_header crypto req_headers) with
             | Ok (session) ->
@@ -78,7 +77,7 @@ let make_handler db pubsub =
                 let session = Session.make (player_id) in
                 let cookie_key, header_val = Session.to_header ~expiration ~path:"/" session crypto in
                 let headers = Cohttp.Header.add headers cookie_key header_val in
-                redirect ~headers ("/games/" ^ game_id)))
+                redirect ~headers (Route.game_show_uri game_id)))
         | Route.Ws_show (game_id) -> (
             match session_player_id crypto req_headers with
             | Some(player_id) -> (
@@ -93,7 +92,7 @@ let make_handler db pubsub =
                                 Db.game_player_presence db game_id player_id false >>=* fun _ ->
                                 Clients.remove clients game_id player_id;
                                 if not (Clients.game_has_players clients game_id) then Pubsub.unsubscribe pubsub game_id;
-                                log ("Player " ^ (string_of_int player_id) ^ " left game " ^ game_id);
+                                log ("Player " ^ (string_of_int player_id) ^ " left game " ^ string_of_int game_id);
                             )
                         | _ ->
                             (* websocket onmessage *)
@@ -101,7 +100,7 @@ let make_handler db pubsub =
                 >>= fun (resp, body, frames_out_fn) ->
                 (* websocket onopen *)
                 Db.game_player_presence db game_id player_id true >>=? fun _ ->
-                ignore (log ("Player " ^ (string_of_int player_id) ^ " joined game " ^ game_id));
+                ignore (log ("Player " ^ (string_of_int player_id) ^ " joined game " ^ string_of_int game_id));
                 Clients.add clients game_id player_id frames_out_fn;
                 Pubsub.subscribe pubsub game_id;
                 Lwt.return (resp, (body :> Cohttp_lwt.Body.t)))
@@ -127,4 +126,8 @@ let start_server host port () =
         Lwt.return (print_endline ("Failed to connect to db!"))
 
 let () =
-    Lwt_main.run (start_server "localhost" 7777 ())
+    let port = if Array.length Sys.argv = 2 then
+        int_of_string Sys.argv.(1)
+    else 7777
+    in
+    Lwt_main.run (start_server "localhost" port ())

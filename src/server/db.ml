@@ -8,16 +8,15 @@ let create_game_query =
     "insert into games default values returning id"
 
 let create_game (module Db : Caqti_lwt.CONNECTION) =
-    Db.find create_game_query () >>=? fun game_id_int ->
-    Lwt.return_ok (Util.base36_of_int game_id_int)
+    Db.find create_game_query () >>=? fun game_id ->
+    Lwt.return_ok game_id
 
 let game_exists_query =
     Caqti_request.find Caqti_type.int Caqti_type.bool
     "select exists (select 1 from games where id = ?)"
 
 let game_exists (module Db : Caqti_lwt.CONNECTION) game_id =
-    let game_id_int = Util.int_of_base36 game_id in
-    Db.find game_exists_query game_id_int
+    Db.find game_exists_query game_id
 
 let create_player_query =
     Caqti_request.find Caqti_type.unit Caqti_type.int
@@ -44,5 +43,4 @@ let game_player_present_query =
     |eos}
 
 let game_player_presence (module Db : Caqti_lwt.CONNECTION) game_id player_id present =
-    let game_id_int = Util.int_of_base36 game_id in
-    Db.exec game_player_present_query (game_id_int, player_id, present)
+    Db.exec game_player_present_query (game_id, player_id, present)
