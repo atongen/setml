@@ -97,7 +97,8 @@ let make_handler db pubsub =
                 Lwt.return (resp, (body :> Cohttp_lwt.Body.t)))
             | None -> render_error "Unable to get player id from session!")
         | Route.Static ->
-            File_server.serve ~info:"Served by Cohttp/Lwt" ~docroot:"./public" ~index:"index.html" uri path
+            let headers = Session.to_headers session crypto in
+            File_server.serve ~info:"Served by Cohttp/Lwt" ~headers ~docroot:"./public" ~index:"index.html" uri path
         | Route.Route_not_found -> render_not_found ()
 
 let start_server host port () =
