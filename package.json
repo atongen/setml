@@ -18,6 +18,7 @@
   "dependencies": {
     "@glennsl/bs-json": "^1.1.2",
     "bs-fetch": "^0.2.1",
+    "bs-websockets": "^1.0.9",
     "react": "^15.4.2",
     "react-dom": "^15.4.2",
     "reason-react": "^0.3.4"

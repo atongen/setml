@@ -8,10 +8,19 @@ open Lib
 let clients = Clients.make ()
 let crypto = Crypto.make "t8sK8LqFLn6Ixt9H6TMiS9HRs6BfcLyw6aXHi02omeOIp7mLYqSIlxtPgxXiETvpentbHMPkGYpiqW8nR9rJmeVU4aEEyzMbzDqIRznNSiqPnDb0Dp9PNerGuODpaeza"
 
+
+let render_index ~headers token =
+    Cohttp_lwt_unix.Server.respond_string
+        ~headers
+        ~status:`OK
+        ~body:(Templates.page "index" "SetML" token)
+        ()
+
 let render_game game_id token =
+    let game_id_str = Route.string_of_game_id game_id in
     Cohttp_lwt_unix.Server.respond_string
         ~status:`OK
-        ~body:(Templates.game game_id token)
+        ~body:(Templates.page "game" ("SetML: " ^ game_id_str) token)
         ()
 
 let render_error msg =
@@ -56,6 +65,9 @@ let make_handler db pubsub =
         >>= fun _ ->
 
         match Route.of_req req with
+        | Route.Index ->
+            let headers = Session.to_headers session crypto in
+            render_index ~headers session.token
         | Route.Game_create ->
             Db.create_game db >>=? (fun game_id ->
             redirect (Route.game_show_uri game_id))

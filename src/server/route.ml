@@ -1,4 +1,5 @@
 type t =
+    | Index
     | Ws_show of int
     | Game_create
     | Game_show of int
@@ -14,7 +15,9 @@ let path_parts path =
 let of_meth_and_path meth path =
     let parts = path_parts path in
     let n = Array.length parts in
-    if n == 1 && String.equal parts.(0) "games" && meth == `POST then
+    if n == 0 && meth == `GET then
+        Index
+    else if n == 1 && String.equal parts.(0) "games" && meth == `POST then
         Game_create
     else if n == 2 && String.equal parts.(0) "games" && meth == `GET then
         let game_id = game_id_string parts.(1) in
@@ -34,6 +37,7 @@ let of_req req =
     of_meth_and_path meth path
 
 let to_meth_and_path = function
+    | Index -> (`GET, "/")
     | Ws_show (game_id) ->
         let game_id_str = string_of_game_id game_id in
         (`GET, "/games/" ^ game_id_str ^ "/ws")
@@ -46,6 +50,7 @@ let to_meth_and_path = function
 
 let to_uri route = snd (to_meth_and_path route) |> Uri.of_string
 
+let index_uri = to_uri Index
 let ws_show_uri game_id = to_uri (Ws_show game_id)
 let game_create_uri game_id = to_uri Game_create
 let game_show_uri game_id = to_uri (Game_show game_id)
