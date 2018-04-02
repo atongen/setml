@@ -1,14 +1,15 @@
-const path = require('path');
+const path = require("path");
 
-const isProd = process.env.NODE_ENV === 'production';
+const isProd = process.env.NODE_ENV === "production";
 
 module.exports = {
   entry: {
-    app: './lib/js/src/client/App.js',
+    index: "./lib/js/src/client/Index.js",
+    game: "./lib/js/src/client/Game.js",
   },
-  mode: isProd ? 'production' : 'development',
+  mode: isProd ? "production" : "development",
   output: {
-    path: path.join(__dirname, "bundledOutputs"),
-    filename: 'public/js/[name].js',
+    path: path.join(__dirname, "public/js"),
+    filename: "[name].js",
   },
 };
