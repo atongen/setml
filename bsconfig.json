@@ -5,7 +5,9 @@
   "bs-dependencies": [
     "reason-react",
     "bs-fetch",
-    "@glennsl/bs-json"
+    "@glennsl/bs-json",
+    "bs-websockets",
+    "bs-webapi"
   ],
   "sources": [
     {
