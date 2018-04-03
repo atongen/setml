@@ -2,16 +2,16 @@ open Belt;
 
 let meta_content = name => {
   let rec aux = c =>
-    switch c {
+    switch (c) {
     | [] => ""
     | [hd, ...tl] =>
       let el_name = Webapi.Dom.Element.getAttribute("name", hd);
-      switch el_name {
+      switch (el_name) {
       | None => aux(tl)
       | Some(n) =>
         if (n == name) {
           let el_content = Webapi.Dom.Element.getAttribute("content", hd);
-          switch el_content {
+          switch (el_content) {
           | None => ""
           | Some(c) => c
           };
@@ -29,17 +29,20 @@ let meta_content = name => {
 
 module NewGameForm = {
   let component = ReasonReact.statelessComponent("NewGameForm");
-  let handleSubmit = (event, _self) => {
-    ReactEventRe.Synthetic.preventDefault(event);
-    Js.log("Clicked!");
-  };
   let make = (~token, _children) => {
     ...component,
     render: self =>
-      <div>
-        <input hidden=Js.true_ name="token" value=token />
-        <button onClick=(self.handle(handleSubmit)) />
-      </div>
+      <section>
+        <h1> (ReasonReact.stringToElement("SetML")) </h1>
+        <form action="/games" method="POST">
+          <input hidden=Js.true_ name="token" value=token readOnly=Js.true_ />
+          <div>
+            <button>
+              (ReasonReact.stringToElement("Start a new game!"))
+            </button>
+          </div>
+        </form>
+      </section>,
   };
 };
 

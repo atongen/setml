@@ -1,7 +1,12 @@
 {
   "name": "setml",
-  "bsc-flags": ["-bs-no-version-header", "-bs-super-errors"],
-  "reason": {"react-jsx" : 2},
+  "bsc-flags": [
+    "-bs-no-version-header",
+    "-bs-super-errors"
+  ],
+  "reason": {
+    "react-jsx": 2
+  },
   "bs-dependencies": [
     "reason-react",
     "bs-fetch",
@@ -15,9 +20,8 @@
       "subdirs": true
     }
   ],
-  // here's a config to make the JS artifacts output alongside your Reason files:
   "package-specs": {
-    "module": "commonjs",
+    "module": "es6",
     "in-source": false
   },
   "refmt": 3
