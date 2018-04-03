@@ -71,7 +71,7 @@ let to_json session =
 let of_header crypto header =
     let cookies = Cohttp.Cookie.Cookie_hdr.extract header in
     try
-        let value = CCList.assoc_opt cookie_key cookies in
+        let value = CCList.Assoc.get ~eq:String.equal cookie_key cookies in
         match value with
         | Some (enc) -> (
             match Crypto.verify_and_decrypt crypto enc with
