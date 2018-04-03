@@ -20,11 +20,10 @@ let meta_content = name => {
         }
       };
     };
-  let htmlCollection =
-    DocumentRe.getElementsByTagName("meta", Webapi.Dom.document);
-  let ar = Webapi.Dom.HtmlCollection.toArray(htmlCollection);
-  let l = Belt.List.fromArray(ar);
-  aux(l);
+  DocumentRe.getElementsByTagName("meta", Webapi.Dom.document)
+  |> Webapi.Dom.HtmlCollection.toArray
+  |> Belt.List.fromArray
+  |> aux;
 };
 
 module NewGameForm = {
