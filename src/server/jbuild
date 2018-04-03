@@ -13,9 +13,11 @@
     util))
   (libraries (
     caqti
-    caqti-lwt
     caqti-driver-postgresql
+    caqti-lwt
     cohttp
+    cohttp-lwt
+    cohttp-lwt-unix
     containers
     containers.thread
     cow
@@ -23,10 +25,10 @@
     nocrypto.unix
     postgresql
     str
-    yojson
     websocket
     websocket.lwt
-    websocket-lwt.cohttp))))
+    websocket-lwt.cohttp
+    yojson))))
 
 (executable
  ((name setml)

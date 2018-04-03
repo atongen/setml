@@ -14,4 +14,18 @@ build: [
 
 depends: [
   "jbuilder" {build & >= "1.0+beta14"}
+  "caqti" {build & = "0.10.1"}
+  "caqti-driver-postgresql" {build & = "0.10.1"}
+  "caqti-lwt" {build & = "0.10.1"}
+  "cohttp" {build & = "1.1.0"}
+  "cohttp-lwt" {build & = "1.0.2"}
+  "cohttp-lwt-unix" {build & = "1.0.2"}
+  "containers" {build & = "2.1"}
+  "cow" {build & = "2.2.0"}
+  "nocrypto" {build & = "0.5.4"}
+  "postgresql" {build & = "4.3.0"}
+  "websocket" {build & = "2.10"}
+  "websocket-lwt" {build & = "2.11"}
+  "yojson" {build & = "1.4.1"}
+  "ounit" {test & = "2.0.7"}
 ]
