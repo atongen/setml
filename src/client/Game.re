@@ -1,21 +1,33 @@
-/* This is the basic component. */
-let component = ReasonReact.statelessComponent("Game");
+open Belt;
 
-/* Your familiar handleClick from ReactJS. This mandatorily takes the payload,
-   then the `self` record, which contains state (none here), `handle`, `reduce`
-   and other utilities */
-let handleClick = (_event, _self) => Js.log("clicked!");
-
-/* `make` is the function that mandatorily takes `children` (if you want to use
-   `JSX). `message` is a named argument, which simulates ReactJS props. Usage:
-
-   `<Page message="hello" />`
-
-   Which desugars to
-
-   `ReasonReact.element(Page.make(~message="hello", [||]))` */
-let make = (~message, _children) => {
-  ...component,
-  render: (self) =>
-    <div onClick=(self.handle(handleClick))> (ReasonReact.stringToElement(message)) </div>
+module Game = {
+    type action =
+    | Message(string);
+    type state = {messages: list(string)};
+    let component = ReasonReact.reducerComponent("Game");
+    let make = _children  => {
+        ...component,
+        reducer: (action, state) =>
+            switch (action) {
+            | Message(message) =>
+                let messages = state.messages @ [message];
+                ReasonReact.Update({...state, messages})
+            },
+        initialState: () => {
+            messages: ["wowza!"]
+        },
+        render: ({state, send}) => {
+            let messages = state.messages |> List.map(_, message => <li>(ReasonReact.stringToElement(message))</li>);
+            <section className="main">
+                <button onClick=(_event => send(Message("Did it.")))>
+                    (ReasonReact.stringToElement("Do it."))
+                </button>
+                <ul className="messages">
+                    (ReasonReact.arrayToElement(List.toArray(messages)))
+                </ul>
+            </section>;
+        }
+    };
 };
+
+ReactDOMRe.renderToElementWithId(<Game />, "game");
