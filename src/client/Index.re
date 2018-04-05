@@ -5,7 +5,7 @@ module NewGameForm = {
     render: _ =>
       <section>
         <h1> (ReasonReact.stringToElement("SetML")) </h1>
-        <form action="/games" method="POST">
+        <form action="/games" method="POST" encType="application/x-www-form-urlencoded">
           <input hidden=Js.true_ name="token" value=token readOnly=Js.true_ />
           <div>
             <button>

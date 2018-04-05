@@ -29,6 +29,12 @@ let render_error msg =
     ~body:(Templates.error msg)
     ()
 
+let render_forbidden =
+  Cohttp_lwt_unix.Server.respond_error
+    ~status:`Forbidden
+    ~body:(Templates.error "Forbidden!")
+    ()
+
 let render_not_found () = Cohttp_lwt_unix.Server.respond_not_found ()
 
 let redirect ?headers uri =
@@ -68,9 +74,15 @@ let make_handler db pubsub =
     | Route.Index ->
       let headers = Session.to_headers session crypto in
       render_index ~headers session.token
-    | Route.Game_create ->
-      Db.create_game db >>=? (fun game_id ->
-          redirect (Route.game_show_uri game_id))
+    | Route.Game_create -> (
+        Cohttp_lwt.Body.to_string body >>= fun myBody ->
+        match Util.form_value myBody "token" with
+        | Some (token) ->
+          if session.token = token then
+            Db.create_game db >>=? (fun game_id ->
+                redirect (Route.game_show_uri game_id))
+          else render_forbidden
+        | None -> render_forbidden)
     | Route.Game_show (game_id) -> (
         match session.player_id with
         | Some (_) ->
