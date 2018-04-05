@@ -34,13 +34,13 @@ let meta_content = name => {
 
 [@bs.get] external host : Dom.location => string = "";
 
-let ws_url = () =>
+let path_parts = () =>
   switch ([%external window]) {
-  | None => []
+  | None => Array.make(0, "")
   | Some((window: Dom.window)) =>
     switch (window |> location |> pathname) {
     | ""
-    | "/" => []
+    | "/" => Array.make(0, "")
     | raw =>
       /* remove the preceeding /, which every pathname seems to have */
       let raw = Js.String.sliceToEnd(~from=1, raw);
@@ -50,6 +50,48 @@ let ws_url = () =>
         | "/" => Js.String.slice(~from=0, ~to_=-1, raw)
         | _ => raw
         };
-      raw |> Js.String.split("/") |> arrayToList;
+      raw |> Js.String.split("/");
     }
+  };
+
+let game_id = () => {
+  let parts = path_parts();
+  if (Array.length(parts) == 2 && parts[0] == Some("games")) {
+    parts[1];
+  } else {
+    None;
+  };
+};
+
+let hostname = () =>
+  switch ([%external window]) {
+  | None => None
+  | Some((window: Dom.window)) =>
+    switch (window |> location |> host) {
+    | "" => None
+    | host => Some(Js.String.make(host))
+    }
+  };
+
+let my_protocol = () =>
+  switch ([%external window]) {
+  | None => None
+  | Some((window: Dom.window)) =>
+    switch (window |> location |> protocol) {
+    | "" => None
+    | protocol => Some(Js.String.make(protocol))
+    }
+  };
+
+let ws_url = () =>
+  switch (my_protocol(), hostname(), game_id()) {
+  | (Some(p), Some(h), Some(gid)) =>
+    let ws_protocol =
+      if (p == "https:") {
+        "wss:";
+      } else {
+        "ws:";
+      };
+    ws_protocol ++ "//" ++ h ++ "/games/" ++ gid ++ "/ws";
+  | _ => "";
   };

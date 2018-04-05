@@ -23,7 +23,8 @@ module Game = {
         self.send(Message(str));
       };
       let ws_url = Util.ws_url();
-      let ws = WebSockets.WebSocket.make("ws://" ++ ws_url);
+      Js.log("here: " ++ ws_url);
+      let ws = WebSockets.WebSocket.make(ws_url);
       ws
       |> WebSockets.WebSocket.on(
            WebSockets.WebSocket.Message(handleMessage),
