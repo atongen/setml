@@ -35,7 +35,7 @@ let render_forbidden =
     ~body:(Templates.error "Forbidden!")
     ()
 
-let render_not_found () = Cohttp_lwt_unix.Server.respond_not_found ()
+let render_not_found = Cohttp_lwt_unix.Server.respond_not_found ()
 
 let redirect ?headers uri =
   Cohttp_lwt_unix.Server.respond_redirect ?headers ~uri ()
@@ -87,42 +87,45 @@ let make_handler db pubsub =
         match session.player_id with
         | Some (_) ->
           Db.game_exists db game_id >>=? (fun exists ->
-              if exists then (render_game game_id session.token) else render_not_found ()
+              if exists then (render_game game_id session.token) else render_not_found
             )
         | None ->
           Db.create_player db >>=? (fun player_id ->
               let headers = Session.set_player_id_headers session crypto player_id in
               redirect ~headers (Route.game_show_uri game_id)))
     | Route.Ws_show (game_id) -> (
-        match session.player_id with
-        | Some(player_id) -> (
-            Cohttp_lwt.Body.drain_body body
-            >>= fun () ->
-            Websocket_cohttp_lwt.upgrade_connection req (fst conn) (
-              fun f ->
-                match f.opcode with
-                | Frame.Opcode.Close ->
-                  (* websocket onclose *)
-                  ignore (
-                    Db.game_player_presence db game_id player_id false >>=* fun () ->
-                    Clients.remove clients game_id player_id;
-                    if not (Clients.game_has_players clients game_id) then Pubsub.unsubscribe pubsub game_id;
-                    log ("Player " ^ (string_of_int player_id) ^ " left game " ^ string_of_int game_id);
-                  )
-                | _ ->
-                  (* websocket onmessage *)
-                  Clients.game_send clients game_id ("From player " ^ (string_of_int player_id) ^ ": " ^ f.content))
-            >>= fun (resp, body, frames_out_fn) ->
-            (* websocket onopen *)
-            Db.game_player_presence db game_id player_id true >>=? fun () ->
-            ignore (log ("Player " ^ (string_of_int player_id) ^ " joined game " ^ string_of_int game_id));
-            Clients.add clients game_id player_id frames_out_fn;
-            Pubsub.subscribe pubsub game_id;
-            Lwt.return (resp, (body :> Cohttp_lwt.Body.t)))
-        | None -> render_error "Unable to get player id from session!")
+        Db.game_exists db game_id >>=? (fun exists ->
+            if exists then (
+              match session.player_id with
+              | Some(player_id) -> (
+                  Cohttp_lwt.Body.drain_body body
+                  >>= fun () ->
+                  Websocket_cohttp_lwt.upgrade_connection req (fst conn) (
+                    fun f ->
+                      match f.opcode with
+                      | Frame.Opcode.Close ->
+                        (* websocket onclose *)
+                        ignore (
+                          Db.game_player_presence db game_id player_id false >>=* fun () ->
+                          Clients.remove clients game_id player_id;
+                          if not (Clients.game_has_players clients game_id) then Pubsub.unsubscribe pubsub game_id;
+                          log ("Player " ^ (string_of_int player_id) ^ " left game " ^ string_of_int game_id);
+                        )
+                      | _ ->
+                        (* websocket onmessage *)
+                        Clients.game_send clients game_id ("From player " ^ (string_of_int player_id) ^ ": " ^ f.content))
+                  >>= fun (resp, body, frames_out_fn) ->
+                  (* websocket onopen *)
+                  Db.game_player_presence db game_id player_id true >>=? fun () ->
+                  ignore (log ("Player " ^ (string_of_int player_id) ^ " joined game " ^ string_of_int game_id));
+                  Clients.add clients game_id player_id frames_out_fn;
+                  Pubsub.subscribe pubsub game_id;
+                  Lwt.return (resp, (body :> Cohttp_lwt.Body.t)))
+              | None -> render_error "Unable to get player id from session!"
+            ) else render_not_found))
     | Route.Static ->
       File_server.serve ~info:"Served by Cohttp/Lwt" ~docroot:"./public" ~index:"index.html" uri path
-    | Route.Route_not_found -> render_not_found ()
+    | Route.Route_not_found -> render_not_found
 
 let start_server host port () =
   let conn_closed (ch,_) =

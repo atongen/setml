@@ -25,3 +25,8 @@ let meta_content = name => {
   |> List.fromArray
   |> aux;
 };
+
+let ws_url = () => {
+  let url = ReasonReact.Router.dangerouslyGetInitialUrl();
+  String.concat(":", url.path);
+};
