@@ -63,35 +63,32 @@ let game_id = () => {
   };
 };
 
-let hostname = () =>
+let with_window = f =>
   switch ([%external window]) {
   | None => None
-  | Some((window: Dom.window)) =>
-    switch (window |> location |> host) {
-    | "" => None
-    | host => Some(Js.String.make(host))
-    }
+  | Some((window: Dom.window)) => f(window)
   };
 
+let hostname = () =>
+  with_window(window =>
+    switch (window |> location |> host) {
+    | "" => None
+    | host => Some(host)
+    }
+  );
+
 let my_protocol = () =>
-  switch ([%external window]) {
-  | None => None
-  | Some((window: Dom.window)) =>
+  with_window(window =>
     switch (window |> location |> protocol) {
     | "" => None
-    | protocol => Some(Js.String.make(protocol))
+    | protocol => Some(protocol)
     }
-  };
+  );
 
 let ws_url = () =>
   switch (my_protocol(), hostname(), game_id()) {
   | (Some(p), Some(h), Some(gid)) =>
-    let ws_protocol =
-      if (p == "https:") {
-        "wss:";
-      } else {
-        "ws:";
-      };
-    ws_protocol ++ "//" ++ h ++ "/games/" ++ gid ++ "/ws";
-  | _ => "";
+    let ws_protocol = p == "https:" ? "wss:" : "ws:";
+    Some(ws_protocol ++ "//" ++ h ++ "/games/" ++ gid ++ "/ws");
+  | _ => None
   };
