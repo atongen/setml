@@ -19,3 +19,8 @@ After you see the webpack compilation succeed (the `npm run webpack` step), open
 * https://gist.github.com/copy/8f71a129e9b7ff64c262cbabf191e2a5
 * https://github.com/vbmithr/ocaml-websocket
 * https://github.com/mirage/ocaml-cohttp
+
+## client-side resources
+
+* https://react.rocks/tag/Game
+* https://github.com/chriz001/Reacteroids
