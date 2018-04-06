@@ -1,12 +1,23 @@
 open Belt;
 
+type canvas;
+
+[@bs.send] external getContext : (canvas, string) => Canvas2dRe.t = "";
+
 module Game = {
   type action =
     | SendMessage(string)
     | ReceiveMessage(string);
+  type screen = {
+    width: int,
+    height: int,
+    ratio: int,
+  };
   type state = {
     messages: list(string),
     ws: ref(option(WebSockets.WebSocket.t)),
+    screen,
+    context: ref(option(Canvas2dRe.t)),
   };
   let component = ReasonReact.reducerComponent("Game");
   let make = _children => {
@@ -24,8 +35,22 @@ module Game = {
         };
         ReasonReact.NoUpdate;
       },
-    initialState: () => {messages: [], ws: ref(None)},
+    initialState: () => {
+      messages: [],
+      ws: ref(None),
+      screen: {
+        width: 800,
+        height: 600,
+        ratio: 1,
+      },
+      context: ref(None),
+    },
     didMount: self => {
+      let myCanvas: canvas = [%bs.raw
+        {| document.getElementById("mycanvas") |}
+      ];
+      let context = getContext(myCanvas, "2d");
+      self.state.context := Some(context);
       let handleMessage = evt => {
         let str = WebSockets.MessageEvent.stringData(evt);
         self.send(ReceiveMessage(str));
@@ -56,6 +81,11 @@ module Game = {
         <ul className="messages">
           (ReasonReact.arrayToElement(List.toArray(messages)))
         </ul>
+        <canvas
+          id="myCanvas"
+          width=(string_of_int(state.screen.width * state.screen.ratio))
+          height=(string_of_int(state.screen.height * state.screen.ratio))
+        />
       </section>;
     },
   };
