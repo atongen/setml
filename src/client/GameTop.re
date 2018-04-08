@@ -1,10 +1,6 @@
 open Belt;
 
-type canvas;
-
 let window = Webapi.Dom.window;
-
-[@bs.send] external getContext : (canvas, string) => Canvas2dRe.t = "";
 
 let devicePixelRatio = () : float => [%bs.raw {| window.devicePixelRatio || 1 |}];
 
@@ -31,8 +27,14 @@ type state = {
   messages: list(string),
   ws: ref(option(WebSockets.WebSocket.t)),
   screen,
-  context: ref(option(Canvas2dRe.t)),
 };
+
+let handleMessage = (evt, self) => {
+  let str = WebSockets.MessageEvent.stringData(evt);
+  self.ReasonReact.send(ReceiveMessage(str));
+};
+
+let handleResize = (evt, self) => self.ReasonReact.send(Resize);
 
 let component = ReasonReact.reducerComponent("Game");
 
@@ -41,6 +43,7 @@ let make = _children => {
   reducer: (action, state) =>
     switch (action) {
     | ReceiveMessage(message) =>
+      Js.log("Got message: " ++ message);
       let messages = state.messages @ [message];
       ReasonReact.Update({...state, messages});
     | SendMessage(message) =>
@@ -53,42 +56,34 @@ let make = _children => {
       Js.log("resizing");
       ReasonReact.Update({...state, screen: getScreen()});
     },
-  initialState: () => {messages: [], ws: ref(None), screen: getScreen(), context: ref(None)},
+  initialState: () => {messages: [], ws: ref(None), screen: getScreen()},
   didMount: self => {
-    let myCanvas: canvas = [%bs.raw {| document.getElementById("myCanvas") |}];
-    let context = getContext(myCanvas, "2d");
-    self.state.context := Some(context);
-    let handleMessage = evt => {
-      let str = WebSockets.MessageEvent.stringData(evt);
-      self.send(ReceiveMessage(str));
-      switch (self.state.context) {
-      | {contents: Some(ctx)} =>
-        Canvas2dRe.setFillStyle(ctx, Canvas2dRe.String, "red");
-        Canvas2dRe.fillRect(~x=25.0, ~y=75.0, ~h=100.0, ~w=100.0, ctx);
-      | _ => Js.log("Unable to draw: No canvas context!")
-      };
-    };
     switch (Util.ws_url()) {
     | Some(ws_url) =>
       let ws = WebSockets.WebSocket.make(ws_url);
-      ws |> WebSockets.WebSocket.on(WebSockets.WebSocket.Message(handleMessage)) |> ignore;
       self.state.ws := Some(ws);
     | None => Js.log("Unable to get websocket url!")
     };
-    let handleResize = (_) => self.send(Resize);
-    WindowRe.addEventListener("resize", handleResize, window);
     ReasonReact.NoUpdate;
   },
+  subscriptions: self => [
+    Sub(
+      () => WindowRe.addEventListener("resize", self.handle(handleResize), window),
+      (_) => WindowRe.removeEventListener("resize", self.handle(handleResize), window),
+    ),
+    Sub(
+        () => switch(self.state.ws) {
+        | {contents: Some(ws)} =>
+            WebSockets.WebSocket.(
+                ws |> on(Message(self.handle(handleMessage))) |> ignore
+            );
+        | _ => Js.log("Unable to setup websocket message handler");
+        },
+        () => (),
+    ),
+  ],
   render: ({state, send}) =>
-    /*let messages =
-      state.messages
-      |> List.mapWithIndex(_, (i, message) =>
-           <li key=(string_of_int(i))> (ReasonReact.stringToElement(message)) </li>
-         ); */
     <section className="main">
-      /*<button onClick=(_event => send(SendMessage("Did it.")))> (ReasonReact.stringToElement("Do it.")) </button>
-        <ul className="messages"> (ReasonReact.arrayToElement(List.toArray(messages))) </ul>*/
-
         <Board
           name="myCanvas"
           width=(size_of_ratio(state.screen.width, state.screen.ratio))
