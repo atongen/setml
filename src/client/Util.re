@@ -1,5 +1,22 @@
 open Belt;
 
+let round = v => floor(v +. 0.5);
+
+let debounceOne = (delay, f) => {
+  let timeout = ref(None);
+  v => {
+    let later = () => {
+      timeout := None;
+      f(v);
+    };
+    switch (timeout) {
+    | {contents: None} => ()
+    | {contents: Some(timeoutId)} => Js.Global.clearTimeout(timeoutId)
+    };
+    timeout := Some(Js.Global.setTimeout(later, delay));
+  };
+};
+
 let meta_content = name => {
   let rec aux = c =>
     switch (c) {
