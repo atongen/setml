@@ -111,3 +111,9 @@ let ws_url = () =>
     Some(ws_protocol ++ "//" ++ h ++ "/games/" ++ gid ++ "/ws");
   | _ => None
   };
+
+let game_url = () =>
+  switch (my_protocol(), hostname(), game_id()) {
+  | (Some(p), Some(h), Some(gid)) => Some(p ++ "//" ++ h ++ "/games/" ++ gid)
+  | _ => None
+  };

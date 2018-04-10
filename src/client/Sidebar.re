@@ -1,25 +1,15 @@
 let component = ReasonReact.statelessComponent("Sidebar");
 
+let game_url =
+  switch (Util.game_url()) {
+  | Some(url) => url
+  | None => ""
+  };
+
 let make = (_children, ~top, ~bottom, ~left, ~right, ~summary) => {
   ...component,
-  render: _self => {
-    Js.log(
-      "rendering Sidebar - top: "
-      ++ string_of_int(top)
-      ++ ", bottom: "
-      ++ string_of_int(bottom)
-      ++ ", left: "
-      ++ string_of_int(left)
-      ++ ", right: "
-      ++ string_of_int(right)
-      ++ ", width: "
-      ++ string_of_int(right - left)
-      ++ ", height: "
-      ++ string_of_int(bottom - top)
-      ++ ", summary: "
-      ++ string_of_bool(summary),
-    );
-    <div
+  render: _self =>
+    <section
       id="sidebar"
       style=(
         ReactDOMRe.Style.make(
@@ -32,7 +22,24 @@ let make = (_children, ~top, ~bottom, ~left, ~right, ~summary) => {
           (),
         )
       )>
-      <p> (ReasonReact.stringToElement("Hello!")) </p>
-    </div>;
-  },
+      <div id="header">
+        <h1> <a href="/"> (ReasonReact.stringToElement("SetML")) </a> </h1>
+        <ul>
+          <li>
+            (ReasonReact.stringToElement("Game: "))
+            <a href=game_url> (ReasonReact.stringToElement(game_url)) </a>
+          </li>
+          <li> (ReasonReact.stringToElement("Sets on board: 4")) </li>
+          <li> (ReasonReact.stringToElement("Cards remaining: 81")) </li>
+        </ul>
+        <button> (ReasonReact.stringToElement("Start!")) </button>
+      </div>
+      <div id="scores">
+        <ul>
+          <li> (ReasonReact.stringToElement("Alice: 1")) </li>
+          <li> (ReasonReact.stringToElement("Bob: 2")) </li>
+          <li> (ReasonReact.stringToElement("Carol: 3")) </li>
+        </ul>
+      </div>
+    </section>,
 };
