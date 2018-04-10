@@ -88,7 +88,7 @@ let make = (_children, ~top, ~bottom, ~left, ~right, ~ratio, ~columns, ~rows) =>
     let myCanvas: canvas = [%bs.raw {| document.getElementById("board") |}];
     let context = getContext(myCanvas, "2d");
     self.state.context := Some(context);
-    Canvas2dRe.scale(ratio, ratio, context);
+    /*Canvas2dRe.scale(ratio, ratio, context);*/
     let width = right - left;
     let height = bottom - top;
     reset(context, "black", width, height);

@@ -35,6 +35,7 @@ let make = (_children, ~top, ~bottom, ~left, ~right, ~summary) => {
         <button> (ReasonReact.stringToElement("Start!")) </button>
       </div>
       <div id="scores">
+        <h2> (ReasonReact.stringToElement("Score")) </h2>
         <ul>
           <li> (ReasonReact.stringToElement("Alice: 1")) </li>
           <li> (ReasonReact.stringToElement("Bob: 2")) </li>
