@@ -5,8 +5,7 @@ type canvas;
 [@bs.send] external getContext : (canvas, string) => Canvas2dRe.t = "";
 
 type action =
-  | Click((int, int))
-  | Resize;
+  | Click((int, int));
 
 type state = {
   num: int,
@@ -25,18 +24,6 @@ let randomColor = () => {
 };
 
 let drawBlock = (ctx, color, x, y, w, h) => {
-  Js.log(
-    "Drawing block - color: "
-    ++ color
-    ++ ", x: "
-    ++ string_of_float(x)
-    ++ ", y: "
-    ++ string_of_float(y)
-    ++ ", w: "
-    ++ string_of_float(w)
-    ++ ", h: "
-    ++ string_of_float(h),
-  );
   Canvas2dRe.setFillStyle(ctx, Canvas2dRe.String, color);
   Canvas2dRe.fillRect(~x=Util.round(x), ~y=Util.round(y), ~w=Util.round(w), ~h=Util.round(h), ctx);
 };
@@ -47,14 +34,40 @@ let reset = (ctx, color, width, height) => {
   ();
 };
 
+let blockSize = (width, height, columns, rows) => {
+    let idealWidth = width /. columns;
+    let idealHeight = height /. rows;
+    if (idealWidth >= idealHeight) {
+        let xOffset = (width -. idealHeight *. columns) /. 2.;
+        (idealHeight, xOffset, 0.);
+    } else {
+        let yOffset = (height -. idealWidth *. rows) /. 2.;
+        (idealWidth, 0., yOffset);
+    };
+};
+
+let border = (width, height) => {
+    min(width, height) /. 25.;
+};
+
+let drawBorder = (ctx, size, width, height, xOffset, yOffset) => {
+    let x = xOffset +. (size /. 2.);
+    let y = yOffset +. (size /. 2.);
+    let w = width -. 2. *. x;
+    let h = height -. 2. *. y;
+    drawBlock(ctx, randomColor(), x, y, w, h);
+};
+
 let drawBlocks = (ctx, width, height, columns, rows) => {
-  let blockWidth = float_of_int(width) /. float_of_int(columns);
-  let blockHeight = float_of_int(height) /. float_of_int(rows);
+  let (w, h, c, r) = Util.map_quad(float_of_int, (width, height, columns, rows));
+  let b = border(w, h);
+  let (bs, xOffset, yOffset) = blockSize(w -. 2. *. b, h -. 2. *. b, c, r);
+  drawBorder(ctx, b, w, h, xOffset, yOffset);
   for (i in 0 to columns - 1) {
     for (j in 0 to rows - 1) {
-      let x = float_of_int(i) *. blockWidth;
-      let y = float_of_int(j) *. blockHeight;
-      drawBlock(ctx, randomColor(), x, y, blockWidth, blockHeight);
+      let x = float_of_int(i) *. bs;
+      let y = float_of_int(j) *. bs;
+      drawBlock(ctx, randomColor(), x +. xOffset +. b, y +. yOffset +. b, bs, bs);
     };
   };
 };
@@ -82,40 +95,22 @@ let make = (_children, ~top, ~bottom, ~left, ~right, ~ratio, ~columns, ~rows) =>
     drawBlocks(context, width, height, columns, rows);
     ReasonReact.NoUpdate;
   },
-  didUpdate: ({oldSelf, newSelf}) => {
-    switch(newSelf.state.context) {
+  didUpdate: ({oldSelf, newSelf}) =>
+    switch (newSelf.state.context) {
     | {contents: Some(ctx)} =>
-        let width = right - left;
-        let height = bottom - top;
-        reset(ctx, "black", width, height);
-        drawBlocks(ctx, width, height, columns, rows);
-    | _ => Js.log("Unable to redraw blocks: No context found!");
-    };
-  },
+      let width = right - left;
+      let height = bottom - top;
+      reset(ctx, "black", width, height);
+      drawBlocks(ctx, width, height, columns, rows);
+    | _ => Js.log("Unable to redraw blocks: No context found!")
+    },
   render: ({state, send}) => {
-    Js.log("Board - rendering!");
     let width = right - left;
     let height = bottom - top;
-    Js.log(
-      "rendering Board - top: "
-      ++ string_of_int(top)
-      ++ ", bottom: "
-      ++ string_of_int(bottom)
-      ++ ", left: "
-      ++ string_of_int(left)
-      ++ ", right: "
-      ++ string_of_int(right)
-      ++ ", ratio: "
-      ++ string_of_float(ratio)
-      ++ ", width: "
-      ++ string_of_int(width)
-      ++ ", height: "
-      ++ string_of_int(height),
-    );
     <canvas
       id="board"
-      width=string_of_int(width)
-      height=string_of_int(height)
+      width=(string_of_int(width))
+      height=(string_of_int(height))
       style=(
         ReactDOMRe.Style.make(
           ~top=string_of_int(top) ++ "px",

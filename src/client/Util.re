@@ -1,5 +1,7 @@
 open Belt;
 
+let map_quad = (f, (a, b, c, d)) => (f(a), f(b), f(c), f(d));
+
 let round = v => floor(v +. 0.5);
 
 let debounceOne = (delay, f) => {
