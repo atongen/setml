@@ -198,15 +198,16 @@ let make = (_children, ~top, ~bottom, ~left, ~right, ~ratio, ~columns, ~rows) =>
     let myCanvas: canvas = [%bs.raw {| document.getElementById("board") |}];
     let context = getContext(myCanvas, "2d");
     self.state.context := Some(context);
-    reset(context, "black", self.state.dims.width, self.state.dims.height);
+    reset(context, "white", self.state.dims.width, self.state.dims.height);
     drawBoard(context, self.state.dims);
+    Array.forEachWithIndex(Card.deck, (i, c) => Js.log(string_of_int(i) ++ ": " ++ Card.to_string(c)));
     ReasonReact.NoUpdate;
   },
   didUpdate: ({oldSelf, newSelf}) =>
     if (shouldRedraw(oldSelf.state.dims, newSelf.state.dims)) {
       switch (newSelf.state.context) {
       | {contents: Some(ctx)} =>
-        reset(ctx, "black", newSelf.state.dims.width, newSelf.state.dims.height);
+        reset(ctx, "white", newSelf.state.dims.width, newSelf.state.dims.height);
         drawBoard(ctx, newSelf.state.dims);
       | _ => Js.log("Unable to redraw blocks: No context found!")
       };

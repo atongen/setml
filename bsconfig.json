@@ -1,28 +1,31 @@
 {
-  "name": "setml",
-  "bsc-flags": [
-    "-bs-no-version-header",
-    "-bs-super-errors"
-  ],
-  "reason": {
-    "react-jsx": 2
-  },
-  "bs-dependencies": [
-    "reason-react",
-    "bs-fetch",
-    "@glennsl/bs-json",
-    "bs-websockets",
-    "bs-webapi"
-  ],
-  "sources": [
-    {
-      "dir": "src/client",
-      "subdirs": true
-    }
-  ],
-  "package-specs": {
-    "module": "es6",
-    "in-source": false
-  },
-  "refmt": 3
+    "name": "setml",
+    "bsc-flags": [
+        "-bs-no-version-header",
+        "-bs-super-errors"
+    ],
+    "reason": {
+        "react-jsx": 2
+    },
+    "bs-dependencies": [
+        "reason-react",
+        "bs-fetch",
+        "@glennsl/bs-json",
+        "bs-websockets",
+        "bs-webapi"
+    ],
+    "sources": [
+        {
+            "dir": "src",
+            "subdirs": [
+                "client",
+                "shared"
+            ]
+        }
+    ],
+    "package-specs": {
+        "module": "es6",
+        "in-source": false
+    },
+    "refmt": 3
 }
