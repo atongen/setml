@@ -1,9 +1,11 @@
 type t = {
-    encryption_key: Nocrypto.Cipher_block.AES.CBC.key;
-    authentication_key: Cstruct.t
+  encryption_key: Nocrypto.Cipher_block.AES.CBC.key;
+  authentication_key: Cstruct.t
 }
 
-let init () = Nocrypto_entropy_unix.initialize ()
+let init () =
+  Random.self_init ();
+  Nocrypto_entropy_unix.initialize ()
 
 let derive_key secret salt =
   Nocrypto.Hash.mac `SHA256
