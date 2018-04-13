@@ -50,6 +50,7 @@
    (modules (test))
    (libraries (
      lib
+     shared
      oUnit))
    (package setml)))
 

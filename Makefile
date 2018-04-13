@@ -1,6 +1,6 @@
 # Invoke `make` to build, `make clean` to clean up, etc.
 
-.PHONY: default all utop test clean build_server
+.PHONY: default all utop test clean
 
 default: all
 

@@ -70,6 +70,8 @@ let to_string x =
   ", c: " ^ (string_of_int (attr_to_int x.color)) ^
   ", s: " ^ (string_of_int (attr_to_int x.shape)) ^ "}"
 
+let compare x1 x2 = compare (to_int x1) (to_int x2)
+
 let rec range i j = if i > j then [] else i :: (range (i+1) j)
 let (--) i j = range i j
 let deck = 0 -- 80 |> List.map of_int |> Array.of_list
@@ -98,24 +100,55 @@ let complete c0 c1 =
     shape = complete_attr c1.shape c1.shape;
   }
 
-let find_sets idxs =
-  let l = List.length idxs in
-  if l < 3 then []
-  else
-    let sets = Queue.create () in
-    for i = 0 to l - 3 do
-      for j = i + 1 to l - 2 do
-        for k = j + 1 to l - 1 do
-          if is_set_idx i j k then Queue.push (i, j, k) sets
-        done
-      done
-    done;
-    let rec aux q ac =
-      if Queue.is_empty q then ac else
-        aux q ((Queue.pop q) :: ac)
-    in
-    List.rev (aux sets [])
+let combinations l k =
+  let rec aux l acc k =
+    match k with
+    | 0 -> [[]]
+    | _ ->
+      match l with
+      | [] -> acc
+      | x :: xs ->
+        let rec accmap acc f = function
+          | [] -> acc
+          | x :: xs -> accmap ((f x) :: acc) f xs
+        in
+        let newacc = accmap acc (fun z -> x :: z) (aux xs [] (k - 1))
+        in aux xs newacc k
+  in aux l [] k
 
-let count_sets idxs = List.length (find_sets idxs)
+let triples l =
+  let s = List.sort_uniq compare l in
+  let arrays = List.map Array.of_list (combinations s 3) in
+  let rec aux acc = function
+    | [] -> acc
+    | hd :: tl -> if Array.length hd = 3 then
+        aux ((hd.(0), hd.(1), hd.(2)) :: acc) tl
+      else aux acc tl
+  in aux [] arrays
 
-let exist_sets idxs = count_sets idxs > 0
+let find_sets cards =
+  let rec aux acc = function
+    | [] -> acc
+    | (c0, c1, c2) as hd :: tl ->
+      if is_set c0 c1 c2 then
+        aux (hd :: acc) tl
+      else
+        aux acc tl
+  in aux [] (triples cards)
+
+let find_sets_idx idxs =
+  List.map of_int idxs |> find_sets
+
+let count_sets cards = List.length (find_sets cards)
+
+let count_sets_idx idxs = List.length (find_sets_idx idxs)
+
+let exist_set cards =
+  let rec aux = function
+    | [] -> false
+    | (c0, c1, c2) :: tl ->
+      if is_set c0 c1 c2 then true
+      else aux tl
+  in aux (triples cards)
+
+let exist_set_idx idxs = List.map of_int idxs |> exist_set
