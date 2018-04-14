@@ -26,13 +26,20 @@ let attr_of_int = function
   | 2 -> AttrTwo
   | _ -> raise (Invalid_argument ("Only 0, 1, or 2 are valid"))
 
+let make n f c s =
+  {
+    num = attr_of_int n;
+    fill = attr_of_int f;
+    color = attr_of_int c;
+    shape = attr_of_int s;
+  }
+
 (* encode from base-10 positive integer to base-3 list of 4 *)
 let base3_list_of_int n =
   let rec aux n ac =
     if n < 0 || n > 80 then
       raise (Invalid_argument ("Only values 0 through 80 are supported"))
-    else if n = 0 then
-      if List.length ac = 0 then [0] else ac
+    else if n = 0 then ac
     else
       let next = n / 3 in
       let remainder = n mod 3 in
@@ -46,23 +53,14 @@ let base3_list_of_int n =
   fill (aux n []) 4 0
 
 let of_int n =
-  let v = base3_list_of_int n
-          |> List.map attr_of_int
-          |> Array.of_list
-  in
-  {
-    num = v.(0);
-    fill = v.(1);
-    color = v.(2);
-    shape = v.(3);
-  }
+  let v = base3_list_of_int n |> Array.of_list in
+  make v.(0) v.(1) v.(2) v.(3)
 
 let to_int x =
-  float_of_int(attr_to_int x.num) ** 4. +.
-  float_of_int(attr_to_int x.fill) ** 3. +.
-  float_of_int(attr_to_int x.color) ** 2. +.
-  float_of_int(attr_to_int x.shape)
-  |> int_of_float
+  (attr_to_int x.num) * 27 +
+  (attr_to_int x.fill) * 9 +
+  (attr_to_int x.color) * 3 +
+  (attr_to_int x.shape)
 
 let to_string x =
   "{ n: " ^ (string_of_int (attr_to_int x.num)) ^
@@ -70,11 +68,20 @@ let to_string x =
   ", c: " ^ (string_of_int (attr_to_int x.color)) ^
   ", s: " ^ (string_of_int (attr_to_int x.shape)) ^ "}"
 
-let compare x1 x2 = compare (to_int x1) (to_int x2)
+let compare x0 x1 = compare (to_int x0) (to_int x1)
 
-let rec range i j = if i > j then [] else i :: (range (i+1) j)
-let (--) i j = range i j
-let deck = 0 -- 80 |> List.map of_int |> Array.of_list
+let equal x0 x1 =
+  List.for_all (fun f -> f x0 == f x1) [num; fill; color; shape]
+
+let rec range i j = if i > j then [] else of_int i :: (range (i+1) j)
+
+module Infix = struct
+  let (--) i j = range i j
+end
+
+include Infix
+
+let deck = 0 -- 80 |> Array.of_list
 
 let is_set c0 c1 c2 =
   List.for_all (fun f ->
@@ -82,8 +89,7 @@ let is_set c0 c1 c2 =
       (f c0 != f c1 && f c1 != f c2 && f c0 != f c2)
     ) [num; fill; color; shape]
 
-let is_set_idx idx0 idx1 idx2 =
-  is_set deck.(idx0) deck.(idx1) deck.(idx2)
+let is_triple_set (c0, c1, c2) = is_set c0 c1 c2
 
 let complete_attr a0 a1 =
   match (a0, a1) with
@@ -97,7 +103,7 @@ let complete c0 c1 =
     num = complete_attr c0.num c1.num;
     fill = complete_attr c0.fill c1.fill;
     color = complete_attr c0.color c1.color;
-    shape = complete_attr c1.shape c1.shape;
+    shape = complete_attr c0.shape c1.shape;
   }
 
 let combinations l k =
@@ -116,39 +122,46 @@ let combinations l k =
         in aux xs newacc k
   in aux l [] k
 
-let triples l =
-  let s = List.sort_uniq compare l in
+let rec combinations_alt l k =
+  if k <= 0 then [ [] ]
+  else match l with
+    | [] -> []
+    | hd :: tl ->
+      let with_h = List.map (fun l -> hd :: l) (combinations tl (k-1)) in
+      let without_h = combinations tl k in
+      with_h @ without_h
+
+let triples cards =
+  let s = List.sort_uniq compare cards in
   let arrays = List.map Array.of_list (combinations s 3) in
   let rec aux acc = function
     | [] -> acc
     | hd :: tl -> if Array.length hd = 3 then
         aux ((hd.(0), hd.(1), hd.(2)) :: acc) tl
-      else aux acc tl
+      else
+        raise (Invalid_argument("Triple combination with length other than 3"))
   in aux [] arrays
 
-let find_sets cards =
-  let rec aux acc = function
-    | [] -> acc
-    | (c0, c1, c2) as hd :: tl ->
-      if is_set c0 c1 c2 then
-        aux (hd :: acc) tl
-      else
-        aux acc tl
-  in aux [] (triples cards)
+let find_sets cards = List.filter is_triple_set (triples cards)
 
-let find_sets_idx idxs =
-  List.map of_int idxs |> find_sets
+let find_sets_idx idxs = List.map of_int idxs |> find_sets
+
+let find_non_sets cards = List.filter (fun x -> not (is_triple_set x)) (triples cards)
+
+let find_non_sets_idx idxs = List.map of_int idxs |> find_non_sets
 
 let count_sets cards = List.length (find_sets cards)
 
 let count_sets_idx idxs = List.length (find_sets_idx idxs)
 
-let exist_set cards =
-  let rec aux = function
-    | [] -> false
-    | (c0, c1, c2) :: tl ->
-      if is_set c0 c1 c2 then true
-      else aux tl
-  in aux (triples cards)
+let count_non_sets cards = List.length (find_non_sets cards)
 
-let exist_set_idx idxs = List.map of_int idxs |> exist_set
+let count_non_sets_idx idxs = List.length (find_non_sets_idx idxs)
+
+let exists_set cards = List.exists is_triple_set (triples cards)
+
+let exists_set_idx idxs = List.map of_int idxs |> exists_set
+
+let exists_non_set cards = List.exists (fun x -> not (is_triple_set x)) (triples cards)
+
+let exists_non_set_idx idxs = List.map of_int idxs |> exists_non_set

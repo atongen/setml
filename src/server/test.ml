@@ -30,7 +30,6 @@ let ae ~printer exp got _test_ctxt = assert_equal ~printer exp got
 let ase exp got _test_ctxt = assert_equal ~printer:sp exp got
 let aie exp got _test_ctxt = assert_equal ~printer:string_of_int exp got
 let ab msg got _test_ctxt = assert_bool msg got
-let abf msg got _test_ctxt = assert_bool msg (not got)
 let af msg _test_ctxt = assert_failure msg
 
 let crypto_encode_decode_tests =
@@ -252,7 +251,51 @@ let base36_decode_tests =
   in
   cases_of check base36_cases
 
+
+let triple_to_cards = function
+    (a, b, c) -> (Card.of_int a, Card.of_int b, Card.of_int c)
+
+(* all combinations of first 9 cards *)
+let set_yes_list = [
+  (0, 1, 2); (0, 3, 6); (0, 4, 8);
+  (1, 3, 8); (1, 4, 7); (1, 5, 6);
+  (2, 3, 7); (2, 4, 6); (2, 5, 8);
+  (3, 4, 5); (6, 7, 8); (0, 5, 7);
+]
+
+let set_yes_cards = List.map triple_to_cards set_yes_list
+
+let set_no_list = [
+  (0, 1, 3); (0, 1, 4); (0, 1, 5);
+  (0, 1, 6); (0, 1, 7); (0, 1, 8);
+  (0, 2, 3); (0, 2, 4); (0, 2, 5);
+  (0, 2, 6); (0, 2, 7); (0, 2, 8);
+  (0, 3, 4); (0, 3, 5); (0, 3, 7);
+  (0, 3, 8); (0, 4, 5); (0, 4, 6);
+  (0, 4, 7); (0, 5, 6); (0, 5, 8);
+  (0, 6, 7); (0, 6, 8); (0, 7, 8);
+  (1, 2, 3); (1, 2, 4); (1, 2, 5);
+  (1, 2, 6); (1, 2, 7); (1, 2, 8);
+  (1, 3, 4); (1, 3, 5); (1, 3, 6);
+  (1, 3, 7); (1, 4, 5); (1, 4, 6);
+  (1, 4, 8); (1, 5, 7); (1, 5, 8);
+  (1, 6, 7); (1, 6, 8); (1, 7, 8);
+  (2, 3, 4); (2, 3, 5); (2, 3, 6);
+  (2, 3, 8); (2, 4, 5); (2, 4, 7);
+  (2, 4, 8); (2, 5, 6); (2, 5, 7);
+  (2, 6, 7); (2, 6, 8); (2, 7, 8);
+  (3, 4, 6); (3, 4, 7); (3, 4, 8);
+  (3, 5, 6); (3, 5, 7); (3, 5, 8);
+  (3, 6, 7); (3, 6, 8); (3, 7, 8);
+  (4, 5, 6); (4, 5, 7); (4, 5, 8);
+  (4, 6, 7); (4, 6, 8); (4, 7, 8);
+  (5, 6, 7); (5, 6, 8); (5, 7, 8);
+]
+
+let set_no_cards = List.map triple_to_cards set_no_list
+
 let cards_tests =
+  let open CCList.Infix in
   [
     test_case (aie 81 (Array.length Card.deck));
 
@@ -271,13 +314,15 @@ let cards_tests =
     test_case (ase "{ n: 2, f: 0, c: 0, s: 0}" (Card.to_string (Card.deck.(54))));
 
     test_case (ase "{ n: 2, f: 2, c: 2, s: 2}" (Card.to_string (Card.deck.(80))));
+
+    test_case (aie (List.length set_yes_list) (Card.count_sets_idx (0 --^ 9)));
+    test_case (aie (List.length set_no_list) (Card.count_non_sets_idx (0 --^ 9)));
   ]
 
 let set_desc prefix c0 c1 c2 =
   let str_lst = List.map (fun c -> Card.to_string c) [c0; c1; c2] in
   prefix ^ ": " ^ String.concat ", " str_lst
 
-(* TODO: this FAILS! *)
 let cards_complete_sets_tests =
   let check(idx0, idx1) =
     let c0 = Card.deck.(idx0) in
@@ -296,48 +341,21 @@ let cards_complete_sets_tests =
   cases_of check cases
 
 let cards_is_set_tests =
+  let open CCList.Infix in
   let check (idx0, idx1, idx2, exp) =
     let (c0, c1, c2) = (Card.deck.(idx0), Card.deck.(idx1), Card.deck.(idx2)) in
     let s = Card.is_set c0 c1 c2 in
-    if exp then
-      let desc = set_desc "expected YES set: " c0 c1 c2 in
-      ab desc s
-    else
-      let desc = set_desc "expected NO set: " c0 c1 c2 in
-      abf desc s
+    let str = if exp then "expected YES set: " else "expected NO set: " in
+    let desc = set_desc str c0 c1 c2 in
+    ab desc (s == exp)
   in
-  (* all combinations of first 9 cards *)
-  cases_of check [
-    (0, 1, 2, true); (0, 3, 6, true); (0, 4, 8, true);
-    (1, 3, 8, true); (1, 4, 7, true); (1, 5, 6, true);
-    (2, 3, 7, true); (2, 4, 6, true); (2, 5, 8, true);
-    (3, 4, 5, true); (6, 7, 8, true); (0, 5, 7, true);
-
-    (0, 1, 3, false); (0, 1, 4, false); (0, 1, 5, false);
-    (0, 1, 6, false); (0, 1, 7, false); (0, 1, 8, false);
-    (0, 2, 3, false); (0, 2, 4, false); (0, 2, 5, false);
-    (0, 2, 6, false); (0, 2, 7, false); (0, 2, 8, false);
-    (0, 3, 4, false); (0, 3, 5, false); (0, 3, 7, false);
-    (0, 3, 8, false); (0, 4, 5, false); (0, 4, 6, false);
-    (0, 4, 7, false); (0, 5, 6, false); (0, 5, 8, false);
-    (0, 6, 7, false); (0, 6, 8, false); (0, 7, 8, false);
-    (1, 2, 3, false); (1, 2, 4, false); (1, 2, 5, false);
-    (1, 2, 6, false); (1, 2, 7, false); (1, 2, 8, false);
-    (1, 3, 4, false); (1, 3, 5, false); (1, 3, 6, false);
-    (1, 3, 7, false); (1, 4, 5, false); (1, 4, 6, false);
-    (1, 4, 8, false); (1, 5, 7, false); (1, 5, 8, false);
-    (1, 6, 7, false); (1, 6, 8, false); (1, 7, 8, false);
-    (2, 3, 4, false); (2, 3, 5, false); (2, 3, 6, false);
-    (2, 3, 8, false); (2, 4, 5, false); (2, 4, 7, false);
-    (2, 4, 8, false); (2, 5, 6, false); (2, 5, 7, false);
-    (2, 6, 7, false); (2, 6, 8, false); (2, 7, 8, false);
-    (3, 4, 6, false); (3, 4, 7, false); (3, 4, 8, false);
-    (3, 5, 6, false); (3, 5, 7, false); (3, 5, 8, false);
-    (3, 6, 7, false); (3, 6, 8, false); (3, 7, 8, false);
-    (4, 5, 6, false); (4, 5, 7, false); (4, 5, 8, false);
-    (4, 6, 7, false); (4, 6, 8, false); (4, 7, 8, false);
-    (5, 6, 7, false); (5, 6, 8, false); (5, 7, 8, false);
-  ]
+  let idx_triple_to_case v = function (a, b, c) -> (a, b, c, v) in
+  let set_cases = [
+    (set_yes_list >|= idx_triple_to_case true);
+    (set_no_list >|= idx_triple_to_case false);
+  ] in
+  let cases = CCList.fold_right (@) set_cases [] in
+  cases_of check cases
 
 let suite =
   "All" >::: [
