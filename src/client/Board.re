@@ -175,15 +175,18 @@ let make = (_children, ~top, ~bottom, ~left, ~right, ~ratio, ~columns, ~rows) =>
         if (oldIdx == newIdx) {
           ReasonReact.NoUpdate;
         } else {
-          Js.log("Started hovering " ++ string_of_int(newIdx) ++ ", stopped hovering " ++ string_of_int(oldIdx));
-          ReasonReact.Update({...state, hovered: Some(newIdx)});
+          /*Js.log("Started hovering " ++ string_of_int(newIdx) ++ ", stopped hovering " ++ string_of_int(oldIdx));*/
+          ReasonReact.Update({
+            ...state,
+            hovered: Some(newIdx),
+          });
         }
       | (Some(oldIdx), None) =>
-        Js.log("Stopped hovering " ++ string_of_int(oldIdx));
-        ReasonReact.Update({...state, hovered: None});
+        /*Js.log("Stopped hovering " ++ string_of_int(oldIdx));*/
+        ReasonReact.Update({...state, hovered: None})
       | (None, Some(newIdx)) =>
-        Js.log("Started hovering " ++ string_of_int(newIdx));
-        ReasonReact.Update({...state, hovered: Some(newIdx)});
+        /*Js.log("Started hovering " ++ string_of_int(newIdx));*/
+        ReasonReact.Update({...state, hovered: Some(newIdx)})
       | (None, None) => ReasonReact.NoUpdate
       };
     },
@@ -200,7 +203,9 @@ let make = (_children, ~top, ~bottom, ~left, ~right, ~ratio, ~columns, ~rows) =>
     self.state.context := Some(context);
     reset(context, "white", self.state.dims.width, self.state.dims.height);
     drawBoard(context, self.state.dims);
-    Array.forEach(Game_deck.make(12), c => Js.log(string_of_int(Card.to_int(c)) ++ ": " ++ Card.to_string(c)));
+    let deck = Game_deck.make(12, 45);
+    Js.log("Length: " ++ string_of_int(Array.length(deck)));
+    Array.forEach(deck, c => Js.log(string_of_int(Card.to_int(c)) ++ ": " ++ Card.to_string(c)));
     ReasonReact.NoUpdate;
   },
   didUpdate: ({oldSelf, newSelf}) =>
