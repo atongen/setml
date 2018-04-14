@@ -200,7 +200,7 @@ let make = (_children, ~top, ~bottom, ~left, ~right, ~ratio, ~columns, ~rows) =>
     self.state.context := Some(context);
     reset(context, "white", self.state.dims.width, self.state.dims.height);
     drawBoard(context, self.state.dims);
-    Array.forEachWithIndex(Card.deck, (i, c) => Js.log(string_of_int(i) ++ ": " ++ Card.to_string(c)));
+    Array.forEach(Game_deck.make(12), c => Js.log(string_of_int(Card.to_int(c)) ++ ": " ++ Card.to_string(c)));
     ReasonReact.NoUpdate;
   },
   didUpdate: ({oldSelf, newSelf}) =>

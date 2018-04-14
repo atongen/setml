@@ -251,6 +251,7 @@ let base36_decode_tests =
   in
   cases_of check base36_cases
 
+let deck = Card.deck ()
 
 let triple_to_cards = function
     (a, b, c) -> (Card.of_int a, Card.of_int b, Card.of_int c)
@@ -297,23 +298,23 @@ let set_no_cards = List.map triple_to_cards set_no_list
 let cards_tests =
   let open CCList.Infix in
   [
-    test_case (aie 81 (Array.length Card.deck));
+    test_case (aie 81 (Array.length deck));
 
-    test_case (ase "{ n: 0, f: 0, c: 0, s: 0}" (Card.to_string (Card.deck.(0))));
+    test_case (ase "{ n: 0, f: 0, c: 0, s: 0}" (Card.to_string (deck.(0))));
 
-    test_case (ase "{ n: 0, f: 0, c: 0, s: 1}" (Card.to_string (Card.deck.(1))));
-    test_case (ase "{ n: 0, f: 0, c: 0, s: 2}" (Card.to_string (Card.deck.(2))));
+    test_case (ase "{ n: 0, f: 0, c: 0, s: 1}" (Card.to_string (deck.(1))));
+    test_case (ase "{ n: 0, f: 0, c: 0, s: 2}" (Card.to_string (deck.(2))));
 
-    test_case (ase "{ n: 0, f: 0, c: 1, s: 0}" (Card.to_string (Card.deck.(3))));
-    test_case (ase "{ n: 0, f: 0, c: 2, s: 0}" (Card.to_string (Card.deck.(6))));
+    test_case (ase "{ n: 0, f: 0, c: 1, s: 0}" (Card.to_string (deck.(3))));
+    test_case (ase "{ n: 0, f: 0, c: 2, s: 0}" (Card.to_string (deck.(6))));
 
-    test_case (ase "{ n: 0, f: 1, c: 0, s: 0}" (Card.to_string (Card.deck.(9))));
-    test_case (ase "{ n: 0, f: 2, c: 0, s: 0}" (Card.to_string (Card.deck.(18))));
+    test_case (ase "{ n: 0, f: 1, c: 0, s: 0}" (Card.to_string (deck.(9))));
+    test_case (ase "{ n: 0, f: 2, c: 0, s: 0}" (Card.to_string (deck.(18))));
 
-    test_case (ase "{ n: 1, f: 0, c: 0, s: 0}" (Card.to_string (Card.deck.(27))));
-    test_case (ase "{ n: 2, f: 0, c: 0, s: 0}" (Card.to_string (Card.deck.(54))));
+    test_case (ase "{ n: 1, f: 0, c: 0, s: 0}" (Card.to_string (deck.(27))));
+    test_case (ase "{ n: 2, f: 0, c: 0, s: 0}" (Card.to_string (deck.(54))));
 
-    test_case (ase "{ n: 2, f: 2, c: 2, s: 2}" (Card.to_string (Card.deck.(80))));
+    test_case (ase "{ n: 2, f: 2, c: 2, s: 2}" (Card.to_string (deck.(80))));
 
     test_case (aie (List.length set_yes_list) (Card.count_sets_idx (0 --^ 9)));
     test_case (aie (List.length set_no_list) (Card.count_non_sets_idx (0 --^ 9)));
@@ -325,8 +326,8 @@ let set_desc prefix c0 c1 c2 =
 
 let cards_complete_sets_tests =
   let check(idx0, idx1) =
-    let c0 = Card.deck.(idx0) in
-    let c1 = Card.deck.(idx1) in
+    let c0 = deck.(idx0) in
+    let c1 = deck.(idx1) in
     let c2 = Card.complete c0 c1 in
     let desc = set_desc "expected set: " c0 c1 c2 in
     let s = Card.is_set c0 c1 c2 in
@@ -343,7 +344,7 @@ let cards_complete_sets_tests =
 let cards_is_set_tests =
   let open CCList.Infix in
   let check (idx0, idx1, idx2, exp) =
-    let (c0, c1, c2) = (Card.deck.(idx0), Card.deck.(idx1), Card.deck.(idx2)) in
+    let (c0, c1, c2) = (deck.(idx0), deck.(idx1), deck.(idx2)) in
     let s = Card.is_set c0 c1 c2 in
     let str = if exp then "expected YES set: " else "expected NO set: " in
     let desc = set_desc str c0 c1 c2 in

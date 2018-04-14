@@ -81,7 +81,7 @@ end
 
 include Infix
 
-let deck = 0 -- 80 |> Array.of_list
+let deck () = 0 -- 80 |> Array.of_list
 
 let is_set c0 c1 c2 =
   List.for_all (fun f ->

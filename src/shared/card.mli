@@ -35,7 +35,7 @@ module Infix : sig
   val (--) : int -> int -> t list
 end
 
-val deck : t array
+val deck : unit -> t array
 
 val is_set : t -> t -> t -> bool
 
