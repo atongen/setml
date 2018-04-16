@@ -27,25 +27,22 @@ let make board_size m =
   let a = Card.deck () in
   let r = a |> knuth_shuffle |> Array.to_list in
   let rec aux acc s m = function
-    | [] ->
-      acc
+    | [] -> acc
     | (hd :: tl) as l ->
       let board = firstk s l in
-      if List.length board < s then (
+      if List.length board < s then
         acc @ l
-      ) else if Card.exists_set board then (
+      else if Card.exists_set board then
         (* there is a set on the board, move on *)
         aux (hd :: acc) s m tl
-      ) else if m < 0 || List.length l <= m then (
-        if Card.exists_set l then (
+      else if m < 0 || List.length l <= m then
+        if Card.exists_set l then
           (* no set on board, but one exists in remainder of deck, shuffle and retry *)
           aux acc s m (shuffle l)
-        ) else (
+        else
           (* no set exists in rest of list, return current results *)
           acc @ l
-        )
-      ) else (
+      else
         aux [] s m (a |> knuth_shuffle |> Array.to_list)
-      )
   in
-  aux [] board_size m r |> Array.of_list
+  aux [] board_size m r

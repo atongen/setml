@@ -45,8 +45,8 @@ create table games_players (
     primary key (game_id, player_id)
 );
 
-create index idx_games_players_on_game_id on games_players using btree (game_id);
-create index idx_games_players_on_player_id on games_players using btree (player_id);
+create index idx_0000 on games_players using btree (game_id);
+create index idx_0001 on games_players using btree (player_id);
 
 create or replace function games_players_present_change_notify() returns trigger AS $$
 begin
@@ -66,3 +66,16 @@ create trigger games_players_present_change_trigger
     after insert or update
     on games_players
     for each row execute procedure games_players_present_change_notify();
+
+drop table if exists game_cards cascade;
+
+create table game_cards (
+    id serial not null primary key,
+    game_id integer not null references games (id)
+        on delete cascade,
+    idx integer not null,
+    card_id integer not null
+);
+
+create unique index idx_0002 on game_cards using btree (game_id,idx);
+create unique index idx_0003 on game_cards using btree (game_id,card_id);

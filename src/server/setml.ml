@@ -78,10 +78,11 @@ let make_handler db pubsub =
         Cohttp_lwt.Body.to_string body >>= fun myBody ->
         match Util.form_value myBody "token" with
         | Some (token) ->
-          if session.token = token then
-            Db.create_game db >>=? (fun game_id ->
-                redirect (Route.game_show_uri game_id))
-          else render_forbidden
+          if session.token = token then (
+            Db.create_game db >>=? fun game_id ->
+            Db.create_game_cards db game_id >>=? fun () ->
+            redirect (Route.game_show_uri game_id)
+          ) else render_forbidden
         | None -> render_forbidden)
     | Route.Game_show (game_id) -> (
         match session.player_id with

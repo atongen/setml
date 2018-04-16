@@ -203,8 +203,8 @@ let make = (_children, ~top, ~bottom, ~left, ~right, ~ratio, ~columns, ~rows) =>
     self.state.context := Some(context);
     reset(context, "white", self.state.dims.width, self.state.dims.height);
     drawBoard(context, self.state.dims);
-    let deck = Game_deck.make(12, -1);
-    /*Js.log("Length: " ++ string_of_int(Array.length(deck)));
+    /*let deck = Game_deck.make(12, -1);
+      Js.log("Length: " ++ string_of_int(Array.length(deck)));
       Array.forEach(deck, c => Js.log(string_of_int(Card.to_int(c)) ++ ": " ++ Card.to_string(c)));*/
     ReasonReact.NoUpdate;
   },
