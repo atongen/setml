@@ -78,7 +78,6 @@ let rec range i j = if i > j then [] else of_int i :: (range (i+1) j)
 module Infix = struct
   let (--) i j = range i j
 end
-
 include Infix
 
 let deck () = 0 -- 80 |> Array.of_list
@@ -106,34 +105,9 @@ let complete c0 c1 =
     shape = complete_attr c0.shape c1.shape;
   }
 
-let combinations l k =
-  let rec aux l acc k =
-    match k with
-    | 0 -> [[]]
-    | _ ->
-      match l with
-      | [] -> acc
-      | x :: xs ->
-        let rec accmap acc f = function
-          | [] -> acc
-          | x :: xs -> accmap ((f x) :: acc) f xs
-        in
-        let newacc = accmap acc (fun z -> x :: z) (aux xs [] (k - 1))
-        in aux xs newacc k
-  in aux l [] k
-
-let rec combinations_alt l k =
-  if k <= 0 then [ [] ]
-  else match l with
-    | [] -> []
-    | hd :: tl ->
-      let with_h = List.map (fun l -> hd :: l) (combinations tl (k-1)) in
-      let without_h = combinations tl k in
-      with_h @ without_h
-
 let triples cards =
   let s = List.sort_uniq compare cards in
-  let arrays = List.map Array.of_list (combinations s 3) in
+  let arrays = List.map Array.of_list (Combinatorics.comb0 s 3) in
   let rec aux acc = function
     | [] -> acc
     | hd :: tl -> if Array.length hd = 3 then
@@ -142,26 +116,82 @@ let triples cards =
         raise (Invalid_argument("Triple combination with length other than 3"))
   in aux [] arrays
 
-let find_sets cards = List.filter is_triple_set (triples cards)
+let triple_generator cards =
+  let s = List.sort_uniq compare cards in
+  let gen = Combinatorics.comb_generator s 3 in
+  let tg () =
+    match gen () with
+    | Some(l) ->
+      if List.length l = 3 then
+        let a = Array.of_list l in
+        Some(a.(0), a.(1), a.(2))
+      else
+        raise (Invalid_argument("Triple combination with length other than 3"))
+    | None -> None
+  in
+  tg
+
+let find_sets cards =
+  let tg = triple_generator cards in
+  let rec aux acc = function
+    | Some (triple) -> if is_triple_set triple then
+        aux (triple :: acc) (tg ())
+      else
+        aux acc (tg ())
+    | None -> acc
+  in
+  aux [] (tg ())
 
 let find_sets_idx idxs = List.map of_int idxs |> find_sets
 
-let find_non_sets cards = List.filter (fun x -> not (is_triple_set x)) (triples cards)
+let find_non_sets cards =
+  let tg = triple_generator cards in
+  let rec aux acc = function
+    | Some (triple) -> if not (is_triple_set triple) then
+        aux (triple :: acc) (tg ())
+      else
+        aux acc (tg ())
+    | None -> acc
+  in
+  aux [] (tg ())
 
 let find_non_sets_idx idxs = List.map of_int idxs |> find_non_sets
 
-let count_sets cards = List.length (find_sets cards)
+let count_sets cards =
+  let tg = triple_generator cards in
+  let rec aux acc = function
+    | Some (triple) -> if is_triple_set triple then
+        aux (acc + 1) (tg ())
+      else
+        aux acc (tg ())
+    | None -> acc
+  in
+  aux 0 (tg ())
 
-let count_sets_idx idxs = List.length (find_sets_idx idxs)
+let count_sets_idx idxs = List.map of_int idxs |> count_sets
 
-let count_non_sets cards = List.length (find_non_sets cards)
+let count_non_sets cards =
+  let l = Combinatorics.choose (List.length cards) 3 in
+  l - (count_sets cards)
 
-let count_non_sets_idx idxs = List.length (find_non_sets_idx idxs)
+let count_non_sets_idx idxs = List.map of_int idxs |> count_non_sets
 
-let exists_set cards = List.exists is_triple_set (triples cards)
+let exists_set cards =
+  let tg = triple_generator cards in
+  let rec aux = function
+    | Some (triple) -> if is_triple_set triple then true
+      else aux (tg ())
+    | None -> false
+  in aux (tg ())
 
 let exists_set_idx idxs = List.map of_int idxs |> exists_set
 
-let exists_non_set cards = List.exists (fun x -> not (is_triple_set x)) (triples cards)
+let exists_non_set cards =
+  let tg = triple_generator cards in
+  let rec aux = function
+    | Some (triple) -> if not (is_triple_set triple) then true
+      else aux (tg ())
+    | None -> false
+  in aux (tg ())
 
 let exists_non_set_idx idxs = List.map of_int idxs |> exists_non_set

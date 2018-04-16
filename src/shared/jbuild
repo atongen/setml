@@ -3,4 +3,6 @@
 (library
  ((name shared)
   (modules (
-    card))))
+    card
+    combinatorics
+    game_deck))))
