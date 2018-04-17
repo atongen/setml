@@ -74,8 +74,45 @@ create table game_cards (
     game_id integer not null references games (id)
         on delete cascade,
     idx integer not null,
-    card_id integer not null
+    card_id integer not null,
+    check (idx >= 0 and idx < 81),
+    check (card_id >= 0 and card_id < 81)
 );
 
 create unique index idx_0002 on game_cards using btree (game_id,idx);
 create unique index idx_0003 on game_cards using btree (game_id,card_id);
+
+drop table if exists board_cards cascade;
+
+create table board_cards (
+    id serial not null primary key,
+    game_id integer not null references games (id)
+        on delete cascade,
+    idx integer not null,
+    card_id integer not null,
+    check (idx >= 0 and idx < 12),
+    check (card_id >= 0 and card_id < 81)
+);
+
+create unique index idx_0004 on board_cards using btree (game_id,idx);
+create unique index idx_0005 on board_cards using btree (game_id,card_id);
+
+drop table if exists moves cascade;
+
+create table moves (
+    id serial not null primary key,
+    game_id integer not null references games (id)
+        on delete cascade,
+    player_id integer not null references player (id)
+        on delete cascade,
+    idx0 integer not null,
+    card0_id integer not null,
+    idx1 integer not null,
+    card1_id integer not null,
+    idx2 integer not null,
+    card2_id integer not null,
+    created_at timestamp without time zone not null default now(),
+)
+
+create index idx_0006 on moves using btree (game_id,player_id);
+create index idx_0007 on moves using btree (game_id,created_at);
