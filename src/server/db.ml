@@ -116,22 +116,45 @@ let create_move_query =
     |eos}
 
 let update_board_card_query =
-  Caqti_request.exec Caqti_type.(tup2 int int)
+  let args6 = Caqti_type.(let (&) = tup2 in int & int & int & int & int & int) in
+  Caqti_request.exec args6
     {eos|
-        update board_cards
-        set card_id = ?
-        where id = ?
+        update board_cards as bc set
+        card_id = c.card_id
+        from (values
+            (?, ?),
+            (?, ?),
+            (?, ?)
+        ) as c(id, card_id)
+        where c.id = bc.id;
     |eos}
 
-(* within transaction (Db.start)
-   insert `moves` row
-   update `board_cards` with values from next `game_cards`
-   increment `games`.`card_idx` *)
+let increment_game_card_idx_query =
+    Caqti_request.find Caqti_type.(tup2 int int) Caqti_type.int
+    {eos|
+    update games
+    set card_idx = card_idx + ?
+    where game_id = ?
+    returning card_idx
+    |eos}
+
+let find_game_cards_query =
+    Caqti_request.collect Caqti_type.(tup3 int int int) Caqti_type.int
+    {eos|
+        select card_id
+        from game_cards
+        where game_id = ?
+        and idx >= ?
+        order by idx asc
+        limit ?
+    |eos}
+
 
 let create_move (module Db : Caqti_lwt.CONNECTION) game_id player_id idx0 card0_id idx1 card1_id idx2 card2_id =
   Db.start () >>=? fun () ->
   Db.find create_move_query (player_id, (game_id, (idx0, (card0_id, (idx1, (card1_id, (idx2, card2_id))))))) >>=? fun (bc0_id, bc1_id, bc2_id) ->
-  Db.exec update_board_card_query (1, bc0_id) >>=? fun () ->
-  Db.exec update_board_card_query (1, bc1_id) >>=? fun () ->
-  Db.exec update_board_card_query (1, bc2_id) >>=? fun () ->
+  Db.find increment_game_card_idx_query (game_id, 3) >>=? fun card_idx ->
+  Db.collect_list find_game_cards_query (game_id, card_idx, 3) >>=? fun card_ids_list ->
+  let card_ids = Array.of_list card_ids_list in
+  Db.exec update_board_card_query (card_ids.(0), (bc0_id, (card_ids.(1), (bc1_id, (card_ids.(2), bc2_id))))) >>=? fun () ->
   Db.commit ()
