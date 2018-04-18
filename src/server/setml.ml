@@ -81,6 +81,7 @@ let make_handler db pubsub =
           if session.token = token then (
             Db.create_game db >>=? fun game_id ->
             Db.create_game_cards db game_id >>=? fun () ->
+            Db.create_board_cards db game_id >>=? fun () ->
             redirect (Route.game_show_uri game_id)
           ) else render_forbidden
         | None -> render_forbidden)

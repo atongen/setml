@@ -1,7 +1,7 @@
 drop table if exists players cascade;
 
 create table players (
-    id serial not null primary key,
+    id bigserial not null primary key,
     name character varying(255) not null default '',
     created_at timestamp without time zone default now()
 );
@@ -10,9 +10,9 @@ create table players (
 -- 60_466_175 is 5-char base-36 max (zzzzz)
 -- 58_786_559 unique values
 -- formula is SELECT floor(random()*(max-min+1))+min;
-CREATE OR REPLACE FUNCTION make_game_id() RETURNS integer AS $$
+CREATE OR REPLACE FUNCTION make_game_id() RETURNS bigint AS $$
 DECLARE
-    new_game_id integer;
+    new_game_id bigint;
     done bool;
 BEGIN
     done := false;
@@ -27,7 +27,8 @@ $$ LANGUAGE PLPGSQL VOLATILE;
 drop table if exists games cascade;
 
 create table games (
-    id integer not null primary key default make_game_id(),
+    id bigint not null primary key default make_game_id(),
+    card_idx int not null default 0,
     created_at timestamp without time zone default now(),
     check (id >= 1679616 and id <= 60466175)
 );
@@ -35,9 +36,9 @@ create table games (
 drop table if exists games_players cascade;
 
 create table games_players (
-    game_id integer not null references games (id)
+    game_id bigint not null references games (id)
         on delete cascade,
-    player_id integer not null references players (id)
+    player_id bigint not null references players (id)
         on delete cascade,
     present boolean default true,
     created_at timestamp without time zone not null default now(),
@@ -70,11 +71,11 @@ create trigger games_players_present_change_trigger
 drop table if exists game_cards cascade;
 
 create table game_cards (
-    id serial not null primary key,
-    game_id integer not null references games (id)
+    id bigserial not null primary key,
+    game_id bigint not null references games (id)
         on delete cascade,
-    idx integer not null,
-    card_id integer not null,
+    idx int not null,
+    card_id int not null,
     check (idx >= 0 and idx < 81),
     check (card_id >= 0 and card_id < 81)
 );
@@ -85,11 +86,11 @@ create unique index idx_0003 on game_cards using btree (game_id,card_id);
 drop table if exists board_cards cascade;
 
 create table board_cards (
-    id serial not null primary key,
-    game_id integer not null references games (id)
+    id bigserial not null primary key,
+    game_id bigint not null references games (id)
         on delete cascade,
-    idx integer not null,
-    card_id integer not null,
+    idx int not null,
+    card_id bigint not null,
     check (idx >= 0 and idx < 12),
     check (card_id >= 0 and card_id < 81)
 );
@@ -100,19 +101,19 @@ create unique index idx_0005 on board_cards using btree (game_id,card_id);
 drop table if exists moves cascade;
 
 create table moves (
-    id serial not null primary key,
-    game_id integer not null references games (id)
+    id bigserial not null primary key,
+    game_id bigint not null references games (id)
         on delete cascade,
-    player_id integer not null references player (id)
+    player_id bigint not null references players (id)
         on delete cascade,
-    idx0 integer not null,
-    card0_id integer not null,
-    idx1 integer not null,
-    card1_id integer not null,
-    idx2 integer not null,
-    card2_id integer not null,
-    created_at timestamp without time zone not null default now(),
-)
+    idx0 int not null,
+    card0_id int not null,
+    idx1 int not null,
+    card1_id int not null,
+    idx2 int not null,
+    card2_id int not null,
+    created_at timestamp without time zone not null default now()
+);
 
 create index idx_0006 on moves using btree (game_id,player_id);
 create index idx_0007 on moves using btree (game_id,created_at);
