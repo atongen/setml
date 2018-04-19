@@ -55,7 +55,18 @@
      oUnit))
    (package setml)))
 
+(executable
+  ((name test_db)
+   (public_name test_db)
+   (modules (test_db))
+   (libraries (
+     lib
+     shared))
+   (package setml)))
+
 (alias
  ((name runtest)
-  (deps (test.exe))
+  (deps (
+    test.exe
+    test_db.exe))
   (action (run ${<}))))

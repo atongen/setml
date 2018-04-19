@@ -6,6 +6,8 @@ create table players (
     created_at timestamp without time zone default now()
 );
 
+drop function if exists make_game_id cascade;
+
 --  1_679_616 is 5-char base-36 min (10000)
 -- 60_466_175 is 5-char base-36 max (zzzzz)
 -- 58_786_559 unique values

@@ -8,8 +8,34 @@ let create_game_query =
   Caqti_request.find Caqti_type.unit Caqti_type.int
     "insert into games default values returning id"
 
+let create_game_cards_query game_id =
+  let cards = Game_deck.make 12 (-1) in
+  let ids = List.map Card.to_int cards in
+  let rows = List.mapi (fun idx card_id ->
+      "(" ^ string_of_int game_id ^ ", " ^ string_of_int idx ^ ", " ^ string_of_int card_id ^ ")"
+    ) ids in
+  let query_values = String.concat ", " rows in
+  let query = "insert into game_cards (game_id, idx, card_id) values " ^ query_values ^ ";" in
+  Caqti_request.exec Caqti_type.unit query
+
+let create_board_cards_query =
+  Caqti_request.exec Caqti_type.int
+    {eos|
+    insert into board_cards (game_id, idx, card_id)
+    select game_id, idx, card_id
+    from game_cards
+    where game_id = ?
+    order by idx asc
+    limit 12
+    |eos}
+
 let create_game (module Db : Caqti_lwt.CONNECTION) =
+  Db.start () >>=? fun () ->
   Db.find create_game_query () >>=? fun game_id ->
+  let query = create_game_cards_query game_id in
+  Db.exec query () >>=? fun () ->
+  Db.exec create_board_cards_query game_id >>=? fun () ->
+  Db.commit () >>=? fun () ->
   Lwt.return_ok game_id
 
 let game_exists_query =
@@ -36,43 +62,15 @@ let player_exists (module Db : Caqti_lwt.CONNECTION) player_id =
 let game_player_present_query =
   Caqti_request.exec Caqti_type.(tup3 int int bool)
     {eos|
-    insert into games_players (game_id, player_id, present, updated_at)
-    values (?, ?, ?, now())
-    on conflict (game_id, player_id)
-    do update set present = excluded.present,
-    updated_at = excluded.updated_at;
+        insert into games_players (game_id, player_id, present, updated_at)
+        values (?, ?, ?, now())
+        on conflict (game_id, player_id)
+        do update set present = excluded.present,
+        updated_at = excluded.updated_at;
     |eos}
 
 let game_player_presence (module Db : Caqti_lwt.CONNECTION) game_id player_id present =
   Db.exec game_player_present_query (game_id, player_id, present)
-
-let create_game_cards_query game_id =
-  let cards = Game_deck.make 12 (-1) in
-  let ids = List.map Card.to_int cards in
-  let rows = List.mapi (fun idx card_id ->
-      "(" ^ string_of_int game_id ^ ", " ^ string_of_int idx ^ ", " ^ string_of_int card_id ^ ")"
-    ) ids in
-  let query_values = String.concat ", " rows in
-  let query = "insert into game_cards (game_id, idx, card_id) values " ^ query_values ^ ";" in
-  Caqti_request.exec Caqti_type.unit query
-
-let create_game_cards (module Db : Caqti_lwt.CONNECTION) game_id =
-  let query = create_game_cards_query game_id in
-  Db.exec query ()
-
-let create_board_cards_query =
-  Caqti_request.exec Caqti_type.int
-    {eos|
-    insert into board_cards (game_id, idx, card_id)
-    select game_id, idx, card_id
-    from game_cards
-    where game_id = ?
-    order by idx asc
-    limit 12
-    |eos}
-
-let create_board_cards (module Db : Caqti_lwt.CONNECTION) game_id =
-  Db.exec create_board_cards_query game_id
 
 let create_move_query =
   let args8 = Caqti_type.(let (&) = tup2 in int & int & int & int & int & int & int & int) in
@@ -132,10 +130,10 @@ let update_board_card_query =
 let increment_game_card_idx_query =
     Caqti_request.find Caqti_type.(tup2 int int) Caqti_type.int
     {eos|
-    update games
-    set card_idx = card_idx + ?
-    where game_id = ?
-    returning card_idx
+        update games
+        set card_idx = card_idx + ?
+        where game_id = ?
+        returning card_idx
     |eos}
 
 let find_game_cards_query =
@@ -149,7 +147,6 @@ let find_game_cards_query =
         limit ?
     |eos}
 
-
 let create_move (module Db : Caqti_lwt.CONNECTION) game_id player_id idx0 card0_id idx1 card1_id idx2 card2_id =
   Db.start () >>=? fun () ->
   Db.find create_move_query (player_id, (game_id, (idx0, (card0_id, (idx1, (card1_id, (idx2, card2_id))))))) >>=? fun (bc0_id, bc1_id, bc2_id) ->
@@ -158,3 +155,31 @@ let create_move (module Db : Caqti_lwt.CONNECTION) game_id player_id idx0 card0_
   let card_ids = Array.of_list card_ids_list in
   Db.exec update_board_card_query (card_ids.(0), (bc0_id, (card_ids.(1), (bc1_id, (card_ids.(2), bc2_id))))) >>=? fun () ->
   Db.commit ()
+
+let find_board_cards_query =
+    Caqti_request.collect Caqti_type.int Caqti_type.int
+    {eos|
+        select card_id
+        from board_cards
+        where game_id = ?
+        order by idx asc;
+    |eos}
+
+let find_board_cards (module Db : Caqti_lwt.CONNECTION) game_id =
+    Db.collect_list find_board_cards_query game_id
+
+let find_player_score_query =
+    Caqti_request.collect Caqti_type.int Caqti_type.(tup2 int int)
+    {eos|
+        select player_id, count(*)
+        from moves
+        where game_id = ?
+        group by player_id;
+    |eos}
+
+let delete_all (module Db : Caqti_lwt.CONNECTION) =
+    let make_query q = Caqti_request.exec Caqti_type.unit q in
+    Db.start () >>=? fun () ->
+    Db.exec (make_query "delete from games;") () >>=? fun () ->
+    Db.exec (make_query "delete from players;") () >>=? fun () ->
+    Db.commit ()
