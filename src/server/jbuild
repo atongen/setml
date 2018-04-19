@@ -61,7 +61,8 @@
    (modules (test_db))
    (libraries (
      lib
-     shared))
+     shared
+     oUnit))
    (package setml)))
 
 (alias

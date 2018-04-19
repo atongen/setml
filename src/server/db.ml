@@ -2,7 +2,14 @@ open Lwt.Infix
 open Shared
 
 let (>>=?) m f =
-  m >>= (function | Ok x -> f x | Error err -> Lwt.return (Error err))
+  m >>= function
+    | Ok x -> f x
+    | Error err -> Lwt.return (Error err)
+
+(* used for testing to validate results of other queries *)
+let query_int (module Db : Caqti_lwt.CONNECTION) q =
+    let r = Caqti_request.find Caqti_type.unit Caqti_type.int q in
+    Db.find r ()
 
 let create_game_query =
   Caqti_request.find Caqti_type.unit Caqti_type.int
