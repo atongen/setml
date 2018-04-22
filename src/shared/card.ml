@@ -195,3 +195,31 @@ let exists_non_set cards =
   in aux (tg ())
 
 let exists_non_set_idx idxs = List.map of_int idxs |> exists_non_set
+
+let find_idx x l =
+    let rec aux x c = function
+        | [] -> None
+        | hd::tl -> if (equal hd x) then Some(c) else aux x (c+1) tl
+    in aux x 0 l
+
+let triple_with_indexes cards (c0, c1, c2) =
+    let oc0 = find_idx c0 cards in
+    let oc1 = find_idx c1 cards in
+    let oc2 = find_idx c2 cards in
+    match (oc0, oc1, oc2) with
+        | (Some(idx0), Some(idx1), Some(idx2)) ->
+            Some((
+                (idx0, c0),
+                (idx1, c1),
+                (idx2, c2)
+            ))
+        | _ -> None
+
+let next_set_and_indexes cards =
+  let tg = triple_generator cards in
+  let rec aux = function
+    | Some (triple) -> if is_triple_set triple then
+        triple_with_indexes cards triple
+      else aux (tg ())
+    | None -> None
+  in aux (tg ())

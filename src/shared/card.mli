@@ -64,3 +64,5 @@ val exists_set_idx : int list -> bool
 val exists_non_set : t list -> bool
 
 val exists_non_set_idx : int list -> bool
+
+val next_set_and_indexes : t list -> ((int * t) * (int * t) * (int * t)) option

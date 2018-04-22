@@ -11,6 +11,10 @@ let query_int (module Db : Caqti_lwt.CONNECTION) q =
     let r = Caqti_request.find Caqti_type.unit Caqti_type.int q in
     Db.find r ()
 
+let query_bool (module Db : Caqti_lwt.CONNECTION) q =
+    let r = Caqti_request.find Caqti_type.unit Caqti_type.bool q in
+    Db.find r ()
+
 let create_game_query =
   Caqti_request.find Caqti_type.unit Caqti_type.int
     "insert into games default values returning id"
@@ -85,7 +89,7 @@ let create_move_query =
     {eos|
         insert into moves (
             game_id,
-            ?, -- player_id
+            ?,
             idx0,
             card0_id,
             idx1,
@@ -183,6 +187,9 @@ let find_player_score_query =
         where game_id = ?
         group by player_id;
     |eos}
+
+let find_player_score (module Db : Caqti_lwt.CONNECTION) game_id =
+    Db.collect_list find_player_score_query game_id
 
 let delete_all (module Db : Caqti_lwt.CONNECTION) =
     let make_query q = Caqti_request.exec Caqti_type.unit q in
