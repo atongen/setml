@@ -32,12 +32,12 @@ let create_game_cards_query game_id =
 let create_board_cards_query =
   Caqti_request.exec Caqti_type.int
     {eos|
-    insert into board_cards (game_id, idx, card_id)
-    select game_id, idx, card_id
-    from game_cards
-    where game_id = ?
-    order by idx asc
-    limit 12
+        insert into board_cards (game_id, idx, card_id)
+        select game_id, idx, card_id
+        from game_cards
+        where game_id = ?
+        order by idx asc
+        limit 12
     |eos}
 
 let create_game (module Db : Caqti_lwt.CONNECTION) =
@@ -141,12 +141,12 @@ let find_game_cards_query =
         limit ?
     |eos}
 
+let set_transaction_mode_query mode =
+    Caqti_request.exec Caqti_type.unit (Printf.sprintf "set transaction isolation level %s;" mode)
+
 let create_move (module Db : Caqti_lwt.CONNECTION) game_id player_id idx0 card0_id idx1 card1_id idx2 card2_id =
   Db.start () >>=? fun () ->
-  (*
-   * set local transaction isolation serializable here
-   * SET SESSION CHARACTERISTICS AS TRANSACTION SERIALIZABLE;
-   *)
+  Db.exec (set_transaction_mode_query "serializable") () >>=? fun () ->
   Db.exec create_move_query (game_id, (player_id, (idx0, (card0_id, (idx1, (card1_id, (idx2, card2_id))))))) >>=? fun () ->
   Db.find increment_game_card_idx_query (3, game_id) >>=? fun card_idx ->
   Db.collect_list find_game_cards_query (game_id, card_idx, 3) >>=? fun card_ids_list ->
