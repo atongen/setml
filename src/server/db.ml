@@ -143,7 +143,10 @@ let find_game_cards_query =
 
 let create_move (module Db : Caqti_lwt.CONNECTION) game_id player_id idx0 card0_id idx1 card1_id idx2 card2_id =
   Db.start () >>=? fun () ->
-  (* set local transaction isolation serializable here *)
+  (*
+   * set local transaction isolation serializable here
+   * SET SESSION CHARACTERISTICS AS TRANSACTION SERIALIZABLE;
+   *)
   Db.exec create_move_query (game_id, (player_id, (idx0, (card0_id, (idx1, (card1_id, (idx2, card2_id))))))) >>=? fun () ->
   Db.find increment_game_card_idx_query (3, game_id) >>=? fun card_idx ->
   Db.collect_list find_game_cards_query (game_id, card_idx, 3) >>=? fun card_ids_list ->
