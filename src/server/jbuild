@@ -68,6 +68,5 @@
 (alias
  ((name runtest)
   (deps (
-    test.exe
-    test_db.exe))
+    test.exe))
   (action (run ${<}))))

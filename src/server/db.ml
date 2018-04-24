@@ -23,7 +23,7 @@ let create_game_cards_query game_id =
   let cards = Game_deck.make 12 (-1) in
   let ids = List.map Card.to_int cards in
   let rows = List.mapi (fun idx card_id ->
-      "(" ^ string_of_int game_id ^ ", " ^ string_of_int idx ^ ", " ^ string_of_int card_id ^ ")"
+        Printf.sprintf "(%d,%d,%d)" game_id idx card_id
     ) ids in
   let query_values = String.concat ", " rows in
   let query = "insert into game_cards (game_id, idx, card_id) values " ^ query_values ^ ";" in
@@ -85,57 +85,40 @@ let game_player_presence (module Db : Caqti_lwt.CONNECTION) game_id player_id pr
 
 let create_move_query =
   let args8 = Caqti_type.(let (&) = tup2 in int & int & int & int & int & int & int & int) in
-  Caqti_request.find args8 Caqti_type.(tup3 int int int)
+  Caqti_request.exec args8
     {eos|
         insert into moves (
             game_id,
-            ?,
+            player_id,
             idx0,
             card0_id,
             idx1,
             card1_id,
             idx2,
-            card2_id,
-        )
-        select
-            bc0.game_id as game_id,
-            bc0.idx as idx0,
-            bc0.card_id as card0_id,
-            bc1.idx as idx1,
-            bc1.card_id as card1_id,
-            bc2.idx as idx2,
-            bc2.card_id as card2_id,
-        from board_cards as bc0
-            where bc0.game_id = ?
-            and bc0.idx = ?
-            and bc0.card_id = ?
-        inner join board_cards as bc1
-            where bc1.game_id = bc0.game_id
-            and bc1.idx = ?
-            and bc1.card_id = ?
-        inner join board_cards as bc2
-            where bc2.game_id = bc0.game_id
-            and bc2.idx = ?
-            and bc2.card_id = ?
-        returning (
-            bc0.id,
-            bc1.id,
-            bc2.id
+            card2_id
+        ) values (
+            ?, ?, ?, ?, ?, ?, ?, ?
         );
     |eos}
 
 let update_board_card_query =
-  let args6 = Caqti_type.(let (&) = tup2 in int & int & int & int & int & int) in
-  Caqti_request.exec args6
+  let args10 = Caqti_type.(let (&) = tup2 in int & int & int & int & int & int & int & int & int & int) in
+  Caqti_request.exec args10
     {eos|
-        update board_cards as bc set
-        card_id = c.card_id
+        update board_cards as bc
+        set card_id = moves.new_card_id::int
         from (values
-            (?, ?),
-            (?, ?),
-            (?, ?)
-        ) as c(id, card_id)
-        where c.id = bc.id;
+            (?, ?, ?),
+            (?, ?, ?),
+            (?, ?, ?)
+        ) as moves (
+            idx,
+            old_card_id,
+            new_card_id
+        )
+        where bc.game_id = ?
+            and bc.idx = moves.idx::int
+            and bc.card_id = moves.old_card_id::int;
     |eos}
 
 let increment_game_card_idx_query =
@@ -143,8 +126,8 @@ let increment_game_card_idx_query =
     {eos|
         update games
         set card_idx = card_idx + ?
-        where game_id = ?
-        returning card_idx
+        where id = ?
+        returning card_idx;
     |eos}
 
 let find_game_cards_query =
@@ -160,11 +143,12 @@ let find_game_cards_query =
 
 let create_move (module Db : Caqti_lwt.CONNECTION) game_id player_id idx0 card0_id idx1 card1_id idx2 card2_id =
   Db.start () >>=? fun () ->
-  Db.find create_move_query (player_id, (game_id, (idx0, (card0_id, (idx1, (card1_id, (idx2, card2_id))))))) >>=? fun (bc0_id, bc1_id, bc2_id) ->
-  Db.find increment_game_card_idx_query (game_id, 3) >>=? fun card_idx ->
+  (* set local transaction isolation serializable here *)
+  Db.exec create_move_query (game_id, (player_id, (idx0, (card0_id, (idx1, (card1_id, (idx2, card2_id))))))) >>=? fun () ->
+  Db.find increment_game_card_idx_query (3, game_id) >>=? fun card_idx ->
   Db.collect_list find_game_cards_query (game_id, card_idx, 3) >>=? fun card_ids_list ->
   let card_ids = Array.of_list card_ids_list in
-  Db.exec update_board_card_query (card_ids.(0), (bc0_id, (card_ids.(1), (bc1_id, (card_ids.(2), bc2_id))))) >>=? fun () ->
+  Db.exec update_board_card_query (game_id, (idx0, (card0_id, (card_ids.(0), (idx1, (card1_id, (card_ids.(1), (idx2, (card2_id, card_ids.(2)))))))))) >>=? fun () ->
   Db.commit ()
 
 let find_board_cards_query =

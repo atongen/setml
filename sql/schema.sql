@@ -92,7 +92,7 @@ create table board_cards (
     game_id bigint not null references games (id)
         on delete cascade,
     idx int not null,
-    card_id bigint not null,
+    card_id int not null,
     check (idx >= 0 and idx < 12),
     check (card_id >= 0 and card_id < 81)
 );
