@@ -63,10 +63,11 @@ let to_int x =
   (attr_to_int x.shape)
 
 let to_string x =
-  "{ n: " ^ (string_of_int (attr_to_int x.num)) ^
-  ", f: " ^ (string_of_int (attr_to_int x.fill)) ^
-  ", c: " ^ (string_of_int (attr_to_int x.color)) ^
-  ", s: " ^ (string_of_int (attr_to_int x.shape)) ^ "}"
+  Printf.sprintf "{ n: %d, f: %d, c: %d, s: %d }"
+    (attr_to_int x.num)
+    (attr_to_int x.fill)
+    (attr_to_int x.color)
+    (attr_to_int x.shape)
 
 let compare x0 x1 = compare (to_int x0) (to_int x1)
 
@@ -197,23 +198,23 @@ let exists_non_set cards =
 let exists_non_set_idx idxs = List.map of_int idxs |> exists_non_set
 
 let find_idx x l =
-    let rec aux x c = function
-        | [] -> None
-        | hd::tl -> if (equal hd x) then Some(c) else aux x (c+1) tl
-    in aux x 0 l
+  let rec aux x c = function
+    | [] -> None
+    | hd::tl -> if (equal hd x) then Some(c) else aux x (c+1) tl
+  in aux x 0 l
 
 let triple_with_indexes cards (c0, c1, c2) =
-    let oc0 = find_idx c0 cards in
-    let oc1 = find_idx c1 cards in
-    let oc2 = find_idx c2 cards in
-    match (oc0, oc1, oc2) with
-        | (Some(idx0), Some(idx1), Some(idx2)) ->
-            Some((
-                (idx0, c0),
-                (idx1, c1),
-                (idx2, c2)
-            ))
-        | _ -> None
+  let oc0 = find_idx c0 cards in
+  let oc1 = find_idx c1 cards in
+  let oc2 = find_idx c2 cards in
+  match (oc0, oc1, oc2) with
+  | (Some(idx0), Some(idx1), Some(idx2)) ->
+    Some((
+        (idx0, c0),
+        (idx1, c1),
+        (idx2, c2)
+      ))
+  | _ -> None
 
 let next_set_and_indexes cards =
   let tg = triple_generator cards in

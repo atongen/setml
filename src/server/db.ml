@@ -3,17 +3,17 @@ open Shared
 
 let (>>=?) m f =
   m >>= function
-    | Ok x -> f x
-    | Error err -> Lwt.return (Error err)
+  | Ok x -> f x
+  | Error err -> Lwt.return (Error err)
 
 (* used for testing to validate results of other queries *)
 let query_int (module Db : Caqti_lwt.CONNECTION) q =
-    let r = Caqti_request.find Caqti_type.unit Caqti_type.int q in
-    Db.find r ()
+  let r = Caqti_request.find Caqti_type.unit Caqti_type.int q in
+  Db.find r ()
 
 let query_bool (module Db : Caqti_lwt.CONNECTION) q =
-    let r = Caqti_request.find Caqti_type.unit Caqti_type.bool q in
-    Db.find r ()
+  let r = Caqti_request.find Caqti_type.unit Caqti_type.bool q in
+  Db.find r ()
 
 let create_game_query =
   Caqti_request.find Caqti_type.unit Caqti_type.int
@@ -23,7 +23,7 @@ let create_game_cards_query game_id =
   let cards = Game_deck.make 12 (-1) in
   let ids = List.map Card.to_int cards in
   let rows = List.mapi (fun idx card_id ->
-        Printf.sprintf "(%d,%d,%d)" game_id idx card_id
+      Printf.sprintf "(%d,%d,%d)" game_id idx card_id
     ) ids in
   let query_values = String.concat ", " rows in
   let query = "insert into game_cards (game_id, idx, card_id) values " ^ query_values ^ ";" in
@@ -105,24 +105,24 @@ let update_board_card_query =
   let args10 = Caqti_type.(let (&) = tup2 in int & int & int & int & int & int & int & int & int & int) in
   Caqti_request.exec args10
     {eos|
-        update board_cards as bc
-        set card_id = moves.new_card_id::int
+        update board_cards bc
+        set card_id = m.new_card_id::int
         from (values
             (?, ?, ?),
             (?, ?, ?),
             (?, ?, ?)
-        ) as moves (
+        ) as m (
             idx,
             old_card_id,
             new_card_id
         )
         where bc.game_id = ?
-            and bc.idx = moves.idx::int
-            and bc.card_id = moves.old_card_id::int;
+            and bc.idx = m.idx::int
+            and bc.card_id = m.old_card_id::int;
     |eos}
 
 let increment_game_card_idx_query =
-    Caqti_request.find Caqti_type.(tup2 int int) Caqti_type.int
+  Caqti_request.find Caqti_type.(tup2 int int) Caqti_type.int
     {eos|
         update games
         set card_idx = card_idx + ?
@@ -131,7 +131,7 @@ let increment_game_card_idx_query =
     |eos}
 
 let find_game_cards_query =
-    Caqti_request.collect Caqti_type.(tup3 int int int) Caqti_type.int
+  Caqti_request.collect Caqti_type.(tup3 int int int) Caqti_type.int
     {eos|
         select card_id
         from game_cards
@@ -142,20 +142,21 @@ let find_game_cards_query =
     |eos}
 
 let set_transaction_mode_query mode =
-    Caqti_request.exec Caqti_type.unit (Printf.sprintf "set transaction isolation level %s;" mode)
+  Caqti_request.exec Caqti_type.unit (Printf.sprintf "set transaction isolation level %s;" mode)
 
 let create_move (module Db : Caqti_lwt.CONNECTION) game_id player_id idx0 card0_id idx1 card1_id idx2 card2_id =
   Db.start () >>=? fun () ->
   Db.exec (set_transaction_mode_query "serializable") () >>=? fun () ->
   Db.exec create_move_query (game_id, (player_id, (idx0, (card0_id, (idx1, (card1_id, (idx2, card2_id))))))) >>=? fun () ->
   Db.find increment_game_card_idx_query (3, game_id) >>=? fun card_idx ->
+  ignore (print_endline (Printf.sprintf "card_idx: %d\n" card_idx));
   Db.collect_list find_game_cards_query (game_id, card_idx, 3) >>=? fun card_ids_list ->
   let card_ids = Array.of_list card_ids_list in
-  Db.exec update_board_card_query (game_id, (idx0, (card0_id, (card_ids.(0), (idx1, (card1_id, (card_ids.(1), (idx2, (card2_id, card_ids.(2)))))))))) >>=? fun () ->
+  Db.exec update_board_card_query (idx0, (card0_id, (card_ids.(0), (idx1, (card1_id, (card_ids.(1), (idx2, (card2_id, (card_ids.(2), game_id))))))))) >>=? fun () ->
   Db.commit ()
 
 let find_board_cards_query =
-    Caqti_request.collect Caqti_type.int Caqti_type.int
+  Caqti_request.collect Caqti_type.int Caqti_type.int
     {eos|
         select card_id
         from board_cards
@@ -164,10 +165,10 @@ let find_board_cards_query =
     |eos}
 
 let find_board_cards (module Db : Caqti_lwt.CONNECTION) game_id =
-    Db.collect_list find_board_cards_query game_id
+  Db.collect_list find_board_cards_query game_id
 
 let find_player_score_query =
-    Caqti_request.collect Caqti_type.int Caqti_type.(tup2 int int)
+  Caqti_request.collect Caqti_type.int Caqti_type.(tup2 int int)
     {eos|
         select player_id, count(*)
         from moves
@@ -176,11 +177,15 @@ let find_player_score_query =
     |eos}
 
 let find_player_score (module Db : Caqti_lwt.CONNECTION) game_id =
-    Db.collect_list find_player_score_query game_id
+  Db.collect_list find_player_score_query game_id
 
 let delete_all (module Db : Caqti_lwt.CONNECTION) =
-    let make_query q = Caqti_request.exec Caqti_type.unit q in
-    Db.start () >>=? fun () ->
-    Db.exec (make_query "delete from games;") () >>=? fun () ->
-    Db.exec (make_query "delete from players;") () >>=? fun () ->
-    Db.commit ()
+  let make_query q = Caqti_request.exec Caqti_type.unit q in
+  Db.start () >>=? fun () ->
+  Db.exec (make_query "truncate table games cascade;") () >>=? fun () ->
+  Db.exec (make_query "truncate table players cascade;") () >>=? fun () ->
+  Db.exec (make_query "truncate table games_players cascade;") () >>=? fun () ->
+  Db.exec (make_query "truncate table game_cards cascade;") () >>=? fun () ->
+  Db.exec (make_query "truncate table board_cards cascade;") () >>=? fun () ->
+  Db.exec (make_query "truncate table moves cascade;") () >>=? fun () ->
+  Db.commit ()
