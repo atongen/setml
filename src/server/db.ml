@@ -6,6 +6,8 @@ let (>>=?) m f =
   | Ok x -> f x
   | Error err -> Lwt.return (Error err)
 
+let board_size = 12
+
 (* used for testing to validate results of other queries *)
 let query_int (module Db : Caqti_lwt.CONNECTION) q =
   let r = Caqti_request.find Caqti_type.unit Caqti_type.int q in
@@ -20,7 +22,7 @@ let create_game_query =
     "insert into games default values returning id"
 
 let create_game_cards_query game_id =
-  let cards = Game_deck.make 12 (-1) in
+  let cards = Game_deck.make board_size (-1) in
   let ids = List.map Card.to_int cards in
   let rows = List.mapi (fun idx card_id ->
       Printf.sprintf "(%d,%d,%d)" game_id idx card_id
@@ -30,22 +32,33 @@ let create_game_cards_query game_id =
   Caqti_request.exec Caqti_type.unit query
 
 let create_board_cards_query =
-  Caqti_request.exec Caqti_type.int
+  Caqti_request.exec Caqti_type.(tup2 int int)
     {eos|
         insert into board_cards (game_id, idx, card_id)
         select game_id, idx, card_id
         from game_cards
         where game_id = ?
         order by idx asc
-        limit 12
+        limit ?
     |eos}
+
+let increment_game_card_idx_query =
+  Caqti_request.find Caqti_type.(tup2 int int) Caqti_type.int
+    {eos|
+        update games
+        set card_idx = card_idx + ?
+        where id = ?
+        returning card_idx;
+    |eos}
+
 
 let create_game (module Db : Caqti_lwt.CONNECTION) =
   Db.start () >>=? fun () ->
   Db.find create_game_query () >>=? fun game_id ->
   let query = create_game_cards_query game_id in
   Db.exec query () >>=? fun () ->
-  Db.exec create_board_cards_query game_id >>=? fun () ->
+  Db.exec create_board_cards_query (game_id, board_size) >>=? fun () ->
+  Db.find increment_game_card_idx_query (board_size, game_id) >>=? fun _ ->
   Db.commit () >>=? fun () ->
   Lwt.return_ok game_id
 
@@ -121,15 +134,6 @@ let update_board_card_query =
             and bc.card_id = m.old_card_id::int;
     |eos}
 
-let increment_game_card_idx_query =
-  Caqti_request.find Caqti_type.(tup2 int int) Caqti_type.int
-    {eos|
-        update games
-        set card_idx = card_idx + ?
-        where id = ?
-        returning card_idx;
-    |eos}
-
 let find_game_cards_query =
   Caqti_request.collect Caqti_type.(tup3 int int int) Caqti_type.int
     {eos|
@@ -140,20 +144,6 @@ let find_game_cards_query =
         order by idx asc
         limit ?
     |eos}
-
-let set_transaction_mode_query mode =
-  Caqti_request.exec Caqti_type.unit (Printf.sprintf "set transaction isolation level %s;" mode)
-
-let create_move (module Db : Caqti_lwt.CONNECTION) game_id player_id idx0 card0_id idx1 card1_id idx2 card2_id =
-  Db.start () >>=? fun () ->
-  Db.exec (set_transaction_mode_query "serializable") () >>=? fun () ->
-  Db.exec create_move_query (game_id, (player_id, (idx0, (card0_id, (idx1, (card1_id, (idx2, card2_id))))))) >>=? fun () ->
-  Db.find increment_game_card_idx_query (3, game_id) >>=? fun card_idx ->
-  ignore (print_endline (Printf.sprintf "card_idx: %d\n" card_idx));
-  Db.collect_list find_game_cards_query (game_id, card_idx, 3) >>=? fun card_ids_list ->
-  let card_ids = Array.of_list card_ids_list in
-  Db.exec update_board_card_query (idx0, (card0_id, (card_ids.(0), (idx1, (card1_id, (card_ids.(1), (idx2, (card2_id, (card_ids.(2), game_id))))))))) >>=? fun () ->
-  Db.commit ()
 
 let find_board_cards_query =
   Caqti_request.collect Caqti_type.int Caqti_type.int
@@ -166,6 +156,20 @@ let find_board_cards_query =
 
 let find_board_cards (module Db : Caqti_lwt.CONNECTION) game_id =
   Db.collect_list find_board_cards_query game_id
+
+let set_transaction_mode_query mode =
+  Caqti_request.exec Caqti_type.unit (Printf.sprintf "set transaction isolation level %s;" mode)
+
+let create_move (module Db : Caqti_lwt.CONNECTION) game_id player_id idx0 card0_id idx1 card1_id idx2 card2_id =
+  Db.start () >>=? fun () ->
+  Db.exec (set_transaction_mode_query "serializable") () >>=? fun () ->
+  Db.exec create_move_query (game_id, (player_id, (idx0, (card0_id, (idx1, (card1_id, (idx2, card2_id))))))) >>=? fun () ->
+  Db.find increment_game_card_idx_query (3, game_id) >>=? fun card_idx ->
+  Db.collect_list find_game_cards_query (game_id, card_idx, 3) >>=? fun card_ids_list ->
+  let card_ids = Array.of_list card_ids_list in
+  Db.exec update_board_card_query (idx0, (card0_id, (card_ids.(0), (idx1, (card1_id, (card_ids.(1), (idx2, (card2_id, (card_ids.(2), game_id))))))))) >>=? fun () ->
+  Db.commit ()
+
 
 let find_player_score_query =
   Caqti_request.collect Caqti_type.int Caqti_type.(tup2 int int)
