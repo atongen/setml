@@ -17,6 +17,6 @@ module NewGameForm = {
   };
 };
 
-let token = Util.meta_content("token");
+let token = ClientUtil.meta_content("token");
 
 ReactDOMRe.renderToElementWithId(<NewGameForm token />, "index");

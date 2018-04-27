@@ -5,4 +5,4 @@
   (modules (
     card
     combinatorics
-    game_deck))))
+    shared_util))))

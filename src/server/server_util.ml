@@ -10,7 +10,6 @@ let form_value body key =
   | Some (_, tl) -> CCList.head_opt tl
   | None -> None
 
-(* decode from base-36 positive string to base-10 integer *)
 let string_to_char_list s =
   let rec aux ac i =
     if i = -1 then ac
@@ -18,6 +17,7 @@ let string_to_char_list s =
       aux (s.[i] :: ac) (pred i)
   in aux [] (String.length s - 1)
 
+(* decode from base-36 positive string to base-10 integer *)
 let int_of_base36 b =
   let rec aux b pos ac =
     match b with

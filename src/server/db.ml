@@ -18,12 +18,8 @@ module Q = struct
 
   let generic_bool_query q = Caqti_request.find ~oneshot:true Caqti_type.unit Caqti_type.bool q
 
-  let create_game_query =
-    Caqti_request.find Caqti_type.unit Caqti_type.int
-      "insert into games default values returning id"
-
   let create_game_cards_query game_id =
-    let cards = Game_deck.make board_size (-1) in
+    let cards = Card.make_board board_size in
     let ids = List.map Card.to_int cards in
     let rows = List.mapi (fun idx card_id ->
         Printf.sprintf "(%d,%d,%d)" game_id idx card_id
@@ -31,6 +27,10 @@ module Q = struct
     let query_values = String.concat ", " rows in
     let query = "insert into game_cards (game_id, idx, card_id) values " ^ query_values ^ ";" in
     Caqti_request.exec ~oneshot:true Caqti_type.unit query
+
+  let create_game_query =
+    Caqti_request.find Caqti_type.unit Caqti_type.int
+      "insert into games default values returning id"
 
   let create_board_cards_query =
     Caqti_request.exec Caqti_type.(tup2 int int)

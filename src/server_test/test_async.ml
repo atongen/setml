@@ -1,40 +1,10 @@
-open Lib
+open OUnit2
 open Lwt
 open Lwt.Infix
-open OUnit2
 
+open Test_util
+open Lib
 open Shared
-
-let (>>=?) m f =
-  m >>= function
-  | Ok x -> f x
-  | Error (#Caqti_error.t as err) -> Lwt.fail (Caqti_error.Exn err)
-
-let do_async_tests ?(name="lwt test") tests =
-  let results =
-    tests
-    |> Lwt_list.map_s (fun (name, test) ->
-        Logs.info (fun f -> f "Running %s" name);
-        let res = Lwt.try_bind test
-            (fun () -> return `Ok)
-            (fun exn -> return (`Exn exn)) in
-        res >|= (fun res -> (name, res))) in
-  results >|= (fun results ->
-      let ounit_tests =
-        results
-        |> List.map (fun (name, res) ->
-            name >:: fun ctx ->
-              match res with
-              | `Ok -> ()
-              | `Exn x -> raise x) in
-      name >::: ounit_tests)
-
-let assert_query_equal db exp q =
-  Db.query_int db q >>=?  fun got ->
-  assert_equal ~printer:string_of_int exp got;
-  Lwt.return_unit
-
-let refute_bool msg got = assert_bool msg (not got)
 
 let create_game_test db =
   fun () ->
@@ -76,10 +46,6 @@ let game_player_presence_test db =
     Db.query_bool db p >>=? fun present_leave ->
     refute_bool "no present leave" present_leave;
     Lwt.return_unit
-
-let card_not_equal c0 c1 = not (Card.equal c0 c1)
-let refute_card_equal c0 c1 =
-  assert_equal ~cmp:card_not_equal ~msg:"card not equal" ~printer:Card.to_string c0 c1
 
 let create_move_test db =
   fun () ->
@@ -128,10 +94,3 @@ let ats db =
     "create_move_test", create_move_test db;
     "create_failed_move_test", create_failed_move_test db;
   ]
-
-let _ = Lwt_main.run (begin
-    Crypto.init ();
-    Caqti_lwt.connect (Uri.of_string "postgresql://atongen:at1234@localhost:5435/setml_test") >>=? fun db ->
-    Db.delete_all db >>=? fun () ->
-    ats db >|= OUnit2.run_test_tt_main
-  end)

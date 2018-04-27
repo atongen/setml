@@ -1,7 +1,6 @@
 open Belt;
 
 /*[@bs.val] external requestAnimationFrame : (unit => unit) => unit = "";*/
-
 type action =
   | SendMessage(string)
   | ReceiveMessage(string);
@@ -16,10 +15,9 @@ let handleMessage = (evt, self) => {
   self.ReasonReact.send(ReceiveMessage(str));
 };
 
-let updateFrame = self => {
+let updateFrame = self =>
+  ();
     /* Nothing to do here yet... */
-    ();
-};
 
 let component = ReasonReact.reducerComponent("Game");
 
@@ -40,7 +38,7 @@ let make = _children => {
     },
   initialState: () => {messages: [], ws: ref(None)},
   didMount: self => {
-    switch (Util.ws_url()) {
+    switch (ClientUtil.ws_url()) {
     | Some(ws_url) =>
       let ws = WebSockets.WebSocket.make(ws_url);
       self.state.ws := Some(ws);
@@ -48,14 +46,11 @@ let make = _children => {
     | None => Js.log("Unable to get websocket url!")
     };
     /*let rec onAnimationFrame = () => {
-      updateFrame(self);
-      requestAnimationFrame(onAnimationFrame);
-    };
-    requestAnimationFrame(onAnimationFrame);*/
+        updateFrame(self);
+        requestAnimationFrame(onAnimationFrame);
+      };
+      requestAnimationFrame(onAnimationFrame);*/
     ReasonReact.NoUpdate;
   },
-  render: ({state, send}) =>
-    <section className="main">
-      <GameLayout dim0=3 dim1=4 />
-    </section>,
+  render: ({state, send}) => <section className="main"> <GameLayout dim0=3 dim1=4 /> </section>,
 };

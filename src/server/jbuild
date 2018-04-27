@@ -10,7 +10,7 @@
     route
     session
     templates
-    util))
+    server_util))
   (libraries (
     caqti
     caqti-driver-postgresql
@@ -44,29 +44,3 @@
     websocket.lwt
     websocket-lwt.cohttp))
   (package setml)))
-
-(executable
-  ((name test)
-   (public_name test)
-   (modules (test))
-   (libraries (
-     lib
-     shared
-     oUnit))
-   (package setml)))
-
-(executable
-  ((name test_db)
-   (public_name test_db)
-   (modules (test_db))
-   (libraries (
-     lib
-     shared
-     oUnit))
-   (package setml)))
-
-(alias
- ((name runtest)
-  (deps (
-    test.exe))
-  (action (run ${<}))))

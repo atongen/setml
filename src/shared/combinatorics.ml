@@ -1,5 +1,4 @@
-let round v = floor (v +. 0.5)
-let roundi v = int_of_float @@ round v
+open Shared_util
 
 let choose n k =
   let rec aux nf kf acc =

@@ -67,7 +67,13 @@ let randomColor = () => {
 
 let drawRectangle = (ctx, color, x, y, w, h) => {
   Canvas2dRe.setFillStyle(ctx, Canvas2dRe.String, color);
-  Canvas2dRe.fillRect(~x=Util.round(x), ~y=Util.round(y), ~w=Util.round(w), ~h=Util.round(h), ctx);
+  Canvas2dRe.fillRect(
+    ~x=ClientUtil.round(x),
+    ~y=ClientUtil.round(y),
+    ~w=ClientUtil.round(w),
+    ~h=ClientUtil.round(h),
+    ctx,
+  );
 };
 
 let drawRect = (ctx, color, rect) => drawRectangle(ctx, color, rect.x, rect.y, rect.w, rect.h);
@@ -203,9 +209,6 @@ let make = (_children, ~top, ~bottom, ~left, ~right, ~ratio, ~columns, ~rows) =>
     self.state.context := Some(context);
     reset(context, "white", self.state.dims.width, self.state.dims.height);
     drawBoard(context, self.state.dims);
-    /*let deck = Game_deck.make(12, -1);
-      Js.log("Length: " ++ string_of_int(Array.length(deck)));
-      Array.forEach(deck, c => Js.log(string_of_int(Card.to_int(c)) ++ ": " ++ Card.to_string(c)));*/
     ReasonReact.NoUpdate;
   },
   didUpdate: ({oldSelf, newSelf}) =>

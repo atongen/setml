@@ -3,9 +3,8 @@ lib: [
   "_build/install/default/lib/setml/opam" {"opam"}
 ]
 bin: [
-  "_build/install/default/bin/setml" {"setml"}
   "_build/install/default/bin/test" {"test"}
-  "_build/install/default/bin/test_db" {"test_db"}
+  "_build/install/default/bin/setml" {"setml"}
 ]
 doc: [
   "_build/install/default/doc/setml/README.md"

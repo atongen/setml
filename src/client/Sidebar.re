@@ -1,7 +1,7 @@
 let component = ReasonReact.statelessComponent("Sidebar");
 
 let game_url =
-  switch (Util.game_url()) {
+  switch (ClientUtil.game_url()) {
   | Some(url) => url
   | None => ""
   };

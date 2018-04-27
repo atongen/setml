@@ -1,0 +1,21 @@
+(jbuild_version 1)
+
+(executable
+  ((name test)
+   (public_name test)
+   (modules (
+     test_sync
+     test_async
+     test_util
+     test))
+   (libraries (
+     lib
+     shared
+     oUnit))
+   (package setml)))
+
+(alias
+ ((name runtest)
+  (deps (
+    test.exe))
+  (action (run ${<}))))

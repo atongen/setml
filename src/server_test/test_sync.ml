@@ -2,35 +2,7 @@ open OUnit2
 open Lib
 open Shared
 
-
-let cases_of f =
-  List.map @@ fun params -> test_case (f params)
-
-let to_list s =
-  let rec loop acc i =
-    if i = -1 then acc
-    else
-      loop (s.[i] :: acc) (pred i)
-  in loop [] (String.length s - 1)
-
-let char_code_string c = string_of_int (Char.code c)
-
-let char_list_to_string cl =
-  let c = String.concat "', '" ((List.map char_code_string) cl) in
-  "['" ^ c ^ "']"
-
-let print_char_list v =
-  to_list v |> char_list_to_string
-
-let sp v =
-  let l = String.length v in
-  "'" ^ v ^ "' (" ^ string_of_int l ^ ")"
-
-let ae ~printer exp got _test_ctxt = assert_equal ~printer exp got
-let ase exp got _test_ctxt = assert_equal ~printer:sp exp got
-let aie exp got _test_ctxt = assert_equal ~printer:string_of_int exp got
-let ab msg got _test_ctxt = assert_bool msg got
-let af msg _test_ctxt = assert_failure msg
+open Test_util
 
 let crypto_encode_decode_tests =
   let case ~secret ~salt ~msg =
@@ -239,14 +211,14 @@ let base36_cases = [
 ]
 let base36_encode_tests =
   let check (n, exp) =
-    let got = Util.base36_of_int n in
+    let got = Server_util.base36_of_int n in
     ae ~printer:sp exp got
   in
   cases_of check base36_cases
 
 let base36_decode_tests =
   let check (exp, s) =
-    let got = Util.int_of_base36 s in
+    let got = Server_util.int_of_base36 s in
     ae ~printer:string_of_int exp got
   in
   cases_of check base36_cases
@@ -300,21 +272,21 @@ let cards_tests =
   [
     test_case (aie 81 (Array.length deck));
 
-    test_case (ase "{ n: 0, f: 0, c: 0, s: 0}" (Card.to_string (deck.(0))));
+    test_case (ase "{ n: 0, f: 0, c: 0, s: 0 }" (Card.to_string (deck.(0))));
 
-    test_case (ase "{ n: 0, f: 0, c: 0, s: 1}" (Card.to_string (deck.(1))));
-    test_case (ase "{ n: 0, f: 0, c: 0, s: 2}" (Card.to_string (deck.(2))));
+    test_case (ase "{ n: 0, f: 0, c: 0, s: 1 }" (Card.to_string (deck.(1))));
+    test_case (ase "{ n: 0, f: 0, c: 0, s: 2 }" (Card.to_string (deck.(2))));
 
-    test_case (ase "{ n: 0, f: 0, c: 1, s: 0}" (Card.to_string (deck.(3))));
-    test_case (ase "{ n: 0, f: 0, c: 2, s: 0}" (Card.to_string (deck.(6))));
+    test_case (ase "{ n: 0, f: 0, c: 1, s: 0 }" (Card.to_string (deck.(3))));
+    test_case (ase "{ n: 0, f: 0, c: 2, s: 0 }" (Card.to_string (deck.(6))));
 
-    test_case (ase "{ n: 0, f: 1, c: 0, s: 0}" (Card.to_string (deck.(9))));
-    test_case (ase "{ n: 0, f: 2, c: 0, s: 0}" (Card.to_string (deck.(18))));
+    test_case (ase "{ n: 0, f: 1, c: 0, s: 0 }" (Card.to_string (deck.(9))));
+    test_case (ase "{ n: 0, f: 2, c: 0, s: 0 }" (Card.to_string (deck.(18))));
 
-    test_case (ase "{ n: 1, f: 0, c: 0, s: 0}" (Card.to_string (deck.(27))));
-    test_case (ase "{ n: 2, f: 0, c: 0, s: 0}" (Card.to_string (deck.(54))));
+    test_case (ase "{ n: 1, f: 0, c: 0, s: 0 }" (Card.to_string (deck.(27))));
+    test_case (ase "{ n: 2, f: 0, c: 0, s: 0 }" (Card.to_string (deck.(54))));
 
-    test_case (ase "{ n: 2, f: 2, c: 2, s: 2}" (Card.to_string (deck.(80))));
+    test_case (ase "{ n: 2, f: 2, c: 2, s: 2 }" (Card.to_string (deck.(80))));
 
     test_case (aie (List.length set_yes_list) (Card.count_sets_idx (0 --^ 9)));
     test_case (aie (List.length set_no_list) (Card.count_non_sets_idx (0 --^ 9)));
@@ -437,7 +409,3 @@ let suite =
       ];
     ];
   ]
-
-let _ =
-  Crypto.init ();
-  OUnit2.run_test_tt_main suite
