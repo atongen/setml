@@ -42,7 +42,7 @@ create table games_players (
         on delete cascade,
     player_id bigint not null references players (id)
         on delete cascade,
-    present boolean default true,
+    presence boolean default true,
     created_at timestamp without time zone not null default now(),
     updated_at timestamp without time zone not null default now(),
     primary key (game_id, player_id)
@@ -51,24 +51,28 @@ create table games_players (
 create index idx_0000 on games_players using btree (game_id);
 create index idx_0001 on games_players using btree (player_id);
 
-create or replace function games_players_present_change_notify() returns trigger AS $$
+create or replace function games_players_presence_change_notify() returns trigger AS $$
+declare
+    player_name character varying(255);
 begin
+    select name into strict player_name from players where id = NEW.player_id;
     perform pg_notify(concat('game_', NEW.game_id), json_build_object(
-        'type', 'present',
+        'type', 'presence',
         'game_id', NEW.game_id,
         'player_id', NEW.player_id,
-        'value', NEW.present
+        'player_name', player_name,
+        'value', NEW.presence
     )::text);
     return NEW;
 end;
 $$ language plpgsql;
 
-drop trigger if exists games_players_present_change_trigger
+drop trigger if exists games_players_presence_change_trigger
     on games_players;
-create trigger games_players_present_change_trigger
+create trigger games_players_presence_change_trigger
     after insert or update
     on games_players
-    for each row execute procedure games_players_present_change_notify();
+    for each row execute procedure games_players_presence_change_notify();
 
 drop table if exists game_cards cascade;
 
