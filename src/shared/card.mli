@@ -33,6 +33,7 @@ val range : int -> int -> t list
 
 module Infix : sig
   val (--) : int -> int -> t list
+  val (--^) : int -> int -> t list
 end
 
 val deck : unit -> t array
@@ -43,27 +44,15 @@ val complete : t -> t -> t
 
 val find_sets : t list -> (t * t * t) list
 
-val find_sets_idx : int list -> (t * t * t) list
-
 val find_non_sets : t list -> (t * t * t) list
-
-val find_non_sets_idx : int list -> (t * t * t) list
 
 val count_sets : t list -> int
 
-val count_sets_idx : int list -> int
-
 val count_non_sets : t list -> int
-
-val count_non_sets_idx : int list -> int
 
 val exists_set : t list -> bool
 
-val exists_set_idx : int list -> bool
-
 val exists_non_set : t list -> bool
-
-val exists_non_set_idx : int list -> bool
 
 val next_set_and_indexes : t list -> ((int * t) * (int * t) * (int * t)) option
 

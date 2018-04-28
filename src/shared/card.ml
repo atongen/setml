@@ -80,6 +80,7 @@ let rec range i j = if i > j then [] else of_int i :: (range (i+1) j)
 
 module Infix = struct
   let (--) i j = range i j
+  let (--^) i j = range i (j-1)
 end
 include Infix
 
@@ -145,8 +146,6 @@ let find_sets cards =
   in
   aux [] (tg ())
 
-let find_sets_idx idxs = List.map of_int idxs |> find_sets
-
 let find_non_sets cards =
   let tg = triple_generator cards in
   let rec aux acc = function
@@ -157,8 +156,6 @@ let find_non_sets cards =
     | None -> acc
   in
   aux [] (tg ())
-
-let find_non_sets_idx idxs = List.map of_int idxs |> find_non_sets
 
 let count_sets cards =
   let tg = triple_generator cards in
@@ -171,13 +168,9 @@ let count_sets cards =
   in
   aux 0 (tg ())
 
-let count_sets_idx idxs = List.map of_int idxs |> count_sets
-
 let count_non_sets cards =
   let l = Combinatorics.choose (List.length cards) 3 in
   l - (count_sets cards)
-
-let count_non_sets_idx idxs = List.map of_int idxs |> count_non_sets
 
 let exists_set cards =
   let tg = triple_generator cards in
@@ -187,8 +180,6 @@ let exists_set cards =
     | None -> false
   in aux (tg ())
 
-let exists_set_idx idxs = List.map of_int idxs |> exists_set
-
 let exists_non_set cards =
   let tg = triple_generator cards in
   let rec aux = function
@@ -196,8 +187,6 @@ let exists_non_set cards =
       else aux (tg ())
     | None -> false
   in aux (tg ())
-
-let exists_non_set_idx idxs = List.map of_int idxs |> exists_non_set
 
 let find_idx x l =
   let rec aux x c = function
