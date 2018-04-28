@@ -64,6 +64,9 @@ let sp v =
   let l = String.length v in
   "'" ^ v ^ "' (" ^ string_of_int l ^ ")"
 
+let string_of_int_list l =
+  String.concat ", " (List.map string_of_int l)
+
 let ae ~printer exp got _test_ctxt = assert_equal ~printer exp got
 let ase exp got _test_ctxt = assert_equal ~printer:sp exp got
 let aie exp got _test_ctxt = assert_equal ~printer:string_of_int exp got
