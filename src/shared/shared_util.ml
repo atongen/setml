@@ -1,4 +1,8 @@
-let round v = floor (v +. 0.5)
+let round v =
+    if v < 0.0 then
+        ceil (v -. 0.5)
+    else
+        floor (v +. 0.5)
 
 let roundi v = int_of_float @@ round v
 

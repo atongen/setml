@@ -72,8 +72,31 @@ let encode_decode_tests =
     in
     cases_of check cases
 
+let roundi_tests =
+    let check (v, exp) =
+        let got = Shared_util.roundi v in
+        ae ~printer:string_of_int exp got
+    in
+    cases_of check [
+        (-1.0, -1);
+        (-0.9, -1);
+        (-0.6, -1);
+        (-0.5, -1);
+        (-0.4, 0);
+        (-0.1, 0);
+        (0.0, 0);
+        (0.1, 0);
+        (0.4, 0);
+        (0.5, 1);
+        (0.6, 1);
+        (0.9, 1);
+        (1.0, 1);
+    ]
+
+
 let suite = [
     "base36_encode" >::: base36_encode_tests;
     "base36_decode" >::: base36_decode_tests;
     "encode_decode" >::: encode_decode_tests;
+    "roundi_tests" >::: roundi_tests;
 ]

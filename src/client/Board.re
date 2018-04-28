@@ -68,10 +68,10 @@ let randomColor = () => {
 let drawRectangle = (ctx, color, x, y, w, h) => {
   Canvas2dRe.setFillStyle(ctx, Canvas2dRe.String, color);
   Canvas2dRe.fillRect(
-    ~x=ClientUtil.round(x),
-    ~y=ClientUtil.round(y),
-    ~w=ClientUtil.round(w),
-    ~h=ClientUtil.round(h),
+    ~x=Shared_util.round(x),
+    ~y=Shared_util.round(y),
+    ~w=Shared_util.round(w),
+    ~h=Shared_util.round(h),
     ctx,
   );
 };
