@@ -51,6 +51,7 @@ create table games_players (
 create index idx_0000 on games_players using btree (game_id);
 create index idx_0001 on games_players using btree (player_id);
 
+drop function if exists games_players_present_change_notify cascade; -- old name
 create or replace function games_players_presence_change_notify() returns trigger AS $$
 declare
     player_name character varying(255);
@@ -67,6 +68,8 @@ begin
 end;
 $$ language plpgsql;
 
+drop trigger if exists games_players_present_change_trigger
+    on games_players; -- old name
 drop trigger if exists games_players_presence_change_trigger
     on games_players;
 create trigger games_players_presence_change_trigger

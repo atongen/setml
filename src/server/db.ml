@@ -64,13 +64,13 @@ module Q = struct
     Caqti_request.find Caqti_type.int Caqti_type.bool
       "select exists (select 1 from players where id = ?)"
 
-  let game_player_present_query =
+  let game_player_presence_query =
     Caqti_request.exec Caqti_type.(tup3 int int bool)
       {eos|
-        insert into games_players (game_id, player_id, present, updated_at)
+        insert into games_players (game_id, player_id, presence, updated_at)
         values (?, ?, ?, now())
         on conflict (game_id, player_id)
-        do update set present = excluded.present,
+        do update set presence = excluded.presence,
         updated_at = excluded.updated_at;
       |eos}
 
@@ -171,7 +171,7 @@ let player_exists (module Db : Caqti_lwt.CONNECTION) player_id =
   Db.find Q.player_exists_query player_id
 
 let game_player_presence (module Db : Caqti_lwt.CONNECTION) game_id player_id present =
-  Db.exec Q.game_player_present_query (game_id, player_id, present)
+  Db.exec Q.game_player_presence_query (game_id, player_id, present)
 
 let find_board_cards (module Db : Caqti_lwt.CONNECTION) game_id =
   Db.collect_list Q.find_board_cards_query game_id

@@ -32,7 +32,7 @@ let game_player_presence_test db =
     Db.create_game db >>=? fun game_id ->
     Db.create_player db >>=? fun player_id ->
     let s = "select exists(" ^ (q "1" game_id player_id) ^ ")" in
-    let p = q "present" game_id player_id in
+    let p = q "presence" game_id player_id in
     Db.query_bool db s >>=? fun exists_before ->
     refute_bool "no exist before" exists_before;
     Db.game_player_presence db game_id player_id true >>=? fun () ->

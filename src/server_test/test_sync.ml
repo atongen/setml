@@ -9,4 +9,5 @@ let suite =
       "card" >::: Card_tests.suite;
       "combinatorics" >::: Combinatorics_tests.suite;
     ];
+    "messages" >::: Messages_tests.suite;
   ]

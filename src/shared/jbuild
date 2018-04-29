@@ -5,4 +5,5 @@
   (modules (
     card
     combinatorics
+    messages
     shared_util))))

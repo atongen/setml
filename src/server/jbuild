@@ -8,6 +8,7 @@
     crypto
     pubsub
     route
+    server_messages
     session
     templates
     server_util))

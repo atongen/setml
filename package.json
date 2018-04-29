@@ -16,7 +16,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@glennsl/bs-json": "^1.1.2",
+    "@glennsl/bs-json": "^1.3.2",
     "bs-fetch": "^0.2.1",
     "bs-webapi": "^0.8.3",
     "bs-websockets": "github:keynan/bs-websockets#0cee6d3291c8844c5b72bfdad159099fe98b54b2",

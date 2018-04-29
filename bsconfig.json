@@ -12,7 +12,8 @@
         "bs-fetch",
         "@glennsl/bs-json",
         "bs-websockets",
-        "bs-webapi"
+        "bs-webapi",
+        "@glennsl/bs-json"
     ],
     "sources": [
         {

@@ -1,24 +1,22 @@
 open Belt;
 
+open ClientMessages;
+
 /*[@bs.val] external requestAnimationFrame : (unit => unit) => unit = "";*/
 type action =
   | SendMessage(string)
   | ReceiveMessage(string);
 
-type state = {
-  messages: list(string),
-  ws: ref(option(WebSockets.WebSocket.t)),
-};
+type state = {ws: ref(option(WebSockets.WebSocket.t))};
 
 let handleMessage = (evt, self) => {
   let str = WebSockets.MessageEvent.stringData(evt);
   self.ReasonReact.send(ReceiveMessage(str));
 };
 
-let updateFrame = self =>
-  ();
-    /* Nothing to do here yet... */
+let updateFrame = self => ();
 
+/* Nothing to do here yet... */
 let component = ReasonReact.reducerComponent("Game");
 
 let make = _children => {
@@ -26,9 +24,10 @@ let make = _children => {
   reducer: (action, state) =>
     switch (action) {
     | ReceiveMessage(message) =>
-      Js.log("Got message: " ++ message);
-      let messages = state.messages @ [message];
-      ReasonReact.Update({...state, messages});
+      switch (ClientMessageConverter.of_json(message)) {
+      | Presence(_) as msg => Js.log(Messages.to_string(msg))
+      };
+      ReasonReact.NoUpdate;
     | SendMessage(message) =>
       switch (state.ws) {
       | {contents: Some(ws)} => WebSockets.WebSocket.sendString(message, ws)
@@ -36,13 +35,15 @@ let make = _children => {
       };
       ReasonReact.NoUpdate;
     },
-  initialState: () => {messages: [], ws: ref(None)},
+  initialState: () => {ws: ref(None)},
   didMount: self => {
     switch (ClientUtil.ws_url()) {
     | Some(ws_url) =>
       let ws = WebSockets.WebSocket.make(ws_url);
       self.state.ws := Some(ws);
-      WebSockets.WebSocket.(ws |> on(Message(self.handle(handleMessage))) |> ignore);
+      WebSockets.WebSocket.(
+        ws |> on(Message(self.handle(handleMessage))) |> ignore
+      );
     | None => Js.log("Unable to get websocket url!")
     };
     /*let rec onAnimationFrame = () => {
@@ -52,5 +53,6 @@ let make = _children => {
       requestAnimationFrame(onAnimationFrame);*/
     ReasonReact.NoUpdate;
   },
-  render: ({state, send}) => <section className="main"> <GameLayout dim0=3 dim1=4 /> </section>,
+  render: ({state, send}) =>
+    <section className="main"> <GameLayout dim0=3 dim1=4 /> </section>,
 };

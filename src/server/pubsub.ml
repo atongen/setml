@@ -1,3 +1,7 @@
+open Shared
+open Shared.Messages
+open Server_messages
+
 type action =
     | Subscribe of int
     | Unsubscribe of int
@@ -16,19 +20,17 @@ let make ?(n=32) ?(delay=0.25) conninfo clients = {
     delay;
 }
 
-let handle_present pubsub game_id player_id present =
-    let msg = if present then "joined" else "left" in
+let handle_presence pubsub pt =
     Lwt_preemptive.run_in_main (fun () ->
         Lwt.return (
-            Clients.game_send pubsub.clients game_id ("Player " ^ string_of_int player_id ^ " " ^ msg ^ " the game.")
+            let json = Server_message_converter.to_json (Presence pt) in
+            Clients.game_send pubsub.clients pt.game_id json
         )
     )
 
 let handle_notification pubsub payload =
-    match Yojson.Safe.from_string payload with
-    | `Assoc ["type", `String "present"; "game_id", `Int game_id; "player_id", `Int player_id; "value", `Bool present] ->
-        handle_present pubsub game_id player_id present
-    | _ -> print_endline @@ "Unknown notification type: " ^ payload
+    match Server_message_converter.of_json payload with
+    | Presence (pt) -> handle_presence pubsub pt
 
 let subscribe pubsub game_id =
     Subscribe game_id |>
