@@ -20,17 +20,26 @@ let make ?(n=32) ?(delay=0.25) conninfo clients = {
     delay;
 }
 
-let handle_presence pubsub pt =
+let handle_presence pubsub data =
     Lwt_preemptive.run_in_main (fun () ->
         Lwt.return (
-            let json = Server_message_converter.to_json (Presence pt) in
-            Clients.game_send pubsub.clients pt.game_id json
+            let json = Server_message_converter.to_json (Presence data) in
+            Clients.game_send pubsub.clients data.game_id json
+        )
+    )
+
+let handle_player_name pubsub data =
+    Lwt_preemptive.run_in_main (fun () ->
+        Lwt.return (
+            let json = Server_message_converter.to_json (Player_name data) in
+            Clients.game_send pubsub.clients data.game_id json
         )
     )
 
 let handle_notification pubsub payload =
     match Server_message_converter.of_json payload with
-    | Presence (pt) -> handle_presence pubsub pt
+    | Presence (d) -> handle_presence pubsub d
+    | Player_name (d) -> handle_player_name pubsub d
 
 let subscribe pubsub game_id =
     Subscribe game_id |>
