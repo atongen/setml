@@ -139,11 +139,26 @@ module Q = struct
   let find_player_score_query =
     Caqti_request.collect Caqti_type.int Caqti_type.(tup2 int int)
       {eos|
-        select player_id, count(*)
-        from moves
-        where game_id = ?
-        group by player_id;
+        select
+            gp.player_id,
+            (
+                select count(*)
+                from moves
+                where moves.game_id = gp.game_id
+                and moves.player_id = gp.player_id
+            ) as score
+        from games_players gp
+        where game_id = ?;
       |eos}
+
+    let update_player_name_query =
+        Caqti_request.exec Caqti_type.(tup2 string int)
+        {eos|
+            update players
+            set name = ?
+            where id = ?
+            limit 1;
+        |eos}
 end
 
 let query_int (module Db : Caqti_lwt.CONNECTION) q =
@@ -188,6 +203,9 @@ let create_move (module Db : Caqti_lwt.CONNECTION) game_id player_id idx0 card0_
 
 let find_player_score (module Db : Caqti_lwt.CONNECTION) game_id =
   Db.collect_list Q.find_player_score_query game_id
+
+let update_player_name (module Db : Caqti_lwt.CONNECTION) player_id name =
+  Db.exec Q.update_player_name_query (name, player_id)
 
 let delete_all (module Db : Caqti_lwt.CONNECTION) =
   Db.start () >>=? fun () ->

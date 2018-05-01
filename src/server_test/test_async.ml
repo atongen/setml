@@ -51,6 +51,7 @@ let create_move_test db =
   fun () ->
     Db.create_game db >>=? fun game_id ->
     Db.create_player db >>=? fun player_id ->
+    Db.game_player_presence db game_id player_id true >>=? fun () ->
     Db.find_board_cards db game_id >>=? fun board_idxs ->
     let cards = List.map Card.of_int board_idxs in
     let sets_and_indexes_opt = Card.next_set_and_indexes cards in
@@ -77,10 +78,12 @@ let create_failed_move_test db =
   fun () ->
     Db.create_game db >>=? fun game_id ->
     Db.create_player db >>=? fun player_id ->
+    Db.game_player_presence db game_id player_id true >>=? fun () ->
     Db.find_board_cards db game_id >>=? fun old_board_idxs ->
     Db.create_move db game_id player_id 0 0 1 1 2 2 >>=? fun () ->
     Db.find_player_score db game_id >>=? fun scores ->
-    assert_equal ~printer:string_of_int 0 (List.length scores);
+    assert_equal ~printer:string_of_int 1 (List.length scores);
+    assert_equal ~printer:string_of_int 0 (List.assoc player_id scores);
     assert_query_equal db 12 (Printf.sprintf "select card_idx from games where id = %d;" game_id) >>= fun () ->
     Db.find_board_cards db game_id >>=? fun new_board_idxs ->
     assert_bool "board hasn't changed" (old_board_idxs = new_board_idxs);

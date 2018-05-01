@@ -167,8 +167,8 @@ declare
     game_id bigint;
 begin
     for game_id in
-        select game_id
-        from games_players
+        select gp.game_id
+        from games_players gp
         where player_id = NEW.id
         and presence = 't'
     loop

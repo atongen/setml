@@ -26,6 +26,7 @@ let make = _children => {
     | ReceiveMessage(message) =>
       switch (ClientMessageConverter.of_json(message)) {
       | Presence(_) as msg => Js.log(Messages.to_string(msg))
+      | Player_name(_) as msg => Js.log(Messages.to_string(msg))
       };
       ReasonReact.NoUpdate;
     | SendMessage(message) =>
@@ -41,9 +42,7 @@ let make = _children => {
     | Some(ws_url) =>
       let ws = WebSockets.WebSocket.make(ws_url);
       self.state.ws := Some(ws);
-      WebSockets.WebSocket.(
-        ws |> on(Message(self.handle(handleMessage))) |> ignore
-      );
+      WebSockets.WebSocket.(ws |> on(Message(self.handle(handleMessage))) |> ignore);
     | None => Js.log("Unable to get websocket url!")
     };
     /*let rec onAnimationFrame = () => {
@@ -53,6 +52,5 @@ let make = _children => {
       requestAnimationFrame(onAnimationFrame);*/
     ReasonReact.NoUpdate;
   },
-  render: ({state, send}) =>
-    <section className="main"> <GameLayout dim0=3 dim1=4 /> </section>,
+  render: ({state, send}) => <section className="main"> <GameLayout dim0=3 dim1=4 /> </section>,
 };
