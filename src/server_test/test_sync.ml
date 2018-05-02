@@ -10,4 +10,5 @@ let suite =
       "combinatorics" >::: Combinatorics_tests.suite;
     ];
     "messages" >::: Messages_tests.suite;
+    "pubsub" >::: Pubsub_tests.suite;
   ]

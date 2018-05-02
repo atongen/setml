@@ -4,4 +4,5 @@ val make : ?n:int -> ?delay:float -> string -> Clients.t -> t
 val subscribe : t -> int -> unit
 val unsubscribe : t -> int -> unit
 val get_notifications : t -> (t -> string -> int -> string -> unit) -> int
+val empty_query : t -> string -> unit
 val start : t -> unit
