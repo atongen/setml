@@ -24,6 +24,7 @@ depends: [
   "cow" {build & = "2.2.0"}
   "nocrypto" {build & = "0.5.4"}
   "postgresql" {build & = "4.3.0"}
+  "re" {build & = "1.7.3"}
   "websocket" {build & = "2.10"}
   "websocket-lwt" {build & = "2.11"}
   "yojson" {build & = "1.4.1"}

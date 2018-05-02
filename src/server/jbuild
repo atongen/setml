@@ -25,6 +25,7 @@
     nocrypto
     nocrypto.unix
     postgresql
+    re
     shared
     str
     websocket

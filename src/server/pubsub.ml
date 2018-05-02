@@ -1,7 +1,3 @@
-open Shared
-open Shared.Messages
-open Server_messages
-
 type action =
   | Subscribe of int
   | Unsubscribe of int
@@ -20,25 +16,23 @@ let make ?(n=32) ?(delay=0.25) conninfo clients = {
   delay;
 }
 
-let send pubsub game_id msg =
-  Lwt_preemptive.run_in_main (fun () ->
-      Lwt.return (
-        Clients.game_send pubsub.clients game_id msg
-      )
-    )
+let channel_game_id_re = Re.Pcre.regexp "^game_([0-9]+)$"
 
-let handle_presence pubsub data =
-  let json = Server_message_converter.to_json (Presence data) in
-  send pubsub data.game_id json
+let channel_game_id channel =
+    let result = Re.Pcre.extract ~rex:channel_game_id_re channel in
+    if Array.length result = 2 then
+        Some(int_of_string result.(1))
+    else None
 
-let handle_player_name pubsub data =
-  let json = Server_message_converter.to_json (Player_name data) in
-  send pubsub data.game_id json
-
-let handle_notification pubsub payload =
-  match Server_message_converter.of_json payload with
-  | Presence (d) -> handle_presence pubsub d
-  | Player_name (d) -> handle_player_name pubsub d
+let handle_notification pubsub channel pid payload =
+    match channel_game_id channel with
+    | Some (game_id) ->
+        Lwt_preemptive.run_in_main (fun () ->
+            Lwt.return (
+                Clients.game_send pubsub.clients game_id payload
+            )
+        )
+    | None -> ignore (print_endline ("Unknown channel: " ^ channel ^ " from pid " ^ string_of_int pid))
 
 let subscribe pubsub game_id =
   Subscribe game_id |>
@@ -89,12 +83,12 @@ let rec hold pubsub f =
   else
     f ()
 
-let get_notifications pubsub =
+let get_notifications pubsub f =
   hold pubsub (fun () ->
       let rec aux pubsub i =
         match pubsub.conn#notifies with
         | Some { Postgresql.Notification.name; pid; extra } ->
-          handle_notification pubsub extra;
+          f pubsub name pid extra;
           aux pubsub (i + 1)
         | None -> i
       in aux pubsub 0
@@ -117,7 +111,7 @@ let start pubsub =
       handle_action pubsub action;
       aux ()
     | None ->
-      let i = get_notifications pubsub in
+      let i = get_notifications pubsub handle_notification in
       if i = 0 then Unix.sleepf pubsub.delay;
       aux ()
   in
