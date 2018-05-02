@@ -9,6 +9,7 @@
      combinatorics_tests
      crypto_tests
      messages_tests
+     pubsub_tests
      server_util_tests
      test_sync
      test_async
