@@ -56,7 +56,12 @@ let pubsub_tests pubsub =
         presence_case false;
     ]
 
-
+(*
+ * See bin/test -help
+ * bin/test -runner sequential
+ * libpq / postgresql library cannot process multiple requests
+ * concurrently against a single db connection
+ *)
 let suite =
     let clients = Clients.make () in
     let pubsub = Pubsub.make "user=atongen password=at1234 port=5435 host=localhost dbname=setml_development" clients in
