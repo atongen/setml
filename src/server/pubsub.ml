@@ -24,15 +24,18 @@ let channel_game_id channel =
         Some(int_of_string result.(1))
     else None
 
-let handle_notification pubsub channel pid payload =
-    match channel_game_id channel with
-    | Some (game_id) ->
-        Lwt_preemptive.run_in_main (fun () ->
-            Lwt.return (
-                Clients.game_send pubsub.clients game_id payload
+let handle_notifications pubsub msgs =
+    List.iter (fun msg ->
+        let channel = msg.Postgresql.Notification.name in
+        match channel_game_id channel with
+        | Some (game_id) ->
+            Lwt_preemptive.run_in_main (fun () ->
+                Lwt.return (
+                    Clients.game_send pubsub.clients game_id msg.extra
+                )
             )
-        )
-    | None -> ignore (print_endline ("Unknown channel: " ^ channel ^ " from pid " ^ string_of_int pid))
+        | None -> ignore (print_endline ("Unknown channel: " ^ channel ^ " from pid " ^ string_of_int msg.pid))
+    ) msgs
 
 let subscribe pubsub game_id =
   Subscribe game_id |>
@@ -83,16 +86,14 @@ let rec hold pubsub f =
   ) else (
     f ())
 
-let get_notifications pubsub f =
+let get_notifications pubsub =
   hold pubsub (fun () ->
-      let rec aux pubsub i =
+      let rec aux pubsub acc =
         match pubsub.conn#notifies with
-        | Some { Postgresql.Notification.name; pid; extra } ->
-          f pubsub name pid extra;
-          aux pubsub (i + 1)
-        | None -> i
-      in aux pubsub 0
-    )
+        | Some (n) -> aux pubsub (n :: acc)
+        | None -> acc
+      in aux pubsub [])
+  |> List.rev
 
 let empty_query pubsub query =
   pubsub.conn#send_query @@ query;
@@ -111,8 +112,12 @@ let start pubsub =
       handle_action pubsub action;
       aux ()
     | None ->
-      let i = get_notifications pubsub handle_notification in
-      if i = 0 then Unix.sleepf pubsub.delay;
+      let msgs = get_notifications pubsub in
+      if List.length msgs = 0 then (
+        Unix.sleepf pubsub.delay
+      ) else (
+        handle_notifications pubsub msgs
+      );
       aux ()
   in
   aux ()
