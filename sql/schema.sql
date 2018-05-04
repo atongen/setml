@@ -178,8 +178,8 @@ begin
             'player_id', NEW.id,
             'player_name', NEW.name
         )::text);
-        return NEW;
     end loop;
+    return NEW;
 end;
 $$ language plpgsql;
 

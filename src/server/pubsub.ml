@@ -70,20 +70,14 @@ let rec flush_result conn =
   match conn#get_result with
   | Some result -> (
       match result#status with
-      | Postgresql.Command_ok ->
-        ignore(print_endline "1");
-        flush_result conn
-      | _ ->
-        print_result conn result;
-        ignore(print_endline "2"))
-  | None -> ignore(print_endline "3")
+      | Postgresql.Command_ok -> flush_result conn
+      | _ -> print_result conn result)
+  | None -> ()
 
 let rec hold pubsub f =
   let fd = Obj.magic pubsub.conn#socket in
-  ignore(print_endline "consume");
   pubsub.conn#consume_input;
   if pubsub.conn#is_busy then (
-    ignore(print_endline "busy");
     let _ = Unix.select [fd] [] [] pubsub.delay in
     hold pubsub f
   ) else (
@@ -101,9 +95,7 @@ let get_notifications pubsub f =
     )
 
 let empty_query pubsub query =
-  ignore(print_endline "send");
   pubsub.conn#send_query @@ query;
-  ignore(print_endline "hold");
   hold pubsub (fun () -> flush_result pubsub.conn)
 
 let handle_action pubsub action =
