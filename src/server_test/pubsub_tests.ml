@@ -22,8 +22,8 @@ let teardown pubsub game_id player_id =
     Pubsub.empty_query pubsub ("delete from players where id = " ^ string_of_int player_id ^ ";");
     ()
 
-let presence_check pubsub game_id player_id player_name test_ctx =
-    let make_query present = Printf.sprintf
+let make_presence_query game_id player_id present =
+    Printf.sprintf
         {eos|
             insert into games_players (game_id, player_id, presence, updated_at)
             values (%d, %d, %B, now())
@@ -31,9 +31,11 @@ let presence_check pubsub game_id player_id player_name test_ctx =
             do update set presence = excluded.presence,
             updated_at = excluded.updated_at;
         |eos}
-    game_id player_id present in
+    game_id player_id present
+
+let presence_check pubsub game_id player_id player_name test_ctx =
     List.iter (fun present ->
-        Pubsub.empty_query pubsub (make_query present);
+        Pubsub.empty_query pubsub (make_presence_query game_id player_id present);
         let msgs = Pubsub.get_notifications pubsub in
         assert_equal ~printer:string_of_int 1 (List.length msgs);
         let expMsg = Messages.make_presence game_id player_id player_name present in
@@ -41,6 +43,21 @@ let presence_check pubsub game_id player_id player_name test_ctx =
         let gotMsg = Server_message_converter.of_json json in
         assert_equal ~ctxt:test_ctx expMsg gotMsg ~printer:Messages.to_string
     ) [true; false]
+
+let presence_check_accum pubsub game_id player_id player_name test_ctx =
+    Pubsub.empty_query pubsub (make_presence_query game_id player_id true);
+    Pubsub.empty_query pubsub (make_presence_query game_id player_id false);
+    let msgs = Pubsub.get_notifications pubsub in
+    assert_equal ~printer:string_of_int 2 (List.length msgs);
+    let msgs_arr = Array.of_list msgs in
+    let expMsg0 = Messages.make_presence game_id player_id player_name true in
+    let expMsg1 = Messages.make_presence game_id player_id player_name false in
+    let json0 = msgs_arr.(0).extra in
+    let json1 = msgs_arr.(1).extra in
+    let gotMsg0 = Server_message_converter.of_json json0 in
+    let gotMsg1 = Server_message_converter.of_json json1 in
+    assert_equal ~ctxt:test_ctx expMsg0 gotMsg0 ~printer:Messages.to_string;
+    assert_equal ~ctxt:test_ctx expMsg1 gotMsg1 ~printer:Messages.to_string
 
 (* this test should check for messages on multiple game channels when a single player name changes
 let player_name_case name =
@@ -60,6 +77,7 @@ let pubsub_tests pubsub =
     in
     cases_of check [
         presence_check;
+        presence_check_accum;
     ]
 
 (*
