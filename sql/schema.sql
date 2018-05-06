@@ -20,9 +20,14 @@ insert into players (name) values ('andrew');
 
 drop function if exists make_game_id cascade;
 
---  1_679_616 is 5-char base-36 min (10000)
--- 60_466_175 is 5-char base-36 max (zzzzz)
+-- for 5-char base-36:
+--  1_679_616 is min (10000)
+-- 60_466_175 is max (zzzzz)
 -- 58_786_559 unique values
+-- for 6-char base-36:
+--    60_466_176 is min (100000)
+-- 2_176_782_335 is max (zzzzzz)
+-- 2_116_316_159 unique values
 -- formula is SELECT floor(random()*(max-min+1))+min;
 CREATE OR REPLACE FUNCTION make_game_id() RETURNS bigint AS $$
 DECLARE
@@ -141,9 +146,7 @@ begin
     select name into strict player_name from players where id = NEW.player_id;
     perform pg_notify(concat('game_', NEW.game_id), json_build_object(
         'type', 'presence',
-        'game_id', NEW.game_id,
         'player_id', NEW.player_id,
-        'player_name', player_name,
         'value', NEW.presence
     )::text);
     return NEW;
@@ -174,9 +177,8 @@ begin
     loop
         perform pg_notify(concat('game_', game_id), json_build_object(
             'type', 'player_name',
-            'game_id', game_id,
             'player_id', NEW.id,
-            'player_name', NEW.name
+            'name', NEW.name
         )::text);
     end loop;
     return NEW;

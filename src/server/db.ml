@@ -136,11 +136,13 @@ module Q = struct
         order by idx asc;
       |eos}
 
-  let find_player_score_query =
-    Caqti_request.collect Caqti_type.int Caqti_type.(tup2 int int)
+  let find_scoreboard_query =
+    Caqti_request.collect Caqti_type.int Caqti_type.(tup4 int string bool int)
       {eos|
         select
             gp.player_id,
+            p.name,
+            gp.presence,
             (
                 select count(*)
                 from moves
@@ -148,7 +150,9 @@ module Q = struct
                 and moves.player_id = gp.player_id
             ) as score
         from games_players gp
-        where game_id = ?;
+        inner join players p
+        on gp.player_id = p.id
+        where gp.game_id = ?;
       |eos}
 
     let update_player_name_query =
@@ -201,8 +205,8 @@ let create_move (module Db : Caqti_lwt.CONNECTION) game_id player_id idx0 card0_
   Db.find Q.update_board_card_query (idx0, (card0_id, (card_ids.(0), (idx1, (card1_id, (card_ids.(1), (idx2, (card2_id, (card_ids.(2), game_id))))))))) >>=? fun num_updated ->
   if num_updated != 3 then Db.rollback () else Db.commit ()
 
-let find_player_score (module Db : Caqti_lwt.CONNECTION) game_id =
-  Db.collect_list Q.find_player_score_query game_id
+let find_scoreboard (module Db : Caqti_lwt.CONNECTION) game_id =
+  Db.collect_list Q.find_scoreboard_query game_id
 
 let update_player_name (module Db : Caqti_lwt.CONNECTION) player_id name =
   Db.exec Q.update_player_name_query (name, player_id)

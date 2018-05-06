@@ -14,8 +14,8 @@ let convert_tests =
     ae v d ~printer:Messages.to_string
   in
   cases_of check [
-    Messages.make_presence 321 1 "andrew" true;
-    Messages.make_player_name 123 2 "andrew2";
+    Messages.make_presence 1 true;
+    Messages.make_player_name 2 "andrew2";
   ]
 
 let suite = [

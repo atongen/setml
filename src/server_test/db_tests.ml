@@ -47,6 +47,16 @@ let game_player_presence_test db =
     refute_bool "no present leave" present_leave;
     Lwt.return_unit
 
+let find_player_scoreboard scoreboard player_id =
+    List.find_opt (fun (pid, _, _, _) ->
+        player_id = pid
+    ) scoreboard
+
+let find_player_score scoreboard player_id =
+    match find_player_scoreboard scoreboard player_id with
+    | Some (_, _, _, score) -> Some (score)
+    | None -> None
+
 let create_move_test db =
   fun () ->
     Db.create_game db >>=? fun game_id ->
@@ -62,9 +72,11 @@ let create_move_test db =
       let c1id = Card.to_int c1 in
       let c2id = Card.to_int c2 in
       Db.create_move db game_id player_id idx0 c0id idx1 c1id idx2 c2id >>=? fun () ->
-      Db.find_player_score db game_id >>=? fun scores ->
+      Db.find_scoreboard db game_id >>=? fun scores ->
       assert_equal ~printer:string_of_int 1 (List.length scores);
-      assert_equal ~printer:string_of_int 1 (List.assoc player_id scores);
+      (match find_player_score scores player_id with
+      | Some (score) -> assert_equal ~printer:string_of_int 1 score
+      | None -> assert_failure "Player score");
       assert_query_equal db (12+3) (Printf.sprintf "select card_idx from games where id = %d;" game_id) >>= fun () ->
       Db.find_board_cards db game_id >>=? fun new_board_idxs ->
       let board = List.map Card.of_int new_board_idxs |> Array.of_list in
@@ -81,9 +93,11 @@ let create_failed_move_test db =
     Db.game_player_presence db game_id player_id true >>=? fun () ->
     Db.find_board_cards db game_id >>=? fun old_board_idxs ->
     Db.create_move db game_id player_id 0 0 1 1 2 2 >>=? fun () ->
-    Db.find_player_score db game_id >>=? fun scores ->
+    Db.find_scoreboard db game_id >>=? fun scores ->
     assert_equal ~printer:string_of_int 1 (List.length scores);
-    assert_equal ~printer:string_of_int 0 (List.assoc player_id scores);
+    (match find_player_score scores player_id with
+    | Some (score) -> assert_equal ~printer:string_of_int 0 score
+    | None -> assert_failure "Player score");
     assert_query_equal db 12 (Printf.sprintf "select card_idx from games where id = %d;" game_id) >>= fun () ->
     Db.find_board_cards db game_id >>=? fun new_board_idxs ->
     assert_bool "board hasn't changed" (old_board_idxs = new_board_idxs);

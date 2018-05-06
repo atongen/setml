@@ -45,7 +45,7 @@ let presence_check pubsub =
             Pubsub.empty_query pubsub (make_presence_query game_id player_id present);
             let msgs = Pubsub.get_notifications pubsub in
             assert_equal ~printer:string_of_int 1 (List.length msgs);
-            let expMsg = Messages.make_presence game_id player_id player_name present in
+            let expMsg = Messages.make_presence player_id present in
             let json = (List.hd msgs).extra in
             let gotMsg = Server_message_converter.of_json json in
             assert_equal ~ctxt:test_ctx expMsg gotMsg ~printer:Messages.to_string
@@ -63,8 +63,8 @@ let presence_check_accum pubsub =
         let msgs = Pubsub.get_notifications pubsub in
         assert_equal ~printer:string_of_int 2 (List.length msgs);
         let msgs_arr = Array.of_list msgs in
-        let expMsg0 = Messages.make_presence game_id player_id player_name true in
-        let expMsg1 = Messages.make_presence game_id player_id player_name false in
+        let expMsg0 = Messages.make_presence player_id true in
+        let expMsg1 = Messages.make_presence player_id false in
         let json0 = msgs_arr.(0).extra in
         let json1 = msgs_arr.(1).extra in
         let gotMsg0 = Server_message_converter.of_json json0 in
@@ -88,14 +88,13 @@ let player_name_check pubsub =
         let msgs = Pubsub.get_notifications pubsub in
         assert_equal ~printer:string_of_int 4 (List.length msgs);
         let msgs_arr = Array.of_list msgs in
-        let expMsg2 = Messages.make_player_name game0_id player_id new_name in
-        let expMsg3 = Messages.make_player_name game1_id player_id new_name in
+        let expMsg = Messages.make_player_name player_id new_name in
         let json2 = msgs_arr.(2).extra in
         let json3 = msgs_arr.(3).extra in
         let gotMsg2 = Server_message_converter.of_json json2 in
         let gotMsg3 = Server_message_converter.of_json json3 in
-        assert_equal ~ctxt:test_ctx expMsg2 gotMsg2 ~printer:Messages.to_string;
-        assert_equal ~ctxt:test_ctx expMsg3 gotMsg3 ~printer:Messages.to_string;
+        assert_equal ~ctxt:test_ctx expMsg gotMsg2 ~printer:Messages.to_string;
+        assert_equal ~ctxt:test_ctx expMsg gotMsg3 ~printer:Messages.to_string;
 
         teardown_player pubsub player_id;
         teardown_game pubsub game0_id;
@@ -116,6 +115,7 @@ let pubsub_tests pubsub =
  * concurrently against a single db connection
  *)
 let suite =
+    Crypto.init ();
     let clients = Clients.make () in
     let pubsub = Pubsub.make "user=atongen password=at1234 port=5435 host=localhost dbname=setml_test" clients in
     pubsub_tests pubsub
