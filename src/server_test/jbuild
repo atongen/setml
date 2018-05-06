@@ -1,28 +1,54 @@
 (jbuild_version 1)
 
+(library
+ ((name test_lib)
+  (modules (
+    test_util))
+  (libraries (
+    lib
+    shared
+    oUnit))))
+
 (executable
-  ((name test)
-   (public_name test)
+  ((name test_processes)
+   (public_name test_processes)
    (modules (
      card_tests
      clients_tests
      combinatorics_tests
      crypto_tests
      messages_tests
-     pubsub_tests
      server_util_tests
-     test_sync
-     test_async
-     test_util
-     test))
+     test_processes))
    (libraries (
+     test_lib
      lib
      shared
      oUnit))
    (package setml)))
 
-(alias
- ((name runtest)
-  (deps (
-    test.exe))
-  (action (run ${<}))))
+(executable
+  ((name test_sequential)
+   (public_name test_sequential)
+   (modules (
+     pubsub_tests
+     test_sequential))
+   (libraries (
+     test_lib
+     lib
+     shared
+     oUnit))
+   (package setml)))
+
+(executable
+  ((name test_async)
+   (public_name test_async)
+   (modules (
+     db_tests
+     test_async))
+   (libraries (
+     test_lib
+     lib
+     shared
+     oUnit))
+   (package setml)))

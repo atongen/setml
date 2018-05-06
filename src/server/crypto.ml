@@ -81,6 +81,9 @@ let random_string n =
   done;
   Bytes.to_string s
 
+let random_int min max =
+    (Random.int (max - min)) + min
+
 let create_iv () =
   let secret = random_string 16 in
   let salt = "session-salt" in

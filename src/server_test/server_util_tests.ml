@@ -2,7 +2,7 @@ open OUnit2
 open Lib
 open Shared
 
-open Test_util
+open Test_lib.Test_util
 
 let base36_cases = [
   (         0,       "0");

@@ -2,7 +2,7 @@ open OUnit2
 open Lib
 open Shared
 
-open Test_util
+open Test_lib.Test_util
 
 let crypto_encode_decode_tests =
   let case ~secret ~salt ~msg =

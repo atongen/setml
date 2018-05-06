@@ -72,7 +72,3 @@ let ase exp got _test_ctxt = assert_equal ~printer:sp exp got
 let aie exp got _test_ctxt = assert_equal ~printer:string_of_int exp got
 let ab msg got _test_ctxt = assert_bool msg got
 let af msg _test_ctxt = assert_failure msg
-
-let rand_int min max =
-    Random.self_init ();
-    (Random.int (max - min)) + min

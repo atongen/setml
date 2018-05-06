@@ -15,9 +15,17 @@ all:
 utop: all
 	OCAMLPATH=_build/install/default/lib:$(OCAMLPATH) utop
 
+test_processes: all
+	./bin/test_processes -runner processes
+
+test_sequential: all
+	./bin/test_sequential -runner sequential
+
+test_async: all
+	./bin/test_async -runner processes
+
 # Build and run tests
-test: all
-	./bin/test
+test: test_processes test_sequential test_async
 
 # Clean up
 clean:

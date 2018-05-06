@@ -5,7 +5,7 @@ open Shared.Messages
 open Lib
 open Lib.Server_messages
 
-open Test_util
+open Test_lib.Test_util
 
 let convert_tests =
   let check v =

@@ -3,7 +3,9 @@ lib: [
   "_build/install/default/lib/setml/opam" {"opam"}
 ]
 bin: [
-  "_build/install/default/bin/test" {"test"}
+  "_build/install/default/bin/test_processes" {"test_processes"}
+  "_build/install/default/bin/test_sequential" {"test_sequential"}
+  "_build/install/default/bin/test_async" {"test_async"}
   "_build/install/default/bin/setml" {"setml"}
 ]
 doc: [

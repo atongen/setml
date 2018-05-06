@@ -209,10 +209,6 @@ let update_player_name (module Db : Caqti_lwt.CONNECTION) player_id name =
 
 let delete_all (module Db : Caqti_lwt.CONNECTION) =
   Db.start () >>=? fun () ->
-  Db.exec (Q.generic_exec_query "truncate table games cascade;") () >>=? fun () ->
-  Db.exec (Q.generic_exec_query "truncate table players cascade;") () >>=? fun () ->
-  Db.exec (Q.generic_exec_query "truncate table games_players cascade;") () >>=? fun () ->
-  Db.exec (Q.generic_exec_query "truncate table game_cards cascade;") () >>=? fun () ->
-  Db.exec (Q.generic_exec_query "truncate table board_cards cascade;") () >>=? fun () ->
-  Db.exec (Q.generic_exec_query "truncate table moves cascade;") () >>=? fun () ->
+  Db.exec (Q.generic_exec_query "delete from games;") () >>=? fun () ->
+  Db.exec (Q.generic_exec_query "delete from players;") () >>=? fun () ->
   Db.commit ()
