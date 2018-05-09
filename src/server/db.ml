@@ -168,6 +168,28 @@ end
 let query_int (module Db : Caqti_lwt.CONNECTION) q =
   Db.find (Q.generic_int_query q) ()
 
+(* start pool experiments *)
+let with_pool pool f =
+  pool |> Caqti_lwt.Pool.use @@ fun (module Db : Caqti_lwt.CONNECTION) ->
+  f (module Db : Caqti_lwt.CONNECTION)
+
+let query_int_pool pool q =
+    with_pool (pool query_int) q
+
+let find f q =
+  f (Q.generic_int_query q) ()
+
+let pool_find pool q =
+    Caqti_lwt.Pool.use (fun (module Db : Caqti_lwt.CONNECTION) ->
+      find Db.find "wow")
+    pool
+
+let qp pool q =
+    Caqti_lwt.Pool.use (fun (module Db : Caqti_lwt.CONNECTION) ->
+      Db.find (Q.generic_int_query q) ())
+    pool
+(* end pool experiments *)
+
 let query_bool (module Db : Caqti_lwt.CONNECTION) q =
   Db.find (Q.generic_bool_query q) ()
 
