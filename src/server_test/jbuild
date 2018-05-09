@@ -45,6 +45,7 @@
    (public_name test_async)
    (modules (
      db_tests
+     dbp_tests
      test_async))
    (libraries (
      test_lib

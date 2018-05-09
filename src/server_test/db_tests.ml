@@ -35,12 +35,12 @@ let game_player_presence_test db =
     let p = q "presence" game_id player_id in
     Db.query_bool db s >>=? fun exists_before ->
     refute_bool "no exist before" exists_before;
-    Db.game_player_presence db game_id player_id true >>=? fun () ->
+    Db.game_player_presence db (game_id, player_id, true) >>=? fun () ->
     Db.query_bool db s >>=? fun exists_join ->
     assert_bool "yes exists join" exists_join;
     Db.query_bool db p >>=? fun present_join ->
     assert_bool "yes present join" present_join;
-    Db.game_player_presence db game_id player_id false >>=? fun () ->
+    Db.game_player_presence db (game_id, player_id, false) >>=? fun () ->
     Db.query_bool db s >>=? fun exists_leave ->
     assert_bool "yes exist leave" exists_leave;
     Db.query_bool db p >>=? fun present_leave ->
@@ -61,7 +61,7 @@ let create_move_test db =
   fun () ->
     Db.create_game db >>=? fun game_id ->
     Db.create_player db >>=? fun player_id ->
-    Db.game_player_presence db game_id player_id true >>=? fun () ->
+    Db.game_player_presence db (game_id, player_id, true) >>=? fun () ->
     Db.find_board_cards db game_id >>=? fun board_idxs ->
     let cards = List.map Card.of_int board_idxs in
     let sets_and_indexes_opt = Card.next_set_and_indexes cards in
@@ -71,7 +71,7 @@ let create_move_test db =
       let c0id = Card.to_int c0 in
       let c1id = Card.to_int c1 in
       let c2id = Card.to_int c2 in
-      Db.create_move db game_id player_id idx0 c0id idx1 c1id idx2 c2id >>=? fun () ->
+      Db.create_move db (game_id, player_id, idx0, c0id, idx1, c1id, idx2, c2id) >>=? fun () ->
       Db.find_scoreboard db game_id >>=? fun scores ->
       assert_equal ~printer:string_of_int 1 (List.length scores);
       (match find_player_score scores player_id with
@@ -90,9 +90,9 @@ let create_failed_move_test db =
   fun () ->
     Db.create_game db >>=? fun game_id ->
     Db.create_player db >>=? fun player_id ->
-    Db.game_player_presence db game_id player_id true >>=? fun () ->
+    Db.game_player_presence db (game_id, player_id, true) >>=? fun () ->
     Db.find_board_cards db game_id >>=? fun old_board_idxs ->
-    Db.create_move db game_id player_id 0 0 1 1 2 2 >>=? fun () ->
+    Db.create_move db (game_id, player_id, 0, 0, 1, 1, 2, 2) >>=? fun () ->
     Db.find_scoreboard db game_id >>=? fun scores ->
     assert_equal ~printer:string_of_int 1 (List.length scores);
     (match find_player_score scores player_id with

@@ -108,7 +108,7 @@ let make_handler db pubsub =
                     | Frame.Opcode.Close ->
                       (* websocket onclose *)
                       ignore (
-                        Db.game_player_presence db game_id player_id false >>=* fun () ->
+                        Db.game_player_presence db (game_id, player_id, false) >>=* fun () ->
                         Clients.remove clients game_id player_id;
                         if not (Clients.game_has_players clients game_id) then Pubsub.unsubscribe pubsub game_id;
                         log ("Player " ^ (string_of_int player_id) ^ " left game " ^ string_of_int game_id);
@@ -118,7 +118,7 @@ let make_handler db pubsub =
                       Clients.game_send clients game_id ("From player " ^ (string_of_int player_id) ^ ": " ^ f.content))
                 >>= fun (resp, body, frames_out_fn) ->
                 (* websocket onopen *)
-                Db.game_player_presence db game_id player_id true >>=? fun () ->
+                Db.game_player_presence db (game_id, player_id, true) >>=? fun () ->
                 ignore (log ("Player " ^ (string_of_int player_id) ^ " joined game " ^ string_of_int game_id));
                 Clients.add clients game_id player_id frames_out_fn;
                 Pubsub.subscribe pubsub game_id;

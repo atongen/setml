@@ -165,76 +165,54 @@ module Q = struct
         |eos}
 end
 
-let query_int (module Db : Caqti_lwt.CONNECTION) q =
-  Db.find (Q.generic_int_query q) ()
+let query_int (module C : Caqti_lwt.CONNECTION) q =
+  C.find (Q.generic_int_query q) ()
 
-(* start pool experiments *)
-let with_pool pool f =
-  pool |> Caqti_lwt.Pool.use @@ fun (module Db : Caqti_lwt.CONNECTION) ->
-  f (module Db : Caqti_lwt.CONNECTION)
+let query_bool (module C : Caqti_lwt.CONNECTION) q =
+  C.find (Q.generic_bool_query q) ()
 
-let query_int_pool pool q =
-    with_pool (pool query_int) q
-
-let find f q =
-  f (Q.generic_int_query q) ()
-
-let pool_find pool q =
-    Caqti_lwt.Pool.use (fun (module Db : Caqti_lwt.CONNECTION) ->
-      find Db.find "wow")
-    pool
-
-let qp pool q =
-    Caqti_lwt.Pool.use (fun (module Db : Caqti_lwt.CONNECTION) ->
-      Db.find (Q.generic_int_query q) ())
-    pool
-(* end pool experiments *)
-
-let query_bool (module Db : Caqti_lwt.CONNECTION) q =
-  Db.find (Q.generic_bool_query q) ()
-
-let create_game (module Db : Caqti_lwt.CONNECTION) =
-  Db.start () >>=? fun () ->
-  Db.find Q.create_game_query () >>=? fun game_id ->
-  Db.exec (Q.create_game_cards_query game_id) () >>=? fun () ->
-  Db.exec Q.create_board_cards_query (game_id, board_size) >>=? fun () ->
-  Db.find Q.increment_game_card_idx_query (board_size, game_id) >>=? fun _ ->
-  Db.commit () >>=? fun () ->
+let create_game (module C : Caqti_lwt.CONNECTION) =
+  C.start () >>=? fun () ->
+  C.find Q.create_game_query () >>=? fun game_id ->
+  C.exec (Q.create_game_cards_query game_id) () >>=? fun () ->
+  C.exec Q.create_board_cards_query (game_id, board_size) >>=? fun () ->
+  C.find Q.increment_game_card_idx_query (board_size, game_id) >>=? fun _ ->
+  C.commit () >>=? fun () ->
   Lwt.return_ok game_id
 
-let game_exists (module Db : Caqti_lwt.CONNECTION) game_id =
-  Db.find Q.game_exists_query game_id
+let game_exists (module C : Caqti_lwt.CONNECTION) game_id =
+  C.find Q.game_exists_query game_id
 
-let create_player (module Db : Caqti_lwt.CONNECTION) =
-  Db.find Q.create_player_query ()
+let create_player (module C : Caqti_lwt.CONNECTION) =
+  C.find Q.create_player_query ()
 
-let player_exists (module Db : Caqti_lwt.CONNECTION) player_id =
-  Db.find Q.player_exists_query player_id
+let player_exists (module C : Caqti_lwt.CONNECTION) player_id =
+  C.find Q.player_exists_query player_id
 
-let game_player_presence (module Db : Caqti_lwt.CONNECTION) game_id player_id present =
-  Db.exec Q.game_player_presence_query (game_id, player_id, present)
+let game_player_presence (module C : Caqti_lwt.CONNECTION) args =
+  C.exec Q.game_player_presence_query args
 
-let find_board_cards (module Db : Caqti_lwt.CONNECTION) game_id =
-  Db.collect_list Q.find_board_cards_query game_id
+let find_board_cards (module C : Caqti_lwt.CONNECTION) game_id =
+  C.collect_list Q.find_board_cards_query game_id
 
-let create_move (module Db : Caqti_lwt.CONNECTION) game_id player_id idx0 card0_id idx1 card1_id idx2 card2_id =
-  Db.start () >>=? fun () ->
-  Db.exec (Q.set_transaction_mode_query "serializable") () >>=? fun () ->
-  Db.exec Q.create_move_query (game_id, (player_id, (idx0, (card0_id, (idx1, (card1_id, (idx2, card2_id))))))) >>=? fun () ->
-  Db.find Q.increment_game_card_idx_query (3, game_id) >>=? fun card_idx ->
-  Db.collect_list Q.find_game_cards_query (game_id, card_idx, 3) >>=? fun card_ids_list ->
+let create_move (module C : Caqti_lwt.CONNECTION) (game_id, player_id, idx0, card0_id, idx1, card1_id, idx2, card2_id) =
+  C.start () >>=? fun () ->
+  C.exec (Q.set_transaction_mode_query "serializable") () >>=? fun () ->
+  C.exec Q.create_move_query (game_id, (player_id, (idx0, (card0_id, (idx1, (card1_id, (idx2, card2_id))))))) >>=? fun () ->
+  C.find Q.increment_game_card_idx_query (3, game_id) >>=? fun card_idx ->
+  C.collect_list Q.find_game_cards_query (game_id, card_idx, 3) >>=? fun card_ids_list ->
   let card_ids = Array.of_list card_ids_list in
-  Db.find Q.update_board_card_query (idx0, (card0_id, (card_ids.(0), (idx1, (card1_id, (card_ids.(1), (idx2, (card2_id, (card_ids.(2), game_id))))))))) >>=? fun num_updated ->
-  if num_updated != 3 then Db.rollback () else Db.commit ()
+  C.find Q.update_board_card_query (idx0, (card0_id, (card_ids.(0), (idx1, (card1_id, (card_ids.(1), (idx2, (card2_id, (card_ids.(2), game_id))))))))) >>=? fun num_updated ->
+  if num_updated != 3 then C.rollback () else C.commit ()
 
-let find_scoreboard (module Db : Caqti_lwt.CONNECTION) game_id =
-  Db.collect_list Q.find_scoreboard_query game_id
+let find_scoreboard (module C : Caqti_lwt.CONNECTION) game_id =
+  C.collect_list Q.find_scoreboard_query game_id
 
-let update_player_name (module Db : Caqti_lwt.CONNECTION) player_id name =
-  Db.exec Q.update_player_name_query (name, player_id)
+let update_player_name (module C : Caqti_lwt.CONNECTION) (player_id, name) =
+  C.exec Q.update_player_name_query (name, player_id)
 
-let delete_all (module Db : Caqti_lwt.CONNECTION) =
-  Db.start () >>=? fun () ->
-  Db.exec (Q.generic_exec_query "delete from games;") () >>=? fun () ->
-  Db.exec (Q.generic_exec_query "delete from players;") () >>=? fun () ->
-  Db.commit ()
+let delete_all (module C : Caqti_lwt.CONNECTION) =
+  C.start () >>=? fun () ->
+  C.exec (Q.generic_exec_query "delete from games;") () >>=? fun () ->
+  C.exec (Q.generic_exec_query "delete from players;") () >>=? fun () ->
+  C.commit ()

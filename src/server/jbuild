@@ -4,6 +4,7 @@
  ((name lib)
   (modules (
     db
+    dbp
     clients
     crypto
     pubsub
