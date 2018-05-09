@@ -1,6 +1,3 @@
-open Lwt.Infix
-open Shared
-
 let with_pool_0 pool f =
     Caqti_lwt.Pool.use (fun (module C : Caqti_lwt.CONNECTION) ->
         f (module C : Caqti_lwt.CONNECTION)
