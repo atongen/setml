@@ -55,7 +55,7 @@ let (>>=*) m f =
   | Ok (x) -> f x
   | Error (err) -> Caqti_error.show err |> log
 
-let make_handler db pubsub =
+let make_handler pool pubsub =
   fun (conn : Conduit_lwt_unix.flow * Cohttp.Connection.t)
     (req  : Cohttp_lwt_unix.Request.t)
     (body : Cohttp_lwt.Body.t) ->
@@ -79,26 +79,26 @@ let make_handler db pubsub =
         match Server_util.form_value myBody "token" with
         | Some (token) ->
           if session.token = token then (
-            Db.create_game db >>=? fun game_id ->
+            Dbp.create_game pool () >>=? fun game_id ->
             redirect (Route.game_show_uri game_id)
           ) else render_forbidden
         | None -> render_forbidden)
     | Route.Game_show (game_id) -> (
         match session.player_id with
         | Some (_) ->
-          Db.game_exists db game_id >>=? (fun exists ->
+          Dbp.game_exists pool game_id >>=? (fun exists ->
               if exists then (render_game game_id session.token) else render_not_found
             )
         | None ->
-          Db.create_player db >>=? (fun player_id ->
+          Dbp.create_player pool () >>=? (fun player_id ->
               let headers = Session.set_player_id_headers session crypto player_id in
               redirect ~headers (Route.game_show_uri game_id)))
     | Route.Ws_show (game_id) -> (
-        Db.game_exists db game_id >>=? fun game_exists ->
+        Dbp.game_exists pool game_id >>=? fun game_exists ->
         if game_exists then (
           match session.player_id with
           | Some(player_id) -> (
-              Db.player_exists db player_id >>=? fun player_exists ->
+              Dbp.player_exists pool player_id >>=? fun player_exists ->
               if player_exists then (
                 Cohttp_lwt.Body.drain_body body
                 >>= fun () ->
@@ -108,7 +108,7 @@ let make_handler db pubsub =
                     | Frame.Opcode.Close ->
                       (* websocket onclose *)
                       ignore (
-                        Db.game_player_presence db (game_id, player_id, false) >>=* fun () ->
+                        Dbp.game_player_presence pool (game_id, player_id, false) >>=* fun () ->
                         Clients.remove clients game_id player_id;
                         if not (Clients.game_has_players clients game_id) then Pubsub.unsubscribe pubsub game_id;
                         log ("Player " ^ (string_of_int player_id) ^ " left game " ^ string_of_int game_id);
@@ -118,7 +118,7 @@ let make_handler db pubsub =
                       Clients.game_send clients game_id ("From player " ^ (string_of_int player_id) ^ ": " ^ f.content))
                 >>= fun (resp, body, frames_out_fn) ->
                 (* websocket onopen *)
-                Db.game_player_presence db (game_id, player_id, true) >>=? fun () ->
+                Dbp.game_player_presence pool (game_id, player_id, true) >>=? fun () ->
                 ignore (log ("Player " ^ (string_of_int player_id) ^ " joined game " ^ string_of_int game_id));
                 Clients.add clients game_id player_id frames_out_fn;
                 Pubsub.subscribe pubsub game_id;
@@ -136,13 +136,13 @@ let start_server host port () =
       (Sexplib.Sexp.to_string_hum (Conduit_lwt_unix.sexp_of_flow ch))
   in
   Lwt_io.eprintf "[SERV] Listening for HTTP on port %d\n%!" port >>= fun () ->
-  Caqti_lwt.connect (Uri.of_string "postgresql://atongen:at1234@localhost:5435/setml_development") >>= function
-  | Ok db ->
+  Lwt.return (Caqti_lwt.connect_pool ~max_size:8 (Uri.of_string "postgresql://atongen:at1234@localhost:5435/setml_development")) >>= function
+  | Ok pool ->
     let pubsub = Pubsub.make "user=atongen password=at1234 port=5435 host=localhost dbname=setml_development" clients in
     ignore (Lwt_preemptive.detach Pubsub.start pubsub);
     Cohttp_lwt_unix.Server.create
       ~mode:(`TCP (`Port port))
-      (Cohttp_lwt_unix.Server.make ~callback:(make_handler db pubsub) ~conn_closed ())
+      (Cohttp_lwt_unix.Server.make ~callback:(make_handler pool pubsub) ~conn_closed ())
   | Error err ->
     Lwt.return (print_endline ("Failed to connect to db!"))
 

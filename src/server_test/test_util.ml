@@ -77,3 +77,13 @@ let ase exp got _test_ctxt = assert_equal ~printer:sp exp got
 let aie exp got _test_ctxt = assert_equal ~printer:string_of_int exp got
 let ab msg got _test_ctxt = assert_bool msg got
 let af msg _test_ctxt = assert_failure msg
+
+let find_player_scoreboard scoreboard player_id =
+    List.find_opt (fun (pid, _, _, _) ->
+        player_id = pid
+    ) scoreboard
+
+let find_player_score scoreboard player_id =
+    match find_player_scoreboard scoreboard player_id with
+    | Some (_, _, _, score) -> Some (score)
+    | None -> None

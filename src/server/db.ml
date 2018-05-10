@@ -171,7 +171,7 @@ let query_int (module C : Caqti_lwt.CONNECTION) q =
 let query_bool (module C : Caqti_lwt.CONNECTION) q =
   C.find (Q.generic_bool_query q) ()
 
-let create_game (module C : Caqti_lwt.CONNECTION) =
+let create_game (module C : Caqti_lwt.CONNECTION) () =
   C.start () >>=? fun () ->
   C.find Q.create_game_query () >>=? fun game_id ->
   C.exec (Q.create_game_cards_query game_id) () >>=? fun () ->
@@ -183,7 +183,7 @@ let create_game (module C : Caqti_lwt.CONNECTION) =
 let game_exists (module C : Caqti_lwt.CONNECTION) game_id =
   C.find Q.game_exists_query game_id
 
-let create_player (module C : Caqti_lwt.CONNECTION) =
+let create_player (module C : Caqti_lwt.CONNECTION) () =
   C.find Q.create_player_query ()
 
 let player_exists (module C : Caqti_lwt.CONNECTION) player_id =
@@ -211,7 +211,7 @@ let find_scoreboard (module C : Caqti_lwt.CONNECTION) game_id =
 let update_player_name (module C : Caqti_lwt.CONNECTION) (player_id, name) =
   C.exec Q.update_player_name_query (name, player_id)
 
-let delete_all (module C : Caqti_lwt.CONNECTION) =
+let delete_all (module C : Caqti_lwt.CONNECTION) () =
   C.start () >>=? fun () ->
   C.exec (Q.generic_exec_query "delete from games;") () >>=? fun () ->
   C.exec (Q.generic_exec_query "delete from players;") () >>=? fun () ->

@@ -8,7 +8,7 @@ open Shared
 
 let create_game_test db =
   fun () ->
-    Db.create_game db >>=? fun game_id ->
+    Db.create_game db () >>=? fun game_id ->
     Db.game_exists db game_id >>=? fun game_exists ->
     assert_bool "game exists" game_exists;
     assert_query_equal db 81 ("select count(*) from game_cards where game_id = " ^ string_of_int game_id) >>= fun () ->
@@ -17,7 +17,7 @@ let create_game_test db =
 
 let create_player_test db =
   fun () ->
-    Db.create_player db >>=? fun player_id ->
+    Db.create_player db () >>=? fun player_id ->
     Db.player_exists db player_id >>=? fun player_exists ->
     Lwt.return (assert_bool "player exists" player_exists)
 
@@ -29,8 +29,8 @@ let game_player_presence_test db =
       "where game_id = " ^ string_of_int game_id ^ " " ^
       "and player_id = " ^ string_of_int player_id
     in
-    Db.create_game db >>=? fun game_id ->
-    Db.create_player db >>=? fun player_id ->
+    Db.create_game db () >>=? fun game_id ->
+    Db.create_player db () >>=? fun player_id ->
     let s = "select exists(" ^ (q "1" game_id player_id) ^ ")" in
     let p = q "presence" game_id player_id in
     Db.query_bool db s >>=? fun exists_before ->
@@ -47,20 +47,10 @@ let game_player_presence_test db =
     refute_bool "no present leave" present_leave;
     Lwt.return_unit
 
-let find_player_scoreboard scoreboard player_id =
-    List.find_opt (fun (pid, _, _, _) ->
-        player_id = pid
-    ) scoreboard
-
-let find_player_score scoreboard player_id =
-    match find_player_scoreboard scoreboard player_id with
-    | Some (_, _, _, score) -> Some (score)
-    | None -> None
-
 let create_move_test db =
   fun () ->
-    Db.create_game db >>=? fun game_id ->
-    Db.create_player db >>=? fun player_id ->
+    Db.create_game db () >>=? fun game_id ->
+    Db.create_player db () >>=? fun player_id ->
     Db.game_player_presence db (game_id, player_id, true) >>=? fun () ->
     Db.find_board_cards db game_id >>=? fun board_idxs ->
     let cards = List.map Card.of_int board_idxs in
@@ -88,8 +78,8 @@ let create_move_test db =
 
 let create_failed_move_test db =
   fun () ->
-    Db.create_game db >>=? fun game_id ->
-    Db.create_player db >>=? fun player_id ->
+    Db.create_game db () >>=? fun game_id ->
+    Db.create_player db () >>=? fun player_id ->
     Db.game_player_presence db (game_id, player_id, true) >>=? fun () ->
     Db.find_board_cards db game_id >>=? fun old_board_idxs ->
     Db.create_move db (game_id, player_id, 0, 0, 1, 1, 2, 2) >>=? fun () ->
