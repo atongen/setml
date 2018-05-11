@@ -140,10 +140,7 @@ create index idx_0007 on moves using btree (game_id,created_at);
 drop function if exists games_players_present_change_notify cascade; -- old name
 
 create or replace function games_players_presence_change_notify() returns trigger AS $$
-declare
-    player_name character varying(255);
 begin
-    select name into strict player_name from players where id = NEW.player_id;
     perform pg_notify(concat('game_', NEW.game_id), json_build_object(
         'type', 'presence',
         'player_id', NEW.player_id,
@@ -191,3 +188,23 @@ create trigger players_name_change_trigger
     after update
     on players
     for each row execute procedure players_name_change_notify();
+
+-- board_card notification
+
+create or replace function board_card_change_notify() returns trigger AS $$
+begin
+    perform pg_notify(concat('game_', NEW.game_id), json_build_object(
+        'type', 'board_card',
+        'idx', NEW.idx,
+        'card_id', NEW.card_id
+    )::text);
+    return NEW;
+end;
+$$ language plpgsql;
+
+drop trigger if exists board_card_change_trigger
+    on board_cards;
+create trigger board_card_change_trigger
+    after update
+    on board_cards
+    for each row execute procedure board_card_change_notify();

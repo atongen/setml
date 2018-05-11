@@ -18,6 +18,13 @@ module ClientMessageConverter: CONVERT = {
         (player_name_key, string(d.name)),
       ])
       |> Json.stringify
+    | Board_card(d) =>
+      object_([
+        (type_key, string(message_type_to_string(Board_card_type))),
+        (idx_key, int(d.idx)),
+        (card_id_key, int(d.idx)),
+      ])
+      |> Json.stringify
     };
   };
   let of_json = str => {
@@ -28,6 +35,7 @@ module ClientMessageConverter: CONVERT = {
     | Presence_type => make_presence(json |> field(player_id_key, int), json |> field(value_key, bool))
     | Player_name_type =>
       make_player_name(json |> field(player_id_key, int), json |> field(player_name_key, string))
+    | Board_card_type => make_board_card(json |> field(idx_key, int), json |> field(card_id_key, int))
     };
   };
 };

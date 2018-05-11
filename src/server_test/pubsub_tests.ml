@@ -100,12 +100,33 @@ let player_name_check pubsub =
         teardown_game pubsub game0_id;
         teardown_game pubsub game1_id
 
+let make_board_cards_query game_id =
+    let open CCList.Infix in
+    let rows = List.map (fun i ->
+        Printf.sprintf "(%d,%d,%d)" game_id i i
+    ) (0 -- 11) in
+    let query_values = String.concat ", " rows in
+    "insert into board_cards (game_id, idx, card_id) values " ^ query_values ^ ";"
+
+let board_card_check pubsub =
+    fun test_ctx ->
+        let game_id = setup_game pubsub in
+        Pubsub.empty_query pubsub (make_board_cards_query game_id);
+        Pubsub.empty_query pubsub @@ Printf.sprintf "update board_cards set card_id = 13 where game_id = %d and idx = 2;" game_id;
+        let msgs = Pubsub.get_notifications pubsub in
+        assert_equal ~printer:string_of_int 1 (List.length msgs);
+        let expMsg = Messages.make_board_card 2 13 in
+        let gotMsg = (List.hd msgs).extra |> Server_message_converter.of_json in
+        assert_equal ~ctxt:test_ctx expMsg gotMsg ~printer:Messages.to_string;
+        teardown_game pubsub game_id
+
 let pubsub_tests pubsub =
     let check f = f pubsub in
     cases_of check [
         presence_check;
         presence_check_accum;
         player_name_check;
+        board_card_check;
     ]
 
 (*

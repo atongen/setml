@@ -16,6 +16,7 @@ let convert_tests =
   cases_of check [
     Messages.make_presence 1 true;
     Messages.make_player_name 2 "andrew2";
+    Messages.make_board_card 5 7;
   ]
 
 let suite = [
