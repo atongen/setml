@@ -37,15 +37,28 @@ let make_presence_query game_id player_id present =
         |eos}
     game_id player_id present
 
+let make_board_cards_query game_id =
+    let open CCList.Infix in
+    let rows = List.map (fun i ->
+        Printf.sprintf "(%d,%d,%d)" game_id i i
+    ) (0 -- 11) in
+    let query_values = String.concat ", " rows in
+    "insert into board_cards (game_id, idx, card_id) values " ^ query_values ^ ";"
+
+
 let presence_check pubsub =
     fun test_ctx ->
+        let open CCList.Infix in
         let game_id = setup_game pubsub in
+        Pubsub.empty_query pubsub (make_board_cards_query game_id);
         let player_id, player_name = setup_player pubsub in
         List.iter (fun present ->
             Pubsub.empty_query pubsub (make_presence_query game_id player_id present);
             let msgs = Pubsub.get_notifications pubsub in
             assert_equal ~printer:string_of_int 1 (List.length msgs);
-            let expMsg = Messages.make_presence player_id present in
+            let expMsg = (Messages.make_scoreboard [
+                Messages.make_scoreboard_player_data player_id player_name present 0;
+            ] ((0 --^ 12) >|= (fun i -> Messages.make_board_card_data i i))) in
             let json = (List.hd msgs).extra in
             let gotMsg = Server_message_converter.of_json json in
             assert_equal ~ctxt:test_ctx expMsg gotMsg ~printer:Messages.to_string
@@ -55,7 +68,9 @@ let presence_check pubsub =
 
 let presence_check_accum pubsub =
     fun test_ctx ->
+        let open CCList.Infix in
         let game_id = setup_game pubsub in
+        Pubsub.empty_query pubsub (make_board_cards_query game_id);
         let player_id, player_name = setup_player pubsub in
         Pubsub.empty_query pubsub (make_presence_query game_id player_id true);
         Pubsub.empty_query pubsub (make_presence_query game_id player_id false);
@@ -63,8 +78,12 @@ let presence_check_accum pubsub =
         let msgs = Pubsub.get_notifications pubsub in
         assert_equal ~printer:string_of_int 2 (List.length msgs);
         let msgs_arr = Array.of_list msgs in
-        let expMsg0 = Messages.make_presence player_id true in
-        let expMsg1 = Messages.make_presence player_id false in
+        let expMsg0 = (Messages.make_scoreboard [
+            Messages.make_scoreboard_player_data player_id player_name true 0;
+        ] ((0 --^ 12) >|= (fun i -> Messages.make_board_card_data i i))) in
+        let expMsg1 = (Messages.make_scoreboard [
+            Messages.make_scoreboard_player_data player_id player_name false 0;
+        ] ((0 --^ 12) >|= (fun i -> Messages.make_board_card_data i i))) in
         let json0 = msgs_arr.(0).extra in
         let json1 = msgs_arr.(1).extra in
         let gotMsg0 = Server_message_converter.of_json json0 in
@@ -99,14 +118,6 @@ let player_name_check pubsub =
         teardown_player pubsub player_id;
         teardown_game pubsub game0_id;
         teardown_game pubsub game1_id
-
-let make_board_cards_query game_id =
-    let open CCList.Infix in
-    let rows = List.map (fun i ->
-        Printf.sprintf "(%d,%d,%d)" game_id i i
-    ) (0 -- 11) in
-    let query_values = String.concat ", " rows in
-    "insert into board_cards (game_id, idx, card_id) values " ^ query_values ^ ";"
 
 let board_card_check pubsub =
     fun test_ctx ->
