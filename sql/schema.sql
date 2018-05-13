@@ -18,39 +18,28 @@ insert into players (name) values ('andrew');
 
 -- games table
 
-drop function if exists make_game_id cascade;
+drop sequence if exists games_id_counter_seq cascade;
 
--- for 5-char base-36:
---  1_679_616 is min (10000)
--- 60_466_175 is max (zzzzz)
--- 58_786_559 unique values
--- for 6-char base-36:
---    60_466_176 is min (100000)
--- 2_176_782_335 is max (zzzzzz)
--- 2_116_316_159 unique values
--- formula is SELECT floor(random()*(max-min+1))+min;
-CREATE OR REPLACE FUNCTION make_game_id() RETURNS bigint AS $$
-DECLARE
-    new_game_id bigint;
-    done bool;
-BEGIN
-    done := false;
-    WHILE NOT done LOOP
-        new_game_id := floor(random()*(58786560))+1679616;
-        done := NOT exists(SELECT 1 FROM games WHERE id=new_game_id);
-    END LOOP;
-    RETURN new_game_id;
-END;
-$$ LANGUAGE PLPGSQL VOLATILE;
+create sequence games_id_counter_seq
+    start with 1
+    increment by 1
+    no minvalue
+    no maxvalue
+    cache 1;
+
 
 drop table if exists games cascade;
 
 create table games (
-    id bigint not null primary key default make_game_id(),
+    id bigint not null primary key,
+    id_counter bigint not null,
+    status character varying(10) not null default 'new',
     card_idx int not null default 0,
     created_at timestamp without time zone default now(),
-    check (id >= 1679616 and id <= 60466175)
+    check (id <= 2176782335)
 );
+
+create unique index idx_0000 on games using btree (id_counter);
 
 
 -- games_players tabe
@@ -68,8 +57,8 @@ create table games_players (
     primary key (game_id, player_id)
 );
 
-create index idx_0000 on games_players using btree (game_id);
-create index idx_0001 on games_players using btree (player_id);
+create index idx_0001 on games_players using btree (game_id);
+create index idx_0002 on games_players using btree (player_id);
 
 
 -- game_cards table
@@ -86,8 +75,8 @@ create table game_cards (
     check (card_id >= 0 and card_id < 81)
 );
 
-create unique index idx_0002 on game_cards using btree (game_id,idx);
-create unique index idx_0003 on game_cards using btree (game_id,card_id);
+create unique index idx_0003 on game_cards using btree (game_id,idx);
+create unique index idx_0004 on game_cards using btree (game_id,card_id);
 
 
 -- board_cards table
@@ -104,8 +93,8 @@ create table board_cards (
     check (card_id >= 0 and card_id < 81)
 );
 
-create unique index idx_0004 on board_cards using btree (game_id,idx);
-create unique index idx_0005 on board_cards using btree (game_id,card_id);
+create unique index idx_0005 on board_cards using btree (game_id,idx);
+create unique index idx_0006 on board_cards using btree (game_id,card_id);
 
 
 -- moves table
@@ -127,8 +116,86 @@ create table moves (
     created_at timestamp without time zone not null default now()
 );
 
-create index idx_0006 on moves using btree (game_id,player_id);
-create index idx_0007 on moves using btree (game_id,created_at);
+create index idx_0007 on moves using btree (game_id,player_id);
+create index idx_0008 on moves using btree (game_id,created_at);
+
+--
+-- Setup data triggers
+--
+
+
+-- base 36, min, max
+-- boundary is 75% of unique values + min
+
+-- 2-char
+-- 10    36
+-- zz 1_295
+--      980 boundary
+
+-- 3-char
+-- 100  1_296
+-- zzz 46_655
+--     35_315 boundary
+
+-- 4-char
+-- 1000    46_656
+-- zzzz 1_679_615
+--      1_271_375 boundary
+
+-- 5-char
+-- 10000  1_679_616
+-- zzzzz 60_466_175
+--       45_769_535 boundary
+
+-- 6-char
+-- 100000    60_466_176
+-- zzzzzz 2_176_782_335
+--        1_647_703_295 boundary
+drop function if exists set_game_id cascade;
+CREATE OR REPLACE FUNCTION set_game_id() RETURNS trigger AS $$
+DECLARE
+    game_id bigint;
+    next_id_counter bigint;
+    min_value bigint;
+    max_value bigint;
+    done bool;
+BEGIN
+    next_id_counter := nextval('games_id_counter_seq'::regclass);
+    NEW.id_counter = next_id_counter;
+    if NEW.id is null then
+        if next_id_counter <= 980 then -- 2-char
+            min_value := 36;
+            max_value := 1295;
+        elsif next_id_counter <= 35315 then -- 3-char
+            min_value := 1296;
+            max_value := 46655;
+        elsif next_id_counter <= 1271375 then -- 4-char
+            min_value := 46656;
+            max_value := 1679615;
+        elsif next_id_counter <= 45769535 then -- 5-char
+            min_value := 1679616;
+            max_value := 60466175;
+        else -- 6-char
+            min_value := 60466176;
+            max_value := 2176782335;
+        end if;
+        done := false;
+        while not done loop
+            game_id := floor(random()*(max_value-min_value+1))+min_value;
+            done := not exists(select 1 from games where id=game_id);
+        end loop;
+        NEW.id = game_id;
+    end if;
+    return NEW;
+END;
+$$ language plpgsql;
+
+drop trigger if exists set_game_id_trigger
+    on games;
+create trigger set_game_id_trigger
+    before insert
+    on games
+    for each row execute procedure set_game_id();
 
 --
 -- Setup notification triggers
@@ -136,8 +203,6 @@ create index idx_0007 on moves using btree (game_id,created_at);
 
 
 -- games_players_present notification
-
-drop function if exists games_players_present_change_notify cascade; -- old name
 
 create or replace function games_players_presence_change_notify() returns trigger AS $$
 begin
@@ -150,8 +215,6 @@ begin
 end;
 $$ language plpgsql;
 
-drop trigger if exists games_players_present_change_trigger
-    on games_players; -- old name
 drop trigger if exists games_players_presence_change_trigger
     on games_players;
 create trigger games_players_presence_change_trigger
