@@ -69,6 +69,13 @@ module Server_message_converter : Messages.CONVERT = struct
                 (card2_id_key, `Int d.card2_id);
             ]
             |> to_string
+        | Player_presence d ->
+            `Assoc [
+                (type_key, `String (message_type_to_string Player_presence_type));
+                (player_id_key, `Int d.player_id);
+                (player_name_key, `Bool d.presence);
+            ]
+            |> to_string
 
     let of_json str =
         let json = from_string str in
@@ -112,5 +119,4 @@ module Server_message_converter : Messages.CONVERT = struct
             | Player_presence_type -> make_player_presence
                 (json |> Util.member player_id_key |> Util.to_int)
                 (json |> Util.member presence_key |> Util.to_bool)
-
 end

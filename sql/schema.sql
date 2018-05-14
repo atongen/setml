@@ -350,13 +350,13 @@ begin
     where moves.game_id = NEW.game_id
     and moves.player_id = NEW.player_id;
 
-    perform pg_notify(concat('game_', NEW.id), json_build_object(
+    perform pg_notify(concat('game_', NEW.game_id), json_build_object(
         'type', 'score',
         'player_id', NEW.player_id,
         'score', score
     )::text);
 
-    perform pg_notify(concat('game_', NEW.id), json_build_object(
+    perform pg_notify(concat('game_', NEW.game_id), json_build_object(
         'type', 'previous_move',
         'card0_id', NEW.card0_id,
         'card1_id', NEW.card1_id,

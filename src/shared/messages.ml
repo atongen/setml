@@ -9,9 +9,9 @@ let card_idx_key = "card_idx"
 let score_key = "score"
 let players_key = "players"
 let status_key = "status"
-let card0_id_key = "card0_id_key"
-let card1_id_key = "card1_id_key"
-let card2_id_key = "card2_id_key"
+let card0_id_key = "card0_id"
+let card1_id_key = "card1_id"
+let card2_id_key = "card2_id"
 let board_key = "board"
 
 type message_type =
