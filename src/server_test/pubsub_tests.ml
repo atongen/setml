@@ -56,9 +56,13 @@ let presence_check pubsub =
             Pubsub.empty_query pubsub (make_presence_query game_id player_id present);
             let msgs = Pubsub.get_notifications pubsub in
             assert_equal ~printer:string_of_int 1 (List.length msgs);
-            let expMsg = (Messages.make_scoreboard [
-                Messages.make_scoreboard_player_data player_id player_name present 0;
-            ] ((0 --^ 12) >|= (fun i -> Messages.make_board_card_data i i))) in
+            let expMsg = if present then
+                (Messages.make_scoreboard [
+                    Messages.make_scoreboard_player_data player_id player_name present 0;
+                ] ((0 --^ 12) >|= (fun i -> Messages.make_board_card_data i i)))
+            else
+                Messages.make_player_presence player_id false
+            in
             let json = (List.hd msgs).extra in
             let gotMsg = Server_message_converter.of_json json in
             assert_equal ~ctxt:test_ctx expMsg gotMsg ~printer:Messages.to_string
@@ -81,9 +85,7 @@ let presence_check_accum pubsub =
         let expMsg0 = (Messages.make_scoreboard [
             Messages.make_scoreboard_player_data player_id player_name true 0;
         ] ((0 --^ 12) >|= (fun i -> Messages.make_board_card_data i i))) in
-        let expMsg1 = (Messages.make_scoreboard [
-            Messages.make_scoreboard_player_data player_id player_name false 0;
-        ] ((0 --^ 12) >|= (fun i -> Messages.make_board_card_data i i))) in
+        let expMsg1 = Messages.make_player_presence player_id false in
         let json0 = msgs_arr.(0).extra in
         let json1 = msgs_arr.(1).extra in
         let gotMsg0 = Server_message_converter.of_json json0 in
