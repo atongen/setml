@@ -67,7 +67,7 @@ module Server_message_converter : Messages.CONVERT = struct
                 `Assoc [
                     (type_key, `String (message_type_to_string Player_presence_type));
                     (player_id_key, `Int d.player_id);
-                    (player_name_key, `Bool d.presence);
+                    (presence_key, `Bool d.presence);
                 ]
             | Batch d ->
                 `Assoc [

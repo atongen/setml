@@ -45,6 +45,8 @@ let convert_tests =
     make_previous_move 10 20 30;
     make_previous_move 11 21 31;
     make_previous_move 64 77 80;
+    make_player_presence 1 true;
+    make_player_presence 1 false;
   ] in
   let batch = Messages.make_batch messages
   in
