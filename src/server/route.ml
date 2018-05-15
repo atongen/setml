@@ -10,7 +10,7 @@ let string_of_game_id id = Server_util.base36_of_int id
 let game_id_string str = Server_util.int_of_base36 str
 
 let path_parts path =
-  Str.split (Str.regexp "\/+") path |> Array.of_list
+  Str.split (Str.regexp "\\/+") path |> Array.of_list
 
 let of_meth_and_path meth path =
   let parts = path_parts path in
