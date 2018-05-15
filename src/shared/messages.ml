@@ -13,6 +13,7 @@ let card0_id_key = "card0_id"
 let card1_id_key = "card1_id"
 let card2_id_key = "card2_id"
 let board_key = "board"
+let messages_key = "messages"
 
 type message_type =
     | Scoreboard_type
@@ -23,6 +24,7 @@ type message_type =
     | Score_type
     | Previous_move_type
     | Player_presence_type
+    | Batch_type
 
 let message_type_to_string = function
     | Scoreboard_type -> "scoreboard"
@@ -33,6 +35,7 @@ let message_type_to_string = function
     | Score_type -> "score"
     | Previous_move_type -> "previous_move"
     | Player_presence_type -> "presence"
+    | Batch_type -> "batch"
 
 let message_type_of_string = function
     | "scoreboard" -> Scoreboard_type
@@ -43,6 +46,7 @@ let message_type_of_string = function
     | "score" -> Score_type
     | "previous_move" -> Previous_move_type
     | "presence" -> Player_presence_type
+    | "batch" -> Batch_type
     | ts -> raise (Invalid_argument ("Unknown message type string: " ^ ts))
 
 type scoreboard_player_data = {
@@ -115,6 +119,7 @@ type t =
     | Score of score_data
     | Previous_move of previous_move_data
     | Player_presence of player_presence_data
+    | Batch of t list
 
 let make_scoreboard players board =
     Scoreboard {
@@ -180,7 +185,9 @@ let make_player_presence player_id presence =
         presence;
     }
 
-let to_string = function
+let make_batch msgs = Batch msgs
+
+let rec to_string = function
     | Scoreboard d ->
         let player_strs = List.map scoreboard_player_data_to_string d.players in
         let players = String.concat ", " player_strs in
@@ -209,7 +216,10 @@ let to_string = function
     | Player_presence d ->
         Printf.sprintf "<message (%s) player_id=%d presence=%b>"
             (message_type_to_string Player_presence_type) d.player_id d.presence
-
+    | Batch d ->
+        let msgs = List.map to_string d in
+        Printf.sprintf "<message (%s) messages=[%s]>"
+            (message_type_to_string Batch_type) (String.concat ", " msgs)
 
 module type CONVERT = sig
     val to_json : t -> string

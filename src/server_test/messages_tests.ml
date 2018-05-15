@@ -13,7 +13,7 @@ let convert_tests =
     let d = v |> to_json |> of_json in
     ae v d ~printer:Messages.to_string
   in
-  cases_of check [
+  let messages = [
     make_scoreboard [
         make_scoreboard_player_data 1 "john" true 5;
         make_scoreboard_player_data 2 "rich" true 4;
@@ -45,7 +45,10 @@ let convert_tests =
     make_previous_move 10 20 30;
     make_previous_move 11 21 31;
     make_previous_move 64 77 80;
-  ]
+  ] in
+  let batch = Messages.make_batch messages
+  in
+  cases_of check (messages @ [batch])
 
 let suite = [
   "convert_tests" >::: convert_tests;
