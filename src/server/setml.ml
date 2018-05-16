@@ -80,7 +80,6 @@ let make_handler pool pubsub =
         | Some (token) ->
           if session.token = token then (
             Dbp.create_game pool () >>=? fun game_id ->
-            Pubsub.subscribe pubsub game_id;
             redirect (Route.game_show_uri game_id)
           ) else render_forbidden
         | None -> render_forbidden)

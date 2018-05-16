@@ -23,8 +23,6 @@ module ConnKey = struct
 end
 module ConnTable = CCHashtbl.Make(ConnKey)
 
-module GameSet = CCSet.Make(GameKey)
-module GamesOfPlayerTable = CCHashtbl.Make(PlayerKey)
 module PlayerSet = CCSet.Make(PlayerKey)
 module PlayersOfGameTable = CCHashtbl.Make(GameKey)
 

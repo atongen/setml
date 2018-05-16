@@ -1,19 +1,17 @@
-type action =
-  | Subscribe of int
-  | Unsubscribe of int
+module Listen_set = CCSet.Make(CCInt)
 
 type t = {
   conn: Postgresql.connection;
   clients: Clients.t;
-  actions: action CCBlockingQueue.t;
   delay: float;
+  mutable listening: Listen_set.t;
 }
 
-let make ?(n=32) ?(delay=0.1) conninfo clients = {
+let make ?(delay=0.1) conninfo clients = {
   conn = new Postgresql.connection ~conninfo ();
   clients;
-  actions = CCBlockingQueue.create n;
   delay;
+  listening = Listen_set.empty;
 }
 
 let channel_game_id_re = Re.Pcre.regexp "^game_([0-9]+)$"
@@ -36,14 +34,6 @@ let handle_notifications pubsub msgs =
             )
         | None -> ignore (print_endline ("Unknown channel: " ^ channel ^ " from pid " ^ string_of_int msg.pid))
     ) msgs
-
-let subscribe pubsub game_id =
-  Subscribe game_id |>
-  CCBlockingQueue.push pubsub.actions
-
-let unsubscribe pubsub game_id =
-  Unsubscribe game_id |>
-  CCBlockingQueue.push pubsub.actions
 
 let print_result (conn: Postgresql.connection) (result: Postgresql.result) =
   let open Postgresql in
@@ -99,25 +89,24 @@ let empty_query pubsub query =
   pubsub.conn#send_query @@ query;
   hold pubsub (fun () -> flush_result pubsub.conn)
 
-let handle_action pubsub action =
-  let query = match action with
-    | Subscribe (game_id) -> "listen game_" ^ string_of_int game_id ^ ";"
-    | Unsubscribe (game_id) -> "unlisten game_" ^ string_of_int game_id ^ ";"
-  in empty_query pubsub query
+let subscribe pubsub game_id =
+    if not (Listen_set.mem game_id pubsub.listening) then
+        empty_query pubsub ("listen game_" ^ string_of_int game_id ^ ";");
+        pubsub.listening <- Listen_set.add game_id pubsub.listening
+
+let unsubscribe pubsub game_id =
+    if Listen_set.mem game_id pubsub.listening then
+        empty_query pubsub ("unlisten game_" ^ string_of_int game_id ^ ";");
+        pubsub.listening <- Listen_set.remove game_id pubsub.listening
 
 let start pubsub =
   let rec aux () =
-    match CCBlockingQueue.try_take pubsub.actions with
-    | Some (action) ->
-      handle_action pubsub action;
-      aux ()
-    | None ->
-      let msgs = get_notifications pubsub in
-      if List.length msgs = 0 then (
-        Unix.sleepf pubsub.delay
-      ) else (
-        handle_notifications pubsub msgs
-      );
-      aux ()
+    let msgs = get_notifications pubsub in
+    if List.length msgs > 0 then (
+      handle_notifications pubsub msgs
+    ) else (
+      Unix.sleepf pubsub.delay
+    );
+    aux ()
   in
   aux ()

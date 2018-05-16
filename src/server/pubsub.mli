@@ -1,6 +1,6 @@
 type t
 
-val make : ?n:int -> ?delay:float -> string -> Clients.t -> t
+val make : ?delay:float -> string -> Clients.t -> t
 val subscribe : t -> int -> unit
 val unsubscribe : t -> int -> unit
 val get_notifications : t -> Postgresql.Notification.t list
