@@ -80,6 +80,7 @@ let make_handler pool pubsub =
         | Some (token) ->
           if session.token = token then (
             Dbp.create_game pool () >>=? fun game_id ->
+            Pubsub.subscribe pubsub game_id;
             redirect (Route.game_show_uri game_id)
           ) else render_forbidden
         | None -> render_forbidden)
@@ -87,7 +88,8 @@ let make_handler pool pubsub =
         match session.player_id with
         | Some (_) ->
           Dbp.game_exists pool game_id >>=? (fun exists ->
-              if exists then (render_game game_id session.token) else render_not_found
+              if exists then (render_game game_id session.token)
+              else render_not_found
             )
         | None ->
           Dbp.create_player pool () >>=? (fun player_id ->
@@ -108,9 +110,9 @@ let make_handler pool pubsub =
                     | Frame.Opcode.Close ->
                       (* websocket onclose *)
                       ignore (
-                        Dbp.game_player_presence pool (game_id, player_id, false) >>=* fun () ->
                         Clients.remove clients game_id player_id;
                         if not (Clients.game_has_players clients game_id) then Pubsub.unsubscribe pubsub game_id;
+                        Dbp.game_player_presence pool (game_id, player_id, false) >>=* fun () ->
                         log ("Player " ^ (string_of_int player_id) ^ " left game " ^ string_of_int game_id);
                       )
                     | _ ->
@@ -118,10 +120,10 @@ let make_handler pool pubsub =
                       Clients.game_send clients game_id ("From player " ^ (string_of_int player_id) ^ ": " ^ f.content))
                 >>= fun (resp, body, frames_out_fn) ->
                 (* websocket onopen *)
+                Pubsub.subscribe pubsub game_id;
+                Clients.add clients game_id player_id frames_out_fn;
                 Dbp.game_player_presence pool (game_id, player_id, true) >>=? fun () ->
                 ignore (log ("Player " ^ (string_of_int player_id) ^ " joined game " ^ string_of_int game_id));
-                Clients.add clients game_id player_id frames_out_fn;
-                Pubsub.subscribe pubsub game_id;
                 Lwt.return (resp, (body :> Cohttp_lwt.Body.t))
               ) else render_not_found)
           | None -> render_error "Unable to get player id from session!"

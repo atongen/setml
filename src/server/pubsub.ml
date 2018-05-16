@@ -9,7 +9,7 @@ type t = {
   delay: float;
 }
 
-let make ?(n=32) ?(delay=0.25) conninfo clients = {
+let make ?(n=32) ?(delay=0.1) conninfo clients = {
   conn = new Postgresql.connection ~conninfo ();
   clients;
   actions = CCBlockingQueue.create n;

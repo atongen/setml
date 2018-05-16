@@ -25,8 +25,7 @@ let make = _children => {
     switch (action) {
     | ReceiveMessage(message) =>
       switch (ClientMessageConverter.of_json(message)) {
-      | Presence(_) as msg => Js.log(Messages.to_string(msg))
-      | Player_name(_) as msg => Js.log(Messages.to_string(msg))
+      | _ as msg => Js.log(Messages.to_string(msg))
       };
       ReasonReact.NoUpdate;
     | SendMessage(message) =>
