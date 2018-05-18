@@ -1,5 +1,7 @@
 open Belt;
 
+open Messages;
+
 open ClientMessages;
 
 /*[@bs.val] external requestAnimationFrame : (unit => unit) => unit = "";*/
@@ -7,12 +9,31 @@ type action =
   | SendMessage(string)
   | ReceiveMessage(string);
 
-type state = {ws: ref(option(WebSockets.WebSocket.t))};
+type state = {
+  ws: ref(option(WebSockets.WebSocket.t)),
+  board: list(board_card_data),
+  players: list(scoreboard_player_data),
+};
 
 let handleMessage = (evt, self) => {
   let str = WebSockets.MessageEvent.stringData(evt);
   self.ReasonReact.send(ReceiveMessage(str));
 };
+
+let rec handleReceiveMessage = (state, msg) =>
+  switch (msg) {
+  | Scoreboard(d) => ReasonReact.Update({...state, board: d.board, players: d.players})
+  | Player_name(d) => ReasonReact.NoUpdate
+  | Board_card(d) => ReasonReact.NoUpdate
+  | Game_card_idx(d) => ReasonReact.NoUpdate
+  | Game_status(d) => ReasonReact.NoUpdate
+  | Score(d) => ReasonReact.NoUpdate
+  | Previous_move(d) => ReasonReact.NoUpdate
+  | Player_presence(d) => ReasonReact.NoUpdate
+  | Batch(d) =>
+    List.map(d, handleReceiveMessage(state));
+    ReasonReact.NoUpdate;
+  };
 
 let updateFrame = self => ();
 
@@ -24,10 +45,9 @@ let make = _children => {
   reducer: (action, state) =>
     switch (action) {
     | ReceiveMessage(message) =>
-      switch (ClientMessageConverter.of_json(message)) {
-      | _ as msg => Js.log(Messages.to_string(msg))
-      };
-      ReasonReact.NoUpdate;
+      let msg = ClientMessageConverter.of_json(message);
+      Js.log(Messages.to_string(msg));
+      handleReceiveMessage(state, msg);
     | SendMessage(message) =>
       switch (state.ws) {
       | {contents: Some(ws)} => WebSockets.WebSocket.sendString(message, ws)
@@ -35,7 +55,7 @@ let make = _children => {
       };
       ReasonReact.NoUpdate;
     },
-  initialState: () => {ws: ref(None)},
+  initialState: () => {ws: ref(None), board: [], players: []},
   didMount: self => {
     switch (ClientUtil.ws_url()) {
     | Some(ws_url) =>
@@ -51,5 +71,5 @@ let make = _children => {
       requestAnimationFrame(onAnimationFrame);*/
     ReasonReact.NoUpdate;
   },
-  render: ({state, send}) => <section className="main"> <GameLayout dim0=3 dim1=4 /> </section>,
+  render: ({state, send}) => <section className="main"> <GameLayout dim0=3 dim1=4 n=state.board /> </section>,
 };

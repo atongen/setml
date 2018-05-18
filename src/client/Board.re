@@ -1,5 +1,7 @@
 open Belt;
 
+open Messages;
+
 type canvas;
 
 [@bs.send] external getContext : (canvas, string) => Canvas2dRe.t = "";
@@ -34,6 +36,7 @@ type state = {
   hovered: option(int),
   selected: Set.Int.t,
   context: ref(option(Canvas2dRe.t)),
+  board: list(board_card_data),
 };
 
 let component = ReasonReact.reducerComponent("Board");
@@ -159,7 +162,7 @@ let shouldRedraw = (oldDims: dimensions, newDims: dimensions) =>
   || oldDims.left != newDims.left
   || oldDims.right != newDims.right;
 
-let make = (_children, ~top, ~bottom, ~left, ~right, ~ratio, ~columns, ~rows) => {
+let make = (_children, ~top, ~bottom, ~left, ~right, ~ratio, ~columns, ~rows, ~n) => {
   ...component,
   reducer: (action, state) =>
     switch (action) {
@@ -201,6 +204,7 @@ let make = (_children, ~top, ~bottom, ~left, ~right, ~ratio, ~columns, ~rows) =>
     hovered: None,
     selected: Set.Int.empty,
     context: ref(None),
+    board: n,
   },
   willReceiveProps: self => {...self.state, dims: makeDims(top, bottom, left, right, ratio, columns, rows)},
   didMount: self => {

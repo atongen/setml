@@ -40,7 +40,7 @@ let handleResize = (evt, self) => self.ReasonReact.send(Resize);
 
 let component = ReasonReact.reducerComponent("GameLayout");
 
-let make = (_children, ~dim0, ~dim1) => {
+let make = (_children, ~dim0, ~dim1, ~n) => {
   ...component,
   reducer: (action, state) =>
     switch (action) {
@@ -70,7 +70,7 @@ let make = (_children, ~dim0, ~dim1) => {
       let sidebar = int_of_float(Shared_util.round(max(minSidebar, idealSidebar)));
       let board = screen.width - sidebar;
       <div>
-        <Board top=0 bottom=screen.height left=0 right=board ratio=screen.ratio columns rows />
+        <Board top=0 bottom=screen.height left=0 right=board ratio=screen.ratio columns rows n />
         <Sidebar top=0 bottom=screen.height left=board right=screen.width summary=true />
       </div>;
     } else {
@@ -82,7 +82,7 @@ let make = (_children, ~dim0, ~dim1) => {
       let sidebar = int_of_float(Shared_util.round(max(minSidebar, idealSidebar)));
       let board = screen.height - sidebar;
       <div>
-        <Board top=0 bottom=board left=0 right=screen.width ratio=screen.ratio columns rows />
+        <Board top=0 bottom=board left=0 right=screen.width ratio=screen.ratio columns rows n />
         <Sidebar top=board bottom=screen.height left=0 right=screen.width summary=false />
       </div>;
     };
