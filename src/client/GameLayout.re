@@ -67,7 +67,7 @@ let make = (_children, ~dim0, ~dim1, ~n) => {
       let idealBlock = idealBoard /. float_of_int(rows);
       let idealSidebar = float_of_int(screen.width) -. idealBlock *. float_of_int(columns);
       let minSidebar = float_of_int(screen.width) *. sidebarMinRatio;
-      let sidebar = int_of_float(Shared_util.round(max(minSidebar, idealSidebar)));
+      let sidebar = Shared_util.roundi(max(minSidebar, idealSidebar));
       let board = screen.width - sidebar;
       <div>
         <Board top=0 bottom=screen.height left=0 right=board ratio=screen.ratio columns rows n />
@@ -79,7 +79,7 @@ let make = (_children, ~dim0, ~dim1, ~n) => {
       let idealBlock = idealBoard /. float_of_int(columns);
       let idealSidebar = float_of_int(screen.height) -. idealBlock *. float_of_int(rows);
       let minSidebar = float_of_int(screen.height) *. sidebarMinRatio;
-      let sidebar = int_of_float(Shared_util.round(max(minSidebar, idealSidebar)));
+      let sidebar = Shared_util.roundi(max(minSidebar, idealSidebar));
       let board = screen.height - sidebar;
       <div>
         <Board top=0 bottom=board left=0 right=screen.width ratio=screen.ratio columns rows n />
