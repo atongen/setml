@@ -59,7 +59,8 @@ let presence_check pubsub =
             let expMsg = if present then
                 (Messages.make_scoreboard [
                     Messages.make_scoreboard_player_data player_id player_name present 0;
-                ] ((0 --^ 12) >|= (fun i -> Messages.make_board_card_data i i)))
+                ] ((0 --^ 12) >|= (fun i -> Card.of_int i))
+                (game_status_data_of_string "new"))
             else
                 Messages.make_player_presence player_id false
             in
@@ -84,7 +85,8 @@ let presence_check_accum pubsub =
         let msgs_arr = Array.of_list msgs in
         let expMsg0 = (Messages.make_scoreboard [
             Messages.make_scoreboard_player_data player_id player_name true 0;
-        ] ((0 --^ 12) >|= (fun i -> Messages.make_board_card_data i i))) in
+        ] ((0 --^ 12) >|= (fun i -> Card.of_int i))
+        (game_status_data_of_string "new")) in
         let expMsg1 = Messages.make_player_presence player_id false in
         let json0 = msgs_arr.(0).extra in
         let json1 = msgs_arr.(1).extra in

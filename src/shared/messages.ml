@@ -9,6 +9,7 @@ let card_idx_key = "card_idx"
 let score_key = "score"
 let players_key = "players"
 let status_key = "status"
+let game_status_key = "game_status"
 let card0_id_key = "card0_id"
 let card1_id_key = "card1_id"
 let card2_id_key = "card2_id"
@@ -49,32 +50,6 @@ let message_type_of_string = function
     | "batch" -> Batch_type
     | ts -> raise (Invalid_argument ("Unknown message type string: " ^ ts))
 
-type scoreboard_player_data = {
-    player_id: int;
-    name: string;
-    presence: bool;
-    score: int;
-}
-
-type player_name_data = {
-    player_id: int;
-    name: string;
-}
-
-type board_card_data = {
-    idx: int;
-    card_id: int;
-}
-
-type scoreboard_data = {
-    players: scoreboard_player_data list;
-    board: board_card_data list;
-}
-
-type game_card_idx_data = {
-    card_idx: int;
-}
-
 type game_status_data =
     | New
     | Pending
@@ -94,15 +69,42 @@ let game_status_data_of_string = function
     | "complete" -> Complete
     | ts -> raise (Invalid_argument ("Unknown game status: " ^ ts))
 
+type scoreboard_player_data = {
+    player_id: int;
+    name: string;
+    presence: bool;
+    score: int;
+}
+
+type player_name_data = {
+    player_id: int;
+    name: string;
+}
+
+type board_card_data = {
+    idx: int;
+    card: Card.t;
+}
+
+type scoreboard_data = {
+    players: scoreboard_player_data list;
+    board: Card.t list;
+    game_status: game_status_data;
+}
+
+type game_card_idx_data = {
+    card_idx: int;
+}
+
 type score_data = {
     player_id: int;
     score: int;
 }
 
 type previous_move_data = {
-    card0_id: int;
-    card1_id: int;
-    card2_id: int;
+    card0: Card.t;
+    card1: Card.t;
+    card2: Card.t;
 }
 
 type player_presence_data = {
@@ -121,10 +123,11 @@ type t =
     | Player_presence of player_presence_data
     | Batch of t list
 
-let make_scoreboard players board =
+let make_scoreboard players board game_status =
     Scoreboard {
         players;
         board;
+        game_status;
     }
 
 let make_scoreboard_player_data player_id name presence score =
@@ -135,14 +138,6 @@ let make_scoreboard_player_data player_id name presence score =
         score;
     }
 
-let scoreboard_player_data_to_string (p: scoreboard_player_data) =
-    Printf.sprintf "{player_id=%d name='%s' presence=%b score=%i}"
-        p.player_id p.name p.presence p.score
-
-let board_card_data_to_string (b: board_card_data) =
-    Printf.sprintf "{idx=%d card_id=%d}"
-        b.idx b.card_id
-
 let make_player_name player_id name =
     Player_name {
         player_id;
@@ -152,7 +147,7 @@ let make_player_name player_id name =
 let make_board_card_data idx card_id =
     {
         idx;
-        card_id;
+        card = Card.of_int card_id;
     }
 
 let make_board_card idx card_id =
@@ -174,9 +169,9 @@ let make_score player_id score =
 
 let make_previous_move card0_id card1_id card2_id =
     Previous_move {
-        card0_id;
-        card1_id;
-        card2_id;
+        card0 = Card.of_int card0_id;
+        card1 = Card.of_int card1_id;
+        card2 = Card.of_int card2_id;
     }
 
 let make_player_presence player_id presence =
@@ -187,20 +182,29 @@ let make_player_presence player_id presence =
 
 let make_batch msgs = Batch msgs
 
+let scoreboard_player_data_to_string (p: scoreboard_player_data) =
+    Printf.sprintf "{player_id=%d name='%s' presence=%b score=%i}"
+        p.player_id p.name p.presence p.score
+
+let board_card_data_to_string (b: board_card_data) =
+    Printf.sprintf "{idx=%d card=%s}"
+        b.idx (Card.to_string b.card)
+
 let rec to_string = function
     | Scoreboard d ->
         let player_strs = List.map scoreboard_player_data_to_string d.players in
         let players = String.concat ", " player_strs in
-        let board_strs = List.map board_card_data_to_string d.board in
+        let board_strs = List.map Card.to_string d.board in
         let board = String.concat ", " board_strs in
-        Printf.sprintf "<message (%s) players=[%s] board=[%s]>"
-            (message_type_to_string Scoreboard_type) players board
+        let game_status = game_status_data_to_string d.game_status in
+        Printf.sprintf "<message (%s) game_status=%s players=[%s] board=[%s]>"
+            (message_type_to_string Scoreboard_type) game_status players board
     | Player_name d ->
         Printf.sprintf "<message (%s) player_id=%d name='%s'>"
             (message_type_to_string Player_name_type) d.player_id d.name
     | Board_card d ->
-        Printf.sprintf "<message (%s) idx=%d card_id=%d>"
-            (message_type_to_string Board_card_type) d.idx d.card_id
+        Printf.sprintf "<message (%s) idx=%d card=%s>"
+            (message_type_to_string Board_card_type) d.idx (Card.to_string d.card)
     | Game_card_idx d ->
         Printf.sprintf "<message (%s) card_idx=%d>"
             (message_type_to_string Game_card_idx_type) d.card_idx
@@ -211,8 +215,8 @@ let rec to_string = function
         Printf.sprintf "<message (%s) player_id=%d score=%d>"
             (message_type_to_string Score_type) d.player_id d.score
     | Previous_move d ->
-        Printf.sprintf "<message (%s) card0_id=%d card1_id=%d card2_id=%d>"
-            (message_type_to_string Previous_move_type) d.card0_id d.card1_id d.card2_id
+        Printf.sprintf "<message (%s) card0=%s card1=%s card2=%s>"
+            (message_type_to_string Previous_move_type) (Card.to_string d.card0) (Card.to_string d.card1) (Card.to_string d.card2)
     | Player_presence d ->
         Printf.sprintf "<message (%s) player_id=%d presence=%b>"
             (message_type_to_string Player_presence_type) d.player_id d.presence

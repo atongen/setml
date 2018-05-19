@@ -259,16 +259,19 @@ begin
                 ) p
             ) as players,
             (
-                select json_agg(b)
+                select json_agg(b.card_id)
                 from (
-                    select
-                        idx,
-                        card_id
+                    select card_id
                     from board_cards
                     where game_id = NEW.game_id
                     order by idx asc
                 ) b
-            ) as board
+            ) as board,
+            (
+                select status
+                from games
+                where id = NEW.game_id
+            ) as game_status
         ) scores;
     else
         msg := json_build_object(

@@ -18,16 +18,12 @@ module ClientMessageConverter: CONVERT = {
               d.players,
             )
             |> Array.of_list;
-          let board =
-            List.map(
-              (b: board_card_data) => object_([(idx_key, int(b.idx)), (card_id_key, int(b.card_id))]),
-              d.board,
-            )
-            |> Array.of_list;
+          let board = List.map(c => int(Card.to_int(c)), d.board) |> Array.of_list;
           object_([
             (type_key, string(message_type_to_string(Scoreboard_type))),
             (players_key, jsonArray(players)),
             (board_key, jsonArray(board)),
+            (game_status_key, string(game_status_data_to_string(d.game_status))),
           ]);
         }
       | Player_name(d) =>
@@ -40,7 +36,7 @@ module ClientMessageConverter: CONVERT = {
         object_([
           (type_key, string(message_type_to_string(Board_card_type))),
           (idx_key, int(d.idx)),
-          (card_id_key, int(d.idx)),
+          (card_id_key, int(Card.to_int(d.card))),
         ])
       | Game_card_idx(d) =>
         object_([
@@ -61,9 +57,9 @@ module ClientMessageConverter: CONVERT = {
       | Previous_move(d) =>
         object_([
           (type_key, string(message_type_to_string(Previous_move_type))),
-          (card0_id_key, int(d.card0_id)),
-          (card1_id_key, int(d.card1_id)),
-          (card2_id_key, int(d.card2_id)),
+          (card0_id_key, int(Card.to_int(d.card0))),
+          (card1_id_key, int(Card.to_int(d.card1))),
+          (card2_id_key, int(Card.to_int(d.card2))),
         ])
       | Player_presence(d) =>
         object_([
@@ -91,22 +87,21 @@ module ClientMessageConverter: CONVERT = {
             json |> field(score_key, int),
           );
         let players = json |> field(players_key, array(players_decoder)) |> Array.to_list;
-        let board_decoder = json =>
-          make_board_card_data(json |> field(idx_key, int), json |> field(card_id_key, int));
-        let board = json |> field(board_key, array(board_decoder)) |> Array.to_list;
-        make_scoreboard(players, board);
+        let board = json |> field(board_key, array(int)) |> Array.to_list;
+        let game_status = json |> field(game_status_key, string) |> game_status_data_of_string;
+        make_scoreboard(players, List.map(Card.of_int, board), game_status);
       | Player_name_type =>
         make_player_name(json |> field(player_id_key, int), json |> field(player_name_key, string))
       | Board_card_type => make_board_card(json |> field(idx_key, int), json |> field(card_id_key, int))
       | Game_card_idx_type => make_game_card_idx(json |> field(card_idx_key, int))
       | Game_status_type => make_game_status(json |> field(status_key, string))
-      | Score_type => make_score(
-          json |> field(player_id_key, int),
-          json |> field(score_key, int))
-      | Previous_move_type => make_previous_move(
+      | Score_type => make_score(json |> field(player_id_key, int), json |> field(score_key, int))
+      | Previous_move_type =>
+        make_previous_move(
           json |> field(card0_id_key, int),
           json |> field(card1_id_key, int),
-          json |> field(card2_id_key, int))
+          json |> field(card2_id_key, int),
+        )
       | Player_presence_type =>
         make_player_presence(json |> field(player_id_key, int), json |> field(presence_key, bool))
       | Batch_type =>

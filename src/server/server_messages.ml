@@ -16,17 +16,15 @@ module Server_message_converter : Messages.CONVERT = struct
                     ]
                 ) d.players
                 in
-                let board = List.map (fun (b: board_card_data) ->
-                    `Assoc [
-                        (idx_key, `Int b.idx);
-                        (card_id_key, `Int b.card_id);
-                    ]
+                let board = List.map (fun c ->
+                    `Int (Card.to_int c)
                 ) d.board
                 in
                 `Assoc [
                     (type_key, `String (message_type_to_string Scoreboard_type));
                     (players_key, `List players);
                     (board_key, `List board);
+                    (game_status_key, `String (game_status_data_to_string d.game_status));
                 ]
             | Player_name d ->
                 `Assoc [
@@ -38,7 +36,7 @@ module Server_message_converter : Messages.CONVERT = struct
                 `Assoc [
                     (type_key, `String (message_type_to_string Board_card_type));
                     (idx_key, `Int d.idx);
-                    (card_id_key, `Int d.card_id);
+                    (card_id_key, `Int (Card.to_int d.card));
                 ]
             | Game_card_idx d ->
                 `Assoc [
@@ -59,9 +57,9 @@ module Server_message_converter : Messages.CONVERT = struct
             | Previous_move d ->
                 `Assoc [
                     (type_key, `String (message_type_to_string Previous_move_type));
-                    (card0_id_key, `Int d.card0_id);
-                    (card1_id_key, `Int d.card1_id);
-                    (card2_id_key, `Int d.card2_id);
+                    (card0_id_key, `Int (Card.to_int d.card0));
+                    (card1_id_key, `Int (Card.to_int d.card1));
+                    (card2_id_key, `Int (Card.to_int d.card2));
                 ]
             | Player_presence d ->
                 `Assoc [
@@ -76,7 +74,6 @@ module Server_message_converter : Messages.CONVERT = struct
                 ]
         in
         aux x |> to_string
-
 
     let of_json str =
         let rec aux json =
@@ -94,12 +91,14 @@ module Server_message_converter : Messages.CONVERT = struct
 
                     let board_json = json |> Util.member board_key |> Util.to_list in
                     let board = List.map (fun json ->
-                        make_board_card_data
-                        (json |> Util.member idx_key |> Util.to_int)
-                        (json |> Util.member card_id_key |> Util.to_int)
+                        json |> Util.to_int |> Card.of_int
                     ) board_json in
 
-                    make_scoreboard players board
+                    let game_status = game_status_data_of_string
+                        (json |> Util.member game_status_key |> Util.to_string)
+                    in
+
+                    make_scoreboard players board game_status
                 | Player_name_type -> make_player_name
                     (json |> Util.member player_id_key |> Util.to_int)
                     (json |> Util.member player_name_key |> Util.to_string)
