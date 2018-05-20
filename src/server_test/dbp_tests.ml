@@ -58,10 +58,7 @@ let create_move_test pool =
     match sets_and_indexes_opt with
     | Some ((idx0, c0), (idx1, c1), (idx2, c2)) ->
       assert_bool "cards are set" (Card.is_set c0 c1 c2);
-      let c0id = Card.to_int c0 in
-      let c1id = Card.to_int c1 in
-      let c2id = Card.to_int c2 in
-      Dbp.create_move pool (game_id, player_id, idx0, c0id, idx1, c1id, idx2, c2id) >>=? fun () ->
+      Dbp.create_move pool (game_id, player_id, idx0, c0, idx1, c1, idx2, c2) >>=? fun () ->
       Dbp.find_scoreboard pool game_id >>=? fun scores ->
       assert_equal ~printer:string_of_int 1 (List.length scores);
       (match find_player_score scores player_id with
@@ -82,7 +79,8 @@ let create_failed_move_test pool =
     Dbp.create_player pool () >>=? fun player_id ->
     Dbp.game_player_presence pool (game_id, player_id, true) >>=? fun () ->
     Dbp.find_board_cards pool game_id >>=? fun old_board_idxs ->
-    Dbp.create_move pool (game_id, player_id, 0, 0, 1, 1, 2, 2) >>=? fun () ->
+    let c0, c1, c2 = (Card.of_int 1, Card.of_int 2, Card.of_int 3) in
+    Dbp.create_move pool (game_id, player_id, 0, c0, 1, c1, 2, c2) >>=? fun () ->
     Dbp.find_scoreboard pool game_id >>=? fun scores ->
     assert_equal ~printer:string_of_int 1 (List.length scores);
     (match find_player_score scores player_id with

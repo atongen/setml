@@ -205,18 +205,11 @@ create trigger set_game_id_trigger
 
 create or replace function games_update_notify() returns trigger AS $$
 begin
-    if OLD.card_idx != NEW.card_idx then
-        perform pg_notify(concat('game_', NEW.id), json_build_object(
-            'type', 'game_card_idx',
-            'card_idx', NEW.card_idx
-        )::text);
-    end if;
-    if OLD.status != NEW.status then
-        perform pg_notify(concat('game_', NEW.id), json_build_object(
-            'type', 'game_status',
-            'status', NEW.status
-        )::text);
-    end if;
+    perform pg_notify(concat('game_', NEW.id), json_build_object(
+        'type', 'game_update',
+        'card_idx', NEW.card_idx
+        'status', NEW.status
+    )::text);
     return NEW;
 end;
 $$ language plpgsql;
@@ -227,18 +220,18 @@ create trigger games_update_trigger
     on games
     for each row execute procedure games_update_notify();
 
--- games scoreboard notification
+-- games data notification
 
-create or replace function games_scoreboard_notify() returns trigger AS $$
+create or replace function games_data_notify() returns trigger AS $$
 declare
     msg text;
 begin
     if NEW.presence then
         select
-            row_to_json(scores)::text into msg
+            row_to_json(data)::text into msg
         from (
             select
-            'scoreboard' as type,
+            'game_data' as type,
             (
                 select json_agg(p)
                 from (
@@ -258,9 +251,11 @@ begin
                     where gp.game_id = NEW.game_id
                     order by gp.created_at asc
                 ) p
-            ) as players,
+            ) as player_data,
             (
-                select json_agg(b)
+                select
+                    'board_card' as type,
+                    json_agg(b)
                 from (
                     select
                         idx,
@@ -269,13 +264,16 @@ begin
                     where game_id = NEW.game_id
                     order by idx asc
                 ) b
-            ) as board,
+            ) as board_data,
             (
-                select status
+                select
+                    'game_update' as type,
+                    card_idx,
+                    status
                 from games
                 where id = NEW.game_id
-            ) as game_status
-        ) scores;
+            ) as game_update
+        ) data;
     else
         msg := json_build_object(
             'type', 'presence',
@@ -289,11 +287,11 @@ begin
 end;
 $$ language plpgsql;
 
-drop trigger if exists games_scoreboard_trigger on games_players;
-create trigger games_scoreboard_trigger
+drop trigger if exists games_data_trigger on games_players;
+create trigger games_data_trigger
     after insert or update
     on games_players
-    for each row execute procedure games_scoreboard_notify();
+    for each row execute procedure games_data_notify();
 
 
 -- players_name notification
@@ -350,25 +348,34 @@ create trigger board_card_change_trigger
 create or replace function moves_insert_notify() returns trigger AS $$
 declare
     score integer;
+    msg text;
 begin
     select count(*) into score
     from moves
     where moves.game_id = NEW.game_id
     and moves.player_id = NEW.player_id;
 
-    perform pg_notify(concat('game_', NEW.game_id), json_build_object(
-        'type', 'score',
-        'player_id', NEW.player_id,
-        'score', score
-    )::text);
+    select
+        row_to_json(data)::text into msg
+    from (
+        select
+        'move_data' as type,
+        (
+            select
+                'score' as type,
+                NEW.player_id,
+                score
+        ) as score,
+        (
+            select
+                'previous_move' as type,
+                NEW.card0_id,
+                NEW.card1_id,
+                NEW.card2_id
+        ) as previous_move
+    ) as data;
 
-    perform pg_notify(concat('game_', NEW.game_id), json_build_object(
-        'type', 'previous_move',
-        'card0_id', NEW.card0_id,
-        'card1_id', NEW.card1_id,
-        'card2_id', NEW.card2_id
-    )::text);
-
+    perform pg_notify(concat('game_', NEW.game_id), msg);
     return NEW;
 end;
 $$ language plpgsql;

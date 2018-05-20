@@ -6,47 +6,42 @@ module Server_message_converter : Messages.CONVERT = struct
 
     let to_json x =
         let rec aux = function
-            | Scoreboard d ->
-                let players = List.map (fun (p: scoreboard_player_data) ->
-                    `Assoc [
-                        (player_id_key, `Int p.player_id);
-                        (player_name_key, `String p.name);
-                        (presence_key, `Bool p.presence);
-                        (score_key, `Int p.score);
-                    ]
-                ) d.players
-                in
-                let board = List.map (fun c ->
-                    `Int (Card.to_int c)
-                ) d.board
+            | Game_data d ->
+                let player_data = List.map (fun pd -> aux @@ Player_data pd ) d.player_data in
+                let board_data = make_board_cards d.board_data
+                    |> Array.to_list
+                    |> List.map aux
                 in
                 `Assoc [
-                    (type_key, `String (message_type_to_string Scoreboard_type));
-                    (players_key, `List players);
-                    (board_key, `List board);
-                    (game_status_key, `String (game_status_data_to_string d.game_status));
+                    (type_key, `String (message_type_to_string Game_data_type));
+                    (player_data_key, `List player_data);
+                    (board_data_key, `List board_data);
+                    (game_update_key, aux @@ Game_update d.game_update);
+                ]
+            | Player_data d ->
+                `Assoc [
+                    (player_id_key, `Int d.player_id);
+                    (name_key, `String d.name);
+                    (presence_key, `Bool d.presence);
+                    (score_key, `Int d.score);
                 ]
             | Player_name d ->
                 `Assoc [
                     (type_key, `String (message_type_to_string Player_name_type));
                     (player_id_key, `Int d.player_id);
-                    (player_name_key, `String d.name);
+                    (name_key, `String d.name);
                 ]
             | Board_card d ->
                 `Assoc [
                     (type_key, `String (message_type_to_string Board_card_type));
                     (idx_key, `Int d.idx);
-                    (card_id_key, `Int (Card.to_int d.card));
+                    (card_id_key, `Int (card_id_of_card_opt d.card));
                 ]
-            | Game_card_idx d ->
+            | Game_update d ->
                 `Assoc [
-                    (type_key, `String (message_type_to_string Game_card_idx_type));
+                    (type_key, `String (message_type_to_string Game_update_type));
                     (card_idx_key, `Int d.card_idx);
-                ]
-            | Game_status d ->
-                `Assoc [
-                    (type_key, `String (message_type_to_string Game_status_type));
-                    (status_key, `String (game_status_data_to_string d));
+                    (status_key, `String (game_status_data_to_string d.status));
                 ]
             | Score d ->
                 `Assoc [
@@ -67,61 +62,69 @@ module Server_message_converter : Messages.CONVERT = struct
                     (player_id_key, `Int d.player_id);
                     (presence_key, `Bool d.presence);
                 ]
-            | Batch d ->
+            | Move_data d ->
                 `Assoc [
-                    (type_key, `String (message_type_to_string Batch_type));
-                    (messages_key, `List (List.map aux d));
+                    (type_key, `String (message_type_to_string Move_data_type));
+                    (score_key, aux @@ Score d.score);
+                    (previous_move_key, aux @@ Previous_move d.previous_move);
                 ]
         in
         aux x |> to_string
+
+    let player_data_of_json json =
+        make_player_data
+        (json |> Util.member player_id_key |> Util.to_int)
+        (json |> Util.member name_key |> Util.to_string)
+        (json |> Util.member presence_key |> Util.to_bool)
+        (json |> Util.member score_key |> Util.to_int)
+
+    let score_data_of_json json =
+        make_score_data
+        (json |> Util.member player_id_key |> Util.to_int)
+        (json |> Util.member score_key |> Util.to_int)
+
+    let previous_move_data_of_json json =
+        make_previous_move_data
+        (json |> Util.member card0_id_key |> Util.to_int)
+        (json |> Util.member card1_id_key |> Util.to_int)
+        (json |> Util.member card2_id_key |> Util.to_int)
 
     let of_json str =
         let rec aux json =
             let message_type = json |> Util.member type_key |> Util.to_string |> message_type_of_string in
             match message_type with
-                | Scoreboard_type ->
-                    let players_json = json |> Util.member players_key |> Util.to_list in
-                    let players = List.map (fun json ->
-                        make_scoreboard_player_data
-                        (json |> Util.member player_id_key |> Util.to_int)
-                        (json |> Util.member player_name_key |> Util.to_string)
-                        (json |> Util.member presence_key |> Util.to_bool)
-                        (json |> Util.member score_key |> Util.to_int)
-                    ) players_json in
-
-                    let board_json = json |> Util.member board_key |> Util.to_list in
-                    let board = List.map (fun json ->
-                        json |> Util.to_int |> Card.of_int
-                    ) board_json in
-
-                    let game_status = game_status_data_of_string
-                        (json |> Util.member game_status_key |> Util.to_string)
+                | Game_data_type ->
+                    let player_data = json |> Util.member player_data_key |> Util.to_list
+                        |> List.map player_data_of_json in
+                    let board_data_json = json |> Util.member board_data_key |> Util.to_list
+                        |> Array.of_list in
+                    let board_data = Array.map (fun json ->
+                        json |> Util.to_int |> make_card
+                    ) board_data_json in
+                    let game_update = make_game_update_data
+                        (json |> Util.member status_key |> Util.to_string)
+                        (json |> Util.member card_idx_key |> Util.to_int)
                     in
-
-                    make_scoreboard players board game_status
+                    make_game_data player_data board_data game_update
+                | Player_data_type -> Player_data (player_data_of_json json)
                 | Player_name_type -> make_player_name
                     (json |> Util.member player_id_key |> Util.to_int)
-                    (json |> Util.member player_name_key |> Util.to_string)
+                    (json |> Util.member name_key |> Util.to_string)
                 | Board_card_type -> make_board_card
                     (json |> Util.member idx_key |> Util.to_int)
                     (json |> Util.member card_id_key |> Util.to_int)
-                | Game_card_idx_type -> make_game_card_idx
-                    (json |> Util.member card_idx_key |> Util.to_int)
-                | Game_status_type -> make_game_status
+                | Game_update_type -> make_game_update
                     (json |> Util.member status_key |> Util.to_string)
-                | Score_type -> make_score
-                    (json |> Util.member player_id_key |> Util.to_int)
-                    (json |> Util.member score_key |> Util.to_int)
-                | Previous_move_type -> make_previous_move
-                    (json |> Util.member card0_id_key |> Util.to_int)
-                    (json |> Util.member card1_id_key |> Util.to_int)
-                    (json |> Util.member card2_id_key |> Util.to_int)
+                    (json |> Util.member card_idx_key |> Util.to_int)
+                | Score_type -> Score (score_data_of_json json)
+                | Previous_move_type -> Previous_move (previous_move_data_of_json json)
                 | Player_presence_type -> make_player_presence
                     (json |> Util.member player_id_key |> Util.to_int)
                     (json |> Util.member presence_key |> Util.to_bool)
-                | Batch_type ->
-                    let messages = json |> Util.member messages_key |> Util.to_list in
-                    make_batch @@ List.map aux messages
+                | Move_data_type ->
+                    let score = json |> Util.member score_key |> score_data_of_json in
+                    let previous_move = json |> Util.member previous_move_key |> previous_move_data_of_json in
+                    make_move_data score previous_move
         in
         let json = from_string str in
         aux json

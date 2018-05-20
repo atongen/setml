@@ -135,6 +135,34 @@ module Q = struct
             where id = ?
             limit 1;
         |eos}
+
+    let find_board_cards_query =
+        Caqti_request.collect Caqti_type.int Caqti_type.int
+        {eos|
+            select card_id
+            from board_cards
+            where game_id = ?
+            order by idx asc;
+        |eos}
+
+    let find_scoreboard_query =
+        Caqti_request.collect Caqti_type.int Caqti_type.(tup4 int string bool int)
+        {eos|
+            select
+                gp.player_id,
+                p.name,
+                gp.presence,
+                (
+                    select count(*)
+                    from moves
+                    where moves.game_id = gp.game_id
+                    and moves.player_id = gp.player_id
+                ) as score
+            from games_players gp
+            inner join players p
+            on gp.player_id = p.id
+            where gp.game_id = ?;
+        |eos}
 end
 
 let query_int (module C : Caqti_lwt.CONNECTION) q =
@@ -180,6 +208,12 @@ let create_move (module C : Caqti_lwt.CONNECTION) (game_id, player_id, idx0, car
 
 let update_player_name (module C : Caqti_lwt.CONNECTION) (player_id, name) =
   C.exec Q.update_player_name_query (name, player_id)
+
+let find_board_cards (module C : Caqti_lwt.CONNECTION) game_id =
+  C.collect_list Q.find_board_cards_query game_id
+
+let find_scoreboard (module C : Caqti_lwt.CONNECTION) game_id =
+  C.collect_list Q.find_scoreboard_query game_id
 
 let delete_all (module C : Caqti_lwt.CONNECTION) () =
   C.start () >>=? fun () ->

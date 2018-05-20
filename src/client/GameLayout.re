@@ -2,8 +2,6 @@ let window = Webapi.Dom.window;
 
 let devicePixelRatio = () : float => [%bs.raw {| window.devicePixelRatio || 1.0 |}];
 
-let size_of_ratio = (size, ratio) => Shared_util.roundi(float_of_int(size) *. ratio);
-
 type action =
   | Resize;
 
