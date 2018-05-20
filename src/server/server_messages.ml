@@ -89,33 +89,35 @@ module Server_message_converter : Messages.CONVERT = struct
         (json |> Util.member card1_id_key |> Util.to_int)
         (json |> Util.member card2_id_key |> Util.to_int)
 
+    let board_card_data_of_json json =
+        make_board_card_data
+        (json |> Util.member idx_key |> Util.to_int)
+        (json |> Util.member card_id_key |> Util.to_int)
+
+    let game_update_data_of_json json =
+        make_game_update_data
+        (json |> Util.member status_key |> Util.to_string)
+        (json |> Util.member card_idx_key |> Util.to_int)
+
     let of_json str =
+        ignore(print_endline str);
         let rec aux json =
             let message_type = json |> Util.member type_key |> Util.to_string |> message_type_of_string in
             match message_type with
                 | Game_data_type ->
                     let player_data = json |> Util.member player_data_key |> Util.to_list
                         |> List.map player_data_of_json in
-                    let board_data_json = json |> Util.member board_data_key |> Util.to_list
+                    let board_data = json |> Util.member board_data_key |> Util.to_list
+                        |> List.map (fun json -> json |> Util.member card_id_key |> Util.to_int |> make_card)
                         |> Array.of_list in
-                    let board_data = Array.map (fun json ->
-                        json |> Util.to_int |> make_card
-                    ) board_data_json in
-                    let game_update = make_game_update_data
-                        (json |> Util.member status_key |> Util.to_string)
-                        (json |> Util.member card_idx_key |> Util.to_int)
-                    in
+                    let game_update = json |> Util.member game_update_key |> game_update_data_of_json in
                     make_game_data player_data board_data game_update
                 | Player_data_type -> Player_data (player_data_of_json json)
                 | Player_name_type -> make_player_name
                     (json |> Util.member player_id_key |> Util.to_int)
                     (json |> Util.member name_key |> Util.to_string)
-                | Board_card_type -> make_board_card
-                    (json |> Util.member idx_key |> Util.to_int)
-                    (json |> Util.member card_id_key |> Util.to_int)
-                | Game_update_type -> make_game_update
-                    (json |> Util.member status_key |> Util.to_string)
-                    (json |> Util.member card_idx_key |> Util.to_int)
+                | Board_card_type -> Board_card (board_card_data_of_json json)
+                | Game_update_type -> Game_update (game_update_data_of_json json)
                 | Score_type -> Score (score_data_of_json json)
                 | Previous_move_type -> Previous_move (previous_move_data_of_json json)
                 | Player_presence_type -> make_player_presence
