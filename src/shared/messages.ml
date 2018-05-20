@@ -54,19 +54,16 @@ let message_type_of_string = function
 
 type game_status_data =
     | New
-    | Pending
     | Started
     | Complete
 
 let game_status_data_to_string = function
     | New -> "new"
-    | Pending -> "pending"
     | Started -> "started"
     | Complete -> "complete"
 
 let game_status_data_of_string = function
     | "new" -> New
-    | "pending" -> Pending
     | "started" -> Started
     | "complete" -> Complete
     | ts -> raise (Invalid_argument ("Unknown game status: " ^ ts))

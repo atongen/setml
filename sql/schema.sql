@@ -207,14 +207,14 @@ create or replace function games_update_notify() returns trigger AS $$
 begin
     perform pg_notify(concat('game_', NEW.id), json_build_object(
         'type', 'game_update',
-        'card_idx', NEW.card_idx
+        'card_idx', NEW.card_idx,
         'status', NEW.status
     )::text);
     return NEW;
 end;
 $$ language plpgsql;
 
-drop trigger if exists games_upates_trigger on games;
+drop trigger if exists games_update_trigger on games;
 create trigger games_update_trigger
     after update
     on games
@@ -361,17 +361,19 @@ begin
         select
         'move_data' as type,
         (
-            select
-                'score' as type,
-                NEW.player_id,
-                score
+            select json_build_object(
+                'type', 'score',
+                'player_id', NEW.player_id,
+                'score', score
+            )
         ) as score,
         (
-            select
-                'previous_move' as type,
-                NEW.card0_id,
-                NEW.card1_id,
-                NEW.card2_id
+            select json_build_object(
+                'type', 'previous_move',
+                'card0_id', NEW.card0_id,
+                'card1_id', NEW.card1_id,
+                'card2_id', NEW.card2_id
+            )
         ) as previous_move
     ) as data;
 

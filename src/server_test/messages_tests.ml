@@ -24,11 +24,10 @@ let convert_tests =
          0;  2;  4;  6;
          8; 10; 33; 52;
         78; 79; 80; 81;
-    ]) (make_game_update_data "pending" 15);
+    ]) (make_game_update_data "started" 15);
     make_player_name 2 "andrew2";
     make_board_card 5 7;
     make_game_update "new" 13;
-    make_game_update "pending" 15;
     make_game_update "started" 17;
     make_game_update "complete" 19;
     make_score 6 4;

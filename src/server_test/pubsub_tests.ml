@@ -59,7 +59,7 @@ let presence_check pubsub =
                 (Messages.make_game_data [
                     Messages.make_player_data player_id player_name present 0;
                 ] (make_board_cards_of_id_list (0 --^ 12))
-                (make_game_update_data "new" 5))
+                (make_game_update_data "new" 0))
             else
                 Messages.make_player_presence player_id false
             in
@@ -85,7 +85,7 @@ let presence_check_accum pubsub =
         let expMsg0 = (Messages.make_game_data [
             Messages.make_player_data player_id player_name true 0;
         ] (make_board_cards_of_id_list (0 --^ 12))
-        (make_game_update_data "new" 5)) in
+        (make_game_update_data "new" 0)) in
         let expMsg1 = Messages.make_player_presence player_id false in
         let json0 = msgs_arr.(0).extra in
         let json1 = msgs_arr.(1).extra in
@@ -142,26 +142,24 @@ let game_update_check pubsub =
         Pubsub.empty_query pubsub @@ Printf.sprintf "update games set card_idx = 13 where id = %d;" game_id;
         let msgs0 = Pubsub.get_notifications pubsub in
         assert_equal ~printer:string_of_int 1 (List.length msgs0);
-        let expMsg0 = Messages.make_game_update "started" 13 in
+        let expMsg0 = Messages.make_game_update "new" 13 in
         let gotMsg0 = (List.hd msgs0).extra |> Server_message_converter.of_json in
         assert_equal ~ctxt:test_ctx expMsg0 gotMsg0 ~printer:Messages.to_string;
 
         (* game status *)
-        Pubsub.empty_query pubsub @@ Printf.sprintf "update games set status = 'pending' where id = %d;" game_id;
+        Pubsub.empty_query pubsub @@ Printf.sprintf "update games set status = 'started' where id = %d;" game_id;
         let msgs1 = Pubsub.get_notifications pubsub in
         assert_equal ~printer:string_of_int 1 (List.length msgs1);
-        let expMsg1 = Messages.make_game_update "pending" 13 in
+        let expMsg1 = Messages.make_game_update "started" 13 in
         let gotMsg1 = (List.hd msgs1).extra |> Server_message_converter.of_json in
         assert_equal ~ctxt:test_ctx expMsg1 gotMsg1 ~printer:Messages.to_string;
 
         (* game card_idx & status *)
-        Pubsub.empty_query pubsub @@ Printf.sprintf "update games set card_idx = 14 where id = %d;" game_id;
-        Pubsub.empty_query pubsub @@ Printf.sprintf "update games set status = 'started' where id = %d;" game_id;
+        Pubsub.empty_query pubsub @@ Printf.sprintf "update games set card_idx = 14, status = 'complete' where id = %d;" game_id;
         let msgs2 = Pubsub.get_notifications pubsub in
-        assert_equal ~printer:string_of_int 2 (List.length msgs2);
-        let expMsg2 = Messages.make_game_update "started" 14 in
-        let msgs2_arr = Array.of_list msgs2 in
-        let gotMsg2 = msgs2_arr.(0).extra |> Server_message_converter.of_json in
+        assert_equal ~printer:string_of_int 1 (List.length msgs2);
+        let expMsg2 = Messages.make_game_update "complete" 14 in
+        let gotMsg2 = (List.hd msgs2).extra |> Server_message_converter.of_json in
         assert_equal ~ctxt:test_ctx expMsg2 gotMsg2 ~printer:Messages.to_string;
 
         teardown_game pubsub game_id
@@ -187,14 +185,10 @@ let moves_insert_check pubsub =
             |eos} game_id player_id;
 
         let msgs = Pubsub.get_notifications pubsub in
-        assert_equal ~printer:string_of_int 2 (List.length msgs);
-        let expMsg0 = Messages.make_score player_id 1 in
-        let expMsg1 = Messages.make_previous_move 2 12 22 in
-        let msgs_arr = Array.of_list msgs in
-        let gotMsg0 = msgs_arr.(0).extra |> Server_message_converter.of_json in
-        let gotMsg1 = msgs_arr.(1).extra |> Server_message_converter.of_json in
-        assert_equal ~ctxt:test_ctx expMsg0 gotMsg0 ~printer:Messages.to_string;
-        assert_equal ~ctxt:test_ctx expMsg1 gotMsg1 ~printer:Messages.to_string;
+        assert_equal ~printer:string_of_int 1 (List.length msgs);
+        let expMsg = Messages.make_move_data (make_score_data player_id 1) (make_previous_move_data 2 12 22) in
+        let gotMsg = (List.hd msgs).extra |> Server_message_converter.of_json in
+        assert_equal ~ctxt:test_ctx expMsg gotMsg ~printer:Messages.to_string;
 
         teardown_player pubsub player_id;
         teardown_game pubsub game_id
