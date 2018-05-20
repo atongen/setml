@@ -253,11 +253,10 @@ begin
                 ) p
             ) as player_data,
             (
-                select
-                    'board_card' as type,
-                    json_agg(b)
+                select json_agg(b)
                 from (
                     select
+                        'board_card' as type,
                         idx,
                         card_id
                     from board_cards
@@ -266,10 +265,11 @@ begin
                 ) b
             ) as board_data,
             (
-                select
-                    'game_update' as type,
-                    card_idx,
-                    status
+                select json_build_object(
+                    'type', 'game_update',
+                    'card_idx', card_idx,
+                    'status', status
+                )
                 from games
                 where id = NEW.game_id
             ) as game_update
