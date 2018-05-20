@@ -143,11 +143,14 @@ let make_player_data player_id name presence score =
         score;
     }
 
-let make_player_name player_id name =
-    Player_name {
+let make_player_name_data player_id name =
+    {
         player_id;
         name;
     }
+
+let make_player_name player_id name =
+    Player_name (make_player_name_data player_id name)
 
 let make_card card_id =
     if card_id < empty_card_id then
@@ -203,11 +206,14 @@ let make_previous_move_data card0_id card1_id card2_id =
 let make_previous_move card0_id card1_id card2_id =
     Previous_move (make_previous_move_data card0_id card1_id card2_id)
 
-let make_player_presence player_id presence =
-    Player_presence {
+let make_player_presence_data player_id presence =
+    {
         player_id;
         presence;
     }
+
+let make_player_presence player_id presence =
+    Player_presence (make_player_presence_data player_id presence)
 
 let make_move_data score previous_move =
     Move_data {

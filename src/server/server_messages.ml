@@ -99,6 +99,16 @@ module Server_message_converter : Messages.CONVERT = struct
         (json |> Util.member status_key |> Util.to_string)
         (json |> Util.member card_idx_key |> Util.to_int)
 
+    let player_name_data_of_json json =
+        make_player_name_data
+        (json |> Util.member player_id_key |> Util.to_int)
+        (json |> Util.member name_key |> Util.to_string)
+
+    let player_presence_data_of_json json =
+        make_player_presence_data
+        (json |> Util.member player_id_key |> Util.to_int)
+        (json |> Util.member presence_key |> Util.to_bool)
+
     let of_json str =
         let rec aux json =
             let message_type = json |> Util.member type_key |> Util.to_string |> message_type_of_string in
@@ -112,16 +122,12 @@ module Server_message_converter : Messages.CONVERT = struct
                     let game_update = json |> Util.member game_update_key |> game_update_data_of_json in
                     make_game_data player_data board_data game_update
                 | Player_data_type -> Player_data (player_data_of_json json)
-                | Player_name_type -> make_player_name
-                    (json |> Util.member player_id_key |> Util.to_int)
-                    (json |> Util.member name_key |> Util.to_string)
+                | Player_name_type -> Player_name (player_name_data_of_json json)
                 | Board_card_type -> Board_card (board_card_data_of_json json)
                 | Game_update_type -> Game_update (game_update_data_of_json json)
                 | Score_type -> Score (score_data_of_json json)
                 | Previous_move_type -> Previous_move (previous_move_data_of_json json)
-                | Player_presence_type -> make_player_presence
-                    (json |> Util.member player_id_key |> Util.to_int)
-                    (json |> Util.member presence_key |> Util.to_bool)
+                | Player_presence_type -> Player_presence (player_presence_data_of_json json)
                 | Move_data_type ->
                     let score = json |> Util.member score_key |> score_data_of_json in
                     let previous_move = json |> Util.member previous_move_key |> previous_move_data_of_json in
