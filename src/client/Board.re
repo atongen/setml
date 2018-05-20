@@ -7,28 +7,16 @@ type canvas;
 [@bs.send] external getContext : (canvas, string) => Canvas2dRe.t = "";
 
 type action =
-  | Click((int, int))
-  | Hover((int, int));
-
-type rect = {
-  x: float,
-  y: float,
-  w: float,
-  h: float,
-};
+  | Click((float, float))
+  | Hover((float, float));
 
 type dimensions = {
-  top: int,
-  bottom: int,
-  left: int,
-  right: int,
   ratio: float,
   columns: int,
   rows: int,
-  width: float,
-  height: float,
-  border: rect,
-  blocks: array(rect),
+  size: Rect.t,
+  border: Rect.t,
+  blocks: array(Rect.t),
 };
 
 type state = {
@@ -36,30 +24,16 @@ type state = {
   hovered: option(int),
   selected: Set.Int.t,
   context: ref(option(Canvas2dRe.t)),
-  board: list(board_card_data),
+  boardCards: list(Card.t),
 };
 
 let component = ReasonReact.reducerComponent("Board");
 
-let getClick = evt => Click((ReactEventRe.Mouse.clientX(evt), ReactEventRe.Mouse.clientY(evt)));
+let getClick = evt =>
+  Click((float_of_int(ReactEventRe.Mouse.clientX(evt)), float_of_int(ReactEventRe.Mouse.clientY(evt))));
 
-let getHover = evt => Hover((ReactEventRe.Mouse.clientX(evt), ReactEventRe.Mouse.clientY(evt)));
-
-let isWithin = (rect, (x, y)) => rect.x <= x && x <= rect.x +. rect.w && rect.y <= y && y <= rect.y +. rect.h;
-
-let inBlock = (blocks, (x, y)) => {
-  let rec aux = i =>
-    switch (blocks[i]) {
-    | Some(block) =>
-      if (isWithin(block, (x, y))) {
-        Some(i);
-      } else {
-        aux(i + 1);
-      }
-    | None => None
-    };
-  aux(0);
-};
+let getHover = evt =>
+  Hover((float_of_int(ReactEventRe.Mouse.clientX(evt)), float_of_int(ReactEventRe.Mouse.clientY(evt))));
 
 let randomColor = () => {
   let r = Random.int(256);
@@ -79,7 +53,7 @@ let drawRectangle = (ctx, color, x, y, w, h) => {
   );
 };
 
-let drawRect = (ctx, color, rect) => drawRectangle(ctx, color, rect.x, rect.y, rect.w, rect.h);
+let drawRect = (ctx, color, rect) => drawRectangle(ctx, color, rect.Rect.x, rect.y, rect.w, rect.h);
 
 let drawBlock = (ctx, color, idx, rect) => {
   drawRect(ctx, color, rect);
@@ -116,58 +90,41 @@ let drawBoard = (ctx, dims) => {
   };
 };
 
-let makeDims = (top, bottom, left, right, ratio, columns, rows) => {
-  let w = float_of_int(right - left);
-  let h = float_of_int(bottom - top);
+let makeDims = (rect, ratio, columns, rows) => {
   let c = float_of_int(columns);
   let r = float_of_int(rows);
-  let b = border(w, h);
-  let (bs, xOffset, yOffset) = blockSize(w -. 2. *. b, h -. 2. *. b, c, r);
+  let b = border(rect.Rect.w, rect.h);
+  let (bs, xOffset, yOffset) = blockSize(rect.w -. 2. *. b, rect.h -. 2. *. b, c, r);
   let borderX = xOffset +. b /. 2.;
   let borderY = yOffset +. b /. 2.;
-  let emptyRect = {x: 0., y: 0., w: 0., h: 0.};
-  let blocks = Array.make(columns * rows, emptyRect);
+  let blocks = Array.make(columns * rows, Rect.empty);
   for (i in 0 to rows - 1) {
     for (j in 0 to columns - 1) {
       let bx = float_of_int(j) *. bs;
       let by = float_of_int(i) *. bs;
-      let bRect = {x: bx +. xOffset +. b, y: by +. yOffset +. b, w: bs, h: bs};
+      let bRect = Rect.make(bx +. xOffset +. b, by +. yOffset +. b, bs, bs);
       let updated = blocks[i * columns + j] = bRect;
       assert updated;
     };
   };
   {
-    top,
-    bottom,
-    left,
-    right,
     ratio,
     columns,
     rows,
-    width: w,
-    height: h,
-    border: {
-      x: borderX,
-      y: borderY,
-      w: w -. 2. *. borderX,
-      h: h -. 2. *. borderY,
-    },
+    size: rect,
+    border: Rect.make(borderX, borderY, rect.w -. 2. *. borderX, rect.h -. 2. *. borderY),
     blocks,
   };
 };
 
-let shouldRedraw = (oldDims: dimensions, newDims: dimensions) =>
-  oldDims.top != newDims.top
-  || oldDims.bottom != newDims.bottom
-  || oldDims.left != newDims.left
-  || oldDims.right != newDims.right;
+let shouldRedraw = (oldDims: dimensions, newDims: dimensions) => oldDims.size != newDims.size;
 
-let make = (_children, ~top, ~bottom, ~left, ~right, ~ratio, ~columns, ~rows, ~n) => {
+let make = (_children, ~rect, ~ratio, ~columns, ~rows, ~boardCards) => {
   ...component,
   reducer: (action, state) =>
     switch (action) {
     | Click((x, y)) =>
-      switch (inBlock(state.dims.blocks, (float_of_int(x), float_of_int(y)))) {
+      switch (Rect.findRect(state.dims.blocks, (x, y))) {
       | Some(idx) =>
         let f = Set.Int.(has(state.selected, idx) ? remove : add);
         let newSelected = f(state.selected, idx);
@@ -178,7 +135,7 @@ let make = (_children, ~top, ~bottom, ~left, ~right, ~ratio, ~columns, ~rows, ~n
       | None => ReasonReact.NoUpdate
       }
     | Hover((x, y)) =>
-      let newHovered = inBlock(state.dims.blocks, (float_of_int(x), float_of_int(y)));
+      let newHovered = Rect.findRect(state.dims.blocks, (x, y));
       switch (state.hovered, newHovered) {
       | (Some(oldIdx), Some(newIdx)) =>
         if (oldIdx == newIdx) {
@@ -200,18 +157,18 @@ let make = (_children, ~top, ~bottom, ~left, ~right, ~ratio, ~columns, ~rows, ~n
       };
     },
   initialState: () => {
-    dims: makeDims(top, bottom, left, right, ratio, columns, rows),
+    dims: makeDims(rect, ratio, columns, rows),
     hovered: None,
     selected: Set.Int.empty,
     context: ref(None),
-    board: n,
+    boardCards,
   },
-  willReceiveProps: self => {...self.state, dims: makeDims(top, bottom, left, right, ratio, columns, rows)},
+  willReceiveProps: self => {...self.state, dims: makeDims(rect, ratio, columns, rows)},
   didMount: self => {
     let myCanvas: canvas = [%bs.raw {| document.getElementById("board") |}];
     let context = getContext(myCanvas, "2d");
     self.state.context := Some(context);
-    reset(context, "white", self.state.dims.width, self.state.dims.height);
+    reset(context, "white", self.state.dims.size.w, self.state.dims.size.h);
     drawBoard(context, self.state.dims);
     ReasonReact.NoUpdate;
   },
@@ -219,7 +176,7 @@ let make = (_children, ~top, ~bottom, ~left, ~right, ~ratio, ~columns, ~rows, ~n
     if (shouldRedraw(oldSelf.state.dims, newSelf.state.dims)) {
       switch (newSelf.state.context) {
       | {contents: Some(ctx)} =>
-        reset(ctx, "white", newSelf.state.dims.width, newSelf.state.dims.height);
+        reset(ctx, "white", newSelf.state.dims.size.w, newSelf.state.dims.size.h);
         drawBoard(ctx, newSelf.state.dims);
       | _ => Js.log("Unable to redraw blocks: No context found!")
       };
@@ -227,19 +184,9 @@ let make = (_children, ~top, ~bottom, ~left, ~right, ~ratio, ~columns, ~rows, ~n
   render: ({state, send}) =>
     <canvas
       id="board"
-      width=(string_of_float(state.dims.width))
-      height=(string_of_float(state.dims.height))
-      style=(
-        ReactDOMRe.Style.make(
-          ~top=string_of_int(state.dims.top) ++ "px",
-          ~bottom=string_of_int(state.dims.bottom) ++ "px",
-          ~left=string_of_int(state.dims.left) ++ "px",
-          ~right=string_of_int(state.dims.right) ++ "px",
-          ~width=string_of_float(state.dims.width) ++ "px",
-          ~height=string_of_float(state.dims.height) ++ "px",
-          (),
-        )
-      )
+      width=(Shared_util.roundis(state.dims.size.w))
+      height=(Shared_util.roundis(state.dims.size.h))
+      style=(Rect.toStyle(rect))
       onClick=(evt => send(getClick(evt)))
       onMouseMove=(evt => send(getHover(evt)))
     />,

@@ -11,7 +11,7 @@ type action =
 
 type state = {
   ws: ref(option(WebSockets.WebSocket.t)),
-  board: list(board_card_data),
+  board: list(Card.t),
   players: list(scoreboard_player_data),
 };
 
@@ -71,5 +71,6 @@ let make = _children => {
       requestAnimationFrame(onAnimationFrame);*/
     ReasonReact.NoUpdate;
   },
-  render: ({state, send}) => <section className="main"> <GameLayout dim0=3 dim1=4 n=state.board /> </section>,
+  render: ({state, send}) =>
+    <section className="main"> <GameLayout dim0=3 dim1=4 boardCards=state.board /> </section>,
 };

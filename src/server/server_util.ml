@@ -62,3 +62,8 @@ let base_of_int n b =
 
 (* encode from base-10 positive integer to base-36 string *)
 let base36_of_int n = base_of_int n 36
+
+let get_or a i d =
+    match CCArray.get_safe a i with
+    | Some v -> v
+    | None -> d

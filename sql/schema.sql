@@ -89,11 +89,12 @@ create table board_cards (
     idx int not null,
     card_id int not null,
     check (idx >= 0 and idx < 12),
-    check (card_id >= 0 and card_id < 81)
+    check (card_id >= 0 and card_id <= 81)
 );
 
 create unique index idx_0005 on board_cards using btree (game_id,idx);
-create unique index idx_0006 on board_cards using btree (game_id,card_id);
+create unique index idx_0006 on board_cards using btree (game_id,card_id)
+    where card_id < 81; -- card 81 is empty
 
 
 -- moves table
@@ -259,9 +260,11 @@ begin
                 ) p
             ) as players,
             (
-                select json_agg(b.card_id)
+                select json_agg(b)
                 from (
-                    select card_id
+                    select
+                        idx,
+                        card_id
                     from board_cards
                     where game_id = NEW.game_id
                     order by idx asc

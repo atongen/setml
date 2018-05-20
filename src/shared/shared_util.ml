@@ -6,6 +6,8 @@ let round v =
 
 let roundi v = int_of_float @@ round v
 
+let roundis v = string_of_int @@ roundi v
+
 let shuffle_array a =
   let n = Array.length a in
   let a = Array.copy a in

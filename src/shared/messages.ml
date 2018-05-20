@@ -83,12 +83,12 @@ type player_name_data = {
 
 type board_card_data = {
     idx: int;
-    card: Card.t;
+    card: Card.t option;
 }
 
 type scoreboard_data = {
     players: scoreboard_player_data list;
-    board: Card.t list;
+    board: (Card.t option) array;
     game_status: game_status_data;
 }
 
@@ -147,7 +147,7 @@ let make_player_name player_id name =
 let make_board_card_data idx card_id =
     {
         idx;
-        card = Card.of_int card_id;
+        card = Some (Card.of_int card_id);
     }
 
 let make_board_card idx card_id =
@@ -186,15 +186,18 @@ let scoreboard_player_data_to_string (p: scoreboard_player_data) =
     Printf.sprintf "{player_id=%d name='%s' presence=%b score=%i}"
         p.player_id p.name p.presence p.score
 
+let card_opt_to_string = function
+    | Some c -> Card.to_string c
+    | None -> "[NONE]"
+
 let board_card_data_to_string (b: board_card_data) =
-    Printf.sprintf "{idx=%d card=%s}"
-        b.idx (Card.to_string b.card)
+    Printf.sprintf "{idx=%d card=%s}" b.idx (card_opt_to_string b.card)
 
 let rec to_string = function
     | Scoreboard d ->
         let player_strs = List.map scoreboard_player_data_to_string d.players in
         let players = String.concat ", " player_strs in
-        let board_strs = List.map Card.to_string d.board in
+        let board_strs = Array.map card_opt_to_string d.board |> Array.to_list in
         let board = String.concat ", " board_strs in
         let game_status = game_status_data_to_string d.game_status in
         Printf.sprintf "<message (%s) game_status=%s players=[%s] board=[%s]>"
@@ -204,7 +207,7 @@ let rec to_string = function
             (message_type_to_string Player_name_type) d.player_id d.name
     | Board_card d ->
         Printf.sprintf "<message (%s) idx=%d card=%s>"
-            (message_type_to_string Board_card_type) d.idx (Card.to_string d.card)
+            (message_type_to_string Board_card_type) d.idx (card_opt_to_string d.card)
     | Game_card_idx d ->
         Printf.sprintf "<message (%s) card_idx=%d>"
             (message_type_to_string Game_card_idx_type) d.card_idx

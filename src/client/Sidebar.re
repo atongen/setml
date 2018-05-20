@@ -6,22 +6,10 @@ let game_url =
   | None => ""
   };
 
-let make = (_children, ~top, ~bottom, ~left, ~right, ~summary) => {
+let make = (_children, ~rect) => {
   ...component,
   render: _self =>
-    <section
-      id="sidebar"
-      style=(
-        ReactDOMRe.Style.make(
-          ~top=string_of_int(top) ++ "px",
-          ~bottom=string_of_int(bottom) ++ "px",
-          ~left=string_of_int(left) ++ "px",
-          ~right=string_of_int(right) ++ "px",
-          ~width=string_of_int(right - left) ++ "px",
-          ~height=string_of_int(bottom - top) ++ "px",
-          (),
-        )
-      )>
+    <section id="sidebar" style=(Rect.toStyle(rect))>
       <div id="header">
         <h1> <a href="/"> (ReasonReact.stringToElement("SetML")) </a> </h1>
         <ul>

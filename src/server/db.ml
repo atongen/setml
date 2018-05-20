@@ -127,34 +127,6 @@ module Q = struct
         limit ?
       |eos}
 
-  let find_board_cards_query =
-    Caqti_request.collect Caqti_type.int Caqti_type.int
-      {eos|
-        select card_id
-        from board_cards
-        where game_id = ?
-        order by idx asc;
-      |eos}
-
-  let find_scoreboard_query =
-    Caqti_request.collect Caqti_type.int Caqti_type.(tup4 int string bool int)
-      {eos|
-        select
-            gp.player_id,
-            p.name,
-            gp.presence,
-            (
-                select count(*)
-                from moves
-                where moves.game_id = gp.game_id
-                and moves.player_id = gp.player_id
-            ) as score
-        from games_players gp
-        inner join players p
-        on gp.player_id = p.id
-        where gp.game_id = ?;
-      |eos}
-
     let update_player_name_query =
         Caqti_request.exec Caqti_type.(tup2 string int)
         {eos|
@@ -192,21 +164,19 @@ let player_exists (module C : Caqti_lwt.CONNECTION) player_id =
 let game_player_presence (module C : Caqti_lwt.CONNECTION) args =
   C.exec Q.game_player_presence_query args
 
-let find_board_cards (module C : Caqti_lwt.CONNECTION) game_id =
-  C.collect_list Q.find_board_cards_query game_id
-
-let create_move (module C : Caqti_lwt.CONNECTION) (game_id, player_id, idx0, card0_id, idx1, card1_id, idx2, card2_id) =
+let create_move (module C : Caqti_lwt.CONNECTION) (game_id, player_id, idx0, card0, idx1, card1, idx2, card2) =
+  let card0_id, card1_id, card2_id = (Card.to_int card0, Card.to_int card1, Card.to_int card2) in
   C.start () >>=? fun () ->
   C.exec (Q.set_transaction_mode_query "serializable") () >>=? fun () ->
   C.exec Q.create_move_query (game_id, (player_id, (idx0, (card0_id, (idx1, (card1_id, (idx2, card2_id))))))) >>=? fun () ->
   C.find Q.increment_game_card_idx_query (3, game_id) >>=? fun card_idx ->
   C.collect_list Q.find_game_cards_query (game_id, card_idx, 3) >>=? fun card_ids_list ->
   let card_ids = Array.of_list card_ids_list in
-  C.find Q.update_board_card_query (idx0, (card0_id, (card_ids.(0), (idx1, (card1_id, (card_ids.(1), (idx2, (card2_id, (card_ids.(2), game_id))))))))) >>=? fun num_updated ->
+  let new_card_0_id = Server_util.get_or card_ids 0 81 in
+  let new_card_1_id = Server_util.get_or card_ids 1 81 in
+  let new_card_2_id = Server_util.get_or card_ids 2 81 in
+  C.find Q.update_board_card_query (idx0, (card0_id, (new_card_0_id, (idx1, (card1_id, (new_card_1_id, (idx2, (card2_id, (new_card_2_id, game_id))))))))) >>=? fun num_updated ->
   if num_updated != 3 then C.rollback () else C.commit ()
-
-let find_scoreboard (module C : Caqti_lwt.CONNECTION) game_id =
-  C.collect_list Q.find_scoreboard_query game_id
 
 let update_player_name (module C : Caqti_lwt.CONNECTION) (player_id, name) =
   C.exec Q.update_player_name_query (name, player_id)

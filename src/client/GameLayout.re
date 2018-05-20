@@ -2,7 +2,7 @@ let window = Webapi.Dom.window;
 
 let devicePixelRatio = () : float => [%bs.raw {| window.devicePixelRatio || 1.0 |}];
 
-let size_of_ratio = (size, ratio) => int_of_float(floor(float_of_int(size) *. ratio +. 0.5));
+let size_of_ratio = (size, ratio) => Shared_util.roundi(float_of_int(size) *. ratio);
 
 type action =
   | Resize;
@@ -40,7 +40,7 @@ let handleResize = (evt, self) => self.ReasonReact.send(Resize);
 
 let component = ReasonReact.reducerComponent("GameLayout");
 
-let make = (_children, ~dim0, ~dim1, ~n) => {
+let make = (_children, ~dim0, ~dim1, ~boardCards) => {
   ...component,
   reducer: (action, state) =>
     switch (action) {
@@ -61,30 +61,26 @@ let make = (_children, ~dim0, ~dim1, ~n) => {
     let columns = self.state.columns;
     let rows = self.state.rows;
     let sidebarMinRatio = 0.2;
-    if (screen.width >= screen.height) {
-      /* landscape */
-      let idealBoard = float_of_int(screen.height);
-      let idealBlock = idealBoard /. float_of_int(rows);
-      let idealSidebar = float_of_int(screen.width) -. idealBlock *. float_of_int(columns);
-      let minSidebar = float_of_int(screen.width) *. sidebarMinRatio;
-      let sidebar = Shared_util.roundi(max(minSidebar, idealSidebar));
-      let board = screen.width - sidebar;
-      <div>
-        <Board top=0 bottom=screen.height left=0 right=board ratio=screen.ratio columns rows n />
-        <Sidebar top=0 bottom=screen.height left=board right=screen.width summary=true />
-      </div>;
-    } else {
-      /* portrait */
-      let idealBoard = float_of_int(screen.width);
-      let idealBlock = idealBoard /. float_of_int(columns);
-      let idealSidebar = float_of_int(screen.height) -. idealBlock *. float_of_int(rows);
-      let minSidebar = float_of_int(screen.height) *. sidebarMinRatio;
-      let sidebar = Shared_util.roundi(max(minSidebar, idealSidebar));
-      let board = screen.height - sidebar;
-      <div>
-        <Board top=0 bottom=board left=0 right=screen.width ratio=screen.ratio columns rows n />
-        <Sidebar top=board bottom=screen.height left=0 right=screen.width summary=false />
-      </div>;
-    };
+    let (boardRect, sidebarRect) =
+      if (screen.width >= screen.height) {
+        /* landscape */
+        let idealBoard = float_of_int(screen.height);
+        let idealBlock = idealBoard /. float_of_int(rows);
+        let idealSidebar = float_of_int(screen.width) -. idealBlock *. float_of_int(columns);
+        let minSidebar = float_of_int(screen.width) *. sidebarMinRatio;
+        let sidebar = Shared_util.roundi(max(minSidebar, idealSidebar));
+        let board = screen.width - sidebar;
+        (Rect.makei(0, 0, board, screen.height), Rect.makei(board, 0, screen.width - board, screen.height));
+      } else {
+        /* portrait */
+        let idealBoard = float_of_int(screen.width);
+        let idealBlock = idealBoard /. float_of_int(columns);
+        let idealSidebar = float_of_int(screen.height) -. idealBlock *. float_of_int(rows);
+        let minSidebar = float_of_int(screen.height) *. sidebarMinRatio;
+        let sidebar = Shared_util.roundi(max(minSidebar, idealSidebar));
+        let board = screen.height - sidebar;
+        (Rect.makei(0, 0, screen.width, board), Rect.makei(0, board, screen.width, screen.height - board));
+      };
+    <div> <Board rect=boardRect ratio=screen.ratio columns rows boardCards /> <Sidebar rect=sidebarRect /> </div>;
   },
 };

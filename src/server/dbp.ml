@@ -17,11 +17,7 @@ let player_exists pool player_id = with_pool pool Db.player_exists player_id
 
 let game_player_presence pool args = with_pool pool Db.game_player_presence args
 
-let find_board_cards pool game_id = with_pool pool Db.find_board_cards game_id
-
 let create_move pool args = with_pool pool Db.create_move args
-
-let find_scoreboard pool game_id = with_pool pool Db.find_scoreboard game_id
 
 let update_player_name pool args = with_pool pool Db.update_player_name args
 
