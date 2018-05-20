@@ -53,8 +53,8 @@ let create_move_test db =
     Db.create_player db () >>=? fun player_id ->
     Db.game_player_presence db (game_id, player_id, true) >>=? fun () ->
     Db.find_board_cards db game_id >>=? fun board_idxs ->
-    let cards = List.map Card.of_int board_idxs in
-    let sets_and_indexes_opt = Card.next_set_and_indexes cards in
+    let cards = Messages.make_board_cards_of_id_list board_idxs in
+    let sets_and_indexes_opt = Card.next_set_and_indexes_of_opt_array cards in
     match sets_and_indexes_opt with
     | Some ((idx0, c0), (idx1, c1), (idx2, c2)) ->
       assert_bool "cards are set" (Card.is_set c0 c1 c2);
@@ -72,6 +72,39 @@ let create_move_test db =
       refute_card_equal c2 board.(idx2);
       Lwt.return_unit
     | None -> assert_failure "No sets/indexes found"
+
+let complete_game_test db =
+  fun () ->
+    Db.create_game db () >>=? fun game_id ->
+    Db.create_player db () >>=? fun player_id ->
+    Db.game_player_presence db (game_id, player_id, true) >>=? fun () ->
+    let rec make_move i =
+      Db.find_board_cards db game_id >>=? fun board_idxs ->
+      ignore(print_endline (String.concat ", " (List.map string_of_int board_idxs)));
+      let cards = Messages.make_board_cards_of_id_list board_idxs in
+      let sets_and_indexes_opt = Card.next_set_and_indexes_of_opt_array cards in
+      match sets_and_indexes_opt with
+      | Some ((idx0, c0), (idx1, c1), (idx2, c2)) ->
+        assert_bool "cards are set" (Card.is_set c0 c1 c2);
+        Db.create_move db (game_id, player_id, idx0, c0, idx1, c1, idx2, c2) >>=? fun () ->
+        Db.find_scoreboard db game_id >>=? fun scores ->
+        assert_equal ~printer:string_of_int 1 (List.length scores);
+        ignore(print_endline (Printf.sprintf "[%d; %d; %d]" (Card.to_int c0) (Card.to_int c1) (Card.to_int c2)));
+        (match find_player_score scores player_id with
+        | Some (score) -> assert_equal ~msg:"player score" ~printer:string_of_int i score
+        | None -> assert_failure "player score");
+        Db.query_int db (Printf.sprintf "select card_idx from games where id = %d;" game_id) >>=? fun card_idx ->
+        assert_equal (12+(3*i)) card_idx;
+        ignore(print_endline @@ "continue: " ^ string_of_int card_idx);
+        make_move (i+1)
+      | None ->
+        Db.query_int db (Printf.sprintf "select card_idx from games where id = %d;" game_id) >>=? fun card_idx ->
+        ignore(print_endline @@ "stop: " ^ string_of_int card_idx);
+        assert (card_idx >= (81 - 12));
+        Lwt.return_unit
+    in
+    make_move 1
+
 
 let create_failed_move_test db =
   fun () ->

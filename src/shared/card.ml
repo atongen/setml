@@ -216,6 +216,17 @@ let next_set_and_indexes cards =
     | None -> None
   in aux (tg ())
 
+let next_set_and_indexes_of_opt_array cards =
+    let rec aux acc = function
+      | [] -> acc
+      | hd :: tl ->
+        match hd with
+        | Some c -> aux (c :: acc) tl
+        | None -> aux acc tl
+    in
+    let l = aux [] (List.rev (Array.to_list cards)) in
+    next_set_and_indexes l
+
 let make_board board_size =
   let a = deck () in
   let r = a |> shuffle_array |> Array.to_list in

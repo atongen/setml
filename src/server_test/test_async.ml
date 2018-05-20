@@ -18,6 +18,7 @@ let suite db =
         "game_player_presence_test", Db_tests.game_player_presence_test db;
         "create_move_test", Db_tests.create_move_test db;
         "create_failed_move_test", Db_tests.create_failed_move_test db;
+        "complete_game_test", Db_tests.complete_game_test db;
     ]
 
 let pool_suite pool =
@@ -43,4 +44,6 @@ let run_pool_suite () =
         pool_suite pool >|= OUnit2.run_test_tt_main
     end)
 
-let _ = run_db_suite (); run_pool_suite ()
+let _ =
+    Crypto.init ();
+    run_db_suite (); run_pool_suite ()
