@@ -163,6 +163,43 @@ module Q = struct
             on gp.player_id = p.id
             where gp.game_id = ?;
         |eos}
+
+    let find_random_board_cards_query =
+        Caqti_request.collect Caqti_type.(tup2 int int) Caqti_type.(tup2 int int)
+        {eos|
+            select idx, card_id
+            from board_cards
+            where game_id = ?
+            and card_id < 81
+            order by random()
+            limit ?;
+        |eos}
+
+    let find_random_game_cards_query =
+        Caqti_request.collect Caqti_type.(tup2 int int) Caqti_type.(tup2 int int)
+        {eos|
+            select idx, card_id
+            from game_cards gc
+            inner join games g
+            on g.id = gc.game_id
+            where gc.game_id = ?
+            and gc.idx > g.card_idx
+            order by random()
+            limit ?;
+        |eos}
+
+    let swap_game_cards =
+        Caqti_request.collect Caqti_type.(tup2 int int) Caqti_type.(tup2 int int)
+        {eos|
+            update game_cards dst
+            set idx = src.idx
+            from game_cards src
+            where dst.game_id = $1
+            and src.game_id = dst.game_id
+            and dst.card_id IN($2,$3)
+            and src.card_id IN($2,$3)
+            and dst.id <> src.id
+        |eos}
 end
 
 let query_int (module C : Caqti_lwt.CONNECTION) q =
@@ -209,7 +246,27 @@ let create_move (module C : Caqti_lwt.CONNECTION) (game_id, player_id, idx0, car
 let shuffle_board (module C : Caqti_lwt.CONNECTION) (game_id, player_id, num_cards) =
   C.start () >>=? fun () ->
   C.exec (Q.set_transaction_mode_query "serializable") () >>=? fun () ->
+  C.collect_list Q.find_random_board_cards_query (game_id, num_cards) >>=? fun board_cards ->
+  if List.length board_cards > num_cards then
+  C.rollback () else
+  C.collect_list Q.find_random_game_cards_query (game_id, num_cards) >>=? fun game_cards ->
+  if List.length game_cards > num_cards then
+  C.rollback () else
+  (*
+  get num_cards random, filled in card idx & ids from board
+  get num_cards random card ids from game_cards > current game card_idx
+  find idx of board cards in game cards
+  swap board cards with game cards at indexes 0 through num_cards
+  *)
   C.commit ()
+
+let is_game_over (module C : Caqti_lwt.CONNECTION) game_id =
+  (*
+  if there is a set present on board_cards, then false
+  if there is a set present on remaining game_cards, then false
+  else true
+  *)
+  Lwt.return_unit
 
 let update_player_name (module C : Caqti_lwt.CONNECTION) (player_id, name) =
   C.exec Q.update_player_name_query (name, player_id)
