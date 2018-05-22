@@ -21,7 +21,16 @@ val attr_of_int : int -> attr
 val make : int -> int -> int -> int -> t
 
 val of_int : int -> t
+
+val of_int_opt : int -> t option
+
+val of_int_list : int list -> t option list
+
 val to_int : t -> int
+
+val to_int_opt : t option -> int
+
+val to_int_list : t option list -> int list
 
 val to_string : t -> string
 

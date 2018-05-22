@@ -35,7 +35,7 @@ module Server_message_converter : Messages.CONVERT = struct
                 `Assoc [
                     (type_key, `String (message_type_to_string Board_card_type));
                     (idx_key, `Int d.idx);
-                    (card_id_key, `Int (card_id_of_card_opt d.card));
+                    (card_id_key, `Int (Card.to_int_opt d.card));
                 ]
             | Game_update d ->
                 `Assoc [
@@ -117,7 +117,7 @@ module Server_message_converter : Messages.CONVERT = struct
                     let player_data = json |> Util.member player_data_key |> Util.to_list
                         |> List.map player_data_of_json in
                     let board_data = json |> Util.member board_data_key |> Util.to_list
-                        |> List.map (fun json -> json |> Util.member card_id_key |> Util.to_int |> make_card)
+                        |> List.map (fun json -> json |> Util.member card_id_key |> Util.to_int |> Card.of_int_opt)
                         |> Array.of_list in
                     let game_update = json |> Util.member game_update_key |> game_update_data_of_json in
                     make_game_data player_data board_data game_update

@@ -58,11 +58,24 @@ let of_int n =
   let v = base3_list_of_int n |> Array.of_list in
   make v.(0) v.(1) v.(2) v.(3)
 
+let of_int_opt n =
+  if n >= 0 && n < 81 then Some (of_int n)
+  else None
+
+let of_int_list l = List.map of_int_opt l
+
 let to_int x =
   (attr_to_int x.num) * 27 +
   (attr_to_int x.fill) * 9 +
   (attr_to_int x.color) * 3 +
   (attr_to_int x.shape)
+
+let to_int_opt x =
+  match x with
+  | Some c -> to_int c
+  | None -> 81
+
+let to_int_list l = List.map to_int_opt l
 
 let to_string x =
   Printf.sprintf "{ n: %d, f: %d, c: %d, s: %d }"

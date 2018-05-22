@@ -20,11 +20,11 @@ let convert_tests =
         make_player_data 3 "bill" false 6;
         make_player_data 4 "cindy" true 9;
         make_player_data 5 "carol" true 3;
-    ] (make_board_cards_of_id_list [
+    ] (Card.of_int_list [
          0;  2;  4;  6;
          8; 10; 33; 52;
         78; 79; 80; 81;
-    ]) (make_game_update_data "started" 15);
+    ] |> Array.of_list) (make_game_update_data "started" 15);
     make_player_name 2 "andrew2";
     make_board_card 5 7;
     make_game_update "new" 13;

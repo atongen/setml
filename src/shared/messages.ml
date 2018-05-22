@@ -16,8 +16,6 @@ let card2_id_key = "card2_id"
 let board_data_key = "board_data"
 let game_update_key = "game_update"
 
-let empty_card_id = 81
-
 type message_type =
     | Game_data_type
     | Player_data_type
@@ -152,20 +150,11 @@ let make_player_name_data player_id name =
 let make_player_name player_id name =
     Player_name (make_player_name_data player_id name)
 
-let make_card card_id =
-    if card_id < empty_card_id then
-        Some (Card.of_int card_id)
-    else None
-
 let make_board_card_data idx card_id =
     {
         idx;
-        card = make_card card_id;
+        card = Card.of_int_opt card_id;
     }
-
-let card_id_of_card_opt = function
-    | Some c -> Card.to_int c
-    | None -> empty_card_id
 
 let make_board_card idx card_id =
     Board_card (make_board_card_data idx card_id)
@@ -174,9 +163,6 @@ let make_board_cards bc_arr =
     Array.mapi (fun idx card ->
         Board_card {idx; card}
     ) bc_arr
-
-let make_board_cards_of_id_list bcl =
-    Array.map (fun card_id -> make_card card_id) (Array.of_list bcl)
 
 let make_game_update_data status card_idx =
     {

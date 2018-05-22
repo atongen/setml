@@ -53,7 +53,7 @@ let create_move_test db =
     Db.create_player db () >>=? fun player_id ->
     Db.game_player_presence db (game_id, player_id, true) >>=? fun () ->
     Db.find_board_cards db game_id >>=? fun board_idxs ->
-    let cards = Messages.make_board_cards_of_id_list board_idxs in
+    let cards = Card.of_int_list board_idxs |> Array.of_list in
     let sets_and_indexes_opt = Card.next_set_and_indexes_of_opt_array cards in
     match sets_and_indexes_opt with
     | Some ((idx0, c0), (idx1, c1), (idx2, c2)) ->
@@ -81,7 +81,7 @@ let complete_game_test db =
     let rec make_move i =
       Db.find_board_cards db game_id >>=? fun board_idxs ->
       ignore(print_endline (String.concat ", " (List.map string_of_int board_idxs)));
-      let cards = Messages.make_board_cards_of_id_list board_idxs in
+      let cards = Card.of_int_list board_idxs |> Array.of_list in
       let sets_and_indexes_opt = Card.next_set_and_indexes_of_opt_array cards in
       match sets_and_indexes_opt with
       | Some ((idx0, c0), (idx1, c1), (idx2, c2)) ->

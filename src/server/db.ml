@@ -206,6 +206,11 @@ let create_move (module C : Caqti_lwt.CONNECTION) (game_id, player_id, idx0, car
   C.find Q.update_board_card_query (idx0, (card0_id, (new_card_0_id, (idx1, (card1_id, (new_card_1_id, (idx2, (card2_id, (new_card_2_id, game_id))))))))) >>=? fun num_updated ->
   if num_updated != 3 then C.rollback () else C.commit ()
 
+let shuffle_board (module C : Caqti_lwt.CONNECTION) (game_id, player_id, num_cards) =
+  C.start () >>=? fun () ->
+  C.exec (Q.set_transaction_mode_query "serializable") () >>=? fun () ->
+  C.commit ()
+
 let update_player_name (module C : Caqti_lwt.CONNECTION) (player_id, name) =
   C.exec Q.update_player_name_query (name, player_id)
 
