@@ -18,14 +18,17 @@ module Q = struct
 
   let generic_bool_query q = Caqti_request.find ~oneshot:true Caqti_type.unit Caqti_type.bool q
 
-  let create_game_cards_query game_id =
-    let cards = Card.make_board board_size in
-    let ids = List.map Card.to_int cards in
+  let make_insert_cards_query_str ?(offset=0) table_name game_id card_ids =
     let rows = List.mapi (fun idx card_id ->
-        Printf.sprintf "(%d,%d,%d)" game_id idx card_id
-      ) ids in
-    let query_values = String.concat ", " rows in
-    let query = "insert into game_cards (game_id, idx, card_id) values " ^ query_values ^ ";" in
+        Printf.sprintf "(%d,%d,%d)" game_id (idx + offset) card_id
+      ) card_ids in
+    let values = String.concat "," rows in
+    Printf.sprintf "insert into %s (game_id, idx, card_id) values %s;" table_name values
+
+  let create_game_cards_query game_id =
+    let open CCList.Infix in
+    let card_ids = Shared_util.shuffle_list (0 --^ 81) in
+    let query = make_insert_cards_query_str "game_cards" game_id card_ids in
     Caqti_request.exec ~oneshot:true Caqti_type.unit query
 
   let create_game_query =
@@ -132,9 +135,9 @@ module Q = struct
     Caqti_request.find args10 Caqti_type.int (make_update_cards_query_str "game_cards")
 
   let find_game_cards_query =
-    Caqti_request.collect Caqti_type.(tup3 int int int) Caqti_type.int
+    Caqti_request.collect Caqti_type.(tup3 int int int) Caqti_type.(tup2 int int)
       {eos|
-        select card_id
+        select idx, card_id
         from game_cards
         where game_id = ?
         and idx >= ?
@@ -224,8 +227,8 @@ let create_move (module C : Caqti_lwt.CONNECTION) (game_id, player_id, idx0, car
   C.exec (Q.set_transaction_mode_query "serializable") () >>=? fun () ->
   C.exec Q.create_move_query (game_id, (player_id, (idx0, (card0_id, (idx1, (card1_id, (idx2, card2_id))))))) >>=? fun () ->
   C.find Q.increment_game_card_idx_query (3, game_id) >>=? fun card_idx ->
-  C.collect_list Q.find_game_cards_query (game_id, card_idx, 3) >>=? fun card_ids_list ->
-  let card_ids = Array.of_list card_ids_list in
+  C.collect_list Q.find_game_cards_query (game_id, card_idx, 3) >>=? fun cards_list ->
+  let card_ids = List.map (fun (_, card_id) -> card_id) cards_list |> Array.of_list in
   let new_card_0_id = Server_util.get_or card_ids 0 81 in
   let new_card_1_id = Server_util.get_or card_ids 1 81 in
   let new_card_2_id = Server_util.get_or card_ids 2 81 in
@@ -236,6 +239,16 @@ let shuffle_board (module C : Caqti_lwt.CONNECTION) (game_id, player_id) =
   C.start () >>=? fun () ->
   C.exec (Q.set_transaction_mode_query "serializable") () >>=? fun () ->
   C.find Q.find_game_card_idx_query game_id >>=? fun card_idx ->
+
+  (* ensure we have at least board size 12 + 3 cards left to swap *)
+  if card_idx < 66 then C.rollback () else
+
+  (* get a list of all (idx, card_id) for this game *)
+  C.collect_list Q.find_game_cards_query (game_id, card_idx, 81 - card_idx) >>=? fun cards_list ->
+
+  (* get a list of all (idx, card_id) for cards currently on the board *)
+  C.collect_list Q.find_random_board_cards_query (game_id, 3) >>=? fun random_board_cards ->
+  if List.length random_board_cards < 3 then C.rollback () else
 
   (*
     # GAME CARDS
@@ -253,14 +266,6 @@ let shuffle_board (module C : Caqti_lwt.CONNECTION) (game_id, player_id) =
       the number of sets on the board when it occured
   *)
 
-  (* ensure we have at least board size 12 + 3 cards left to swap *)
-  if card_idx < 66 then C.rollback () else
-
-  C.collect_list Q.find_game_cards_query (game_id, card_idx, 81 - card_idx) >>=? fun game_card_ids ->
-  let game_cards = List.mapi (fun i card_id -> (card_idx + i, card_id)) game_card_ids |> Array.of_list in
-  let random_game_cards = Shared_util.random_sample game_cards 3 in
-  C.collect_list Q.find_random_board_cards_query (game_id, 3) >>=? fun random_board_cards -> (* [(idx, card_id);...] *)
-  if List.length random_board_cards > 3 then C.rollback () else
 
   C.commit ()
 

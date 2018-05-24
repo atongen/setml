@@ -31,6 +31,15 @@ let rec firstk k = function
     | hd :: tl -> if k=1 then [hd] else
         hd :: firstk (k-1) tl
 
-let random_sample a n =
-    let s = shuffle_array a in
-    Array.sub s 0 (min (Array.length a) n)
+let random_sample ar n =
+    let a = [||] in
+    while Array.length a < n do
+        let i = Random.int n in
+        if not (Array.mem i a) then
+        Array.set a (Array.length a) i
+    done;
+    Array.map (fun i -> ar.(i)) a
+
+let random_sample_list l n =
+    random_sample (Array.of_list l) n
+    |> Array.to_list

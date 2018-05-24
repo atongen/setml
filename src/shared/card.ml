@@ -239,25 +239,3 @@ let next_set_and_indexes_of_opt_array cards =
     in
     let l = aux [] (List.rev (Array.to_list cards)) in
     next_set_and_indexes l
-
-let make_board board_size =
-  let a = deck () in
-  let r = a |> shuffle_array |> Array.to_list in
-  let rec aux acc s = function
-    | [] -> acc
-    | (hd :: tl) as l ->
-      let board = firstk s l in
-      if List.length board < s then
-        acc @ l
-      else if exists_set board then
-        (* there is a set on the board, move on *)
-        aux (hd :: acc) s tl
-      else
-      if exists_set l then
-        (* no set on board, but one exists in remainder of deck, shuffle and retry *)
-        aux acc s (shuffle_list l)
-      else
-        (* no set exists in rest of list, return current results *)
-        acc @ l
-  in
-  aux [] board_size r
