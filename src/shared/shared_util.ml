@@ -43,3 +43,12 @@ let random_sample ar n =
 let random_sample_list l n =
     random_sample (Array.of_list l) n
     |> Array.to_list
+
+let compact l =
+    let rec aux acc = function
+    | [] -> acc
+    | hd :: tl -> match hd with
+        | Some x -> aux (x :: acc) tl
+        | None -> aux acc tl
+    in
+    aux [] (List.rev l)

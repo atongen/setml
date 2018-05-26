@@ -119,6 +119,22 @@ create table moves (
 create index idx_0007 on moves using btree (game_id,player_id);
 create index idx_0008 on moves using btree (game_id,created_at);
 
+-- shuffles table
+
+drop table if exists shuffles cascade;
+
+create table shuffles (
+    id bigserial not null primary key,
+    game_id bigint not null references games (id)
+        on delete cascade,
+    player_id bigint not null references players (id)
+        on delete cascade,
+    sets_on_board int not null default 0,
+    created_at timestamp without time zone not null default now()
+);
+
+create index idx_0009 on shuffles using btree (game_id,player_id);
+
 --
 -- Setup data triggers
 --

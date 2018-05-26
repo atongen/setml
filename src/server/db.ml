@@ -18,18 +18,31 @@ module Q = struct
 
   let generic_bool_query q = Caqti_request.find ~oneshot:true Caqti_type.unit Caqti_type.bool q
 
-  let make_insert_cards_query_str ?(offset=0) table_name game_id card_ids =
-    let rows = List.mapi (fun idx card_id ->
-        Printf.sprintf "(%d,%d,%d)" game_id (idx + offset) card_id
-      ) card_ids in
+  let make_insert_cards_query_str table_name game_id card_list =
+    let rows = List.map (fun (idx, card_id) ->
+        Printf.sprintf "(%d,%d,%d)" game_id idx card_id
+      ) card_list in
     let values = String.concat "," rows in
-    Printf.sprintf "insert into %s (game_id, idx, card_id) values %s;" table_name values
+    Printf.sprintf
+    {eos|
+        with rows as (
+            insert into %s (game_id, idx, card_id)
+            values %s
+            returning id
+        ) select count(*) from rows;
+    |eos}
+    table_name values
 
   let create_game_cards_query game_id =
     let open CCList.Infix in
     let card_ids = Shared_util.shuffle_list (0 --^ 81) in
-    let query = make_insert_cards_query_str "game_cards" game_id card_ids in
-    Caqti_request.exec ~oneshot:true Caqti_type.unit query
+    let card_list = List.mapi (fun idx card_id -> (idx, card_id)) card_ids in
+    let query = make_insert_cards_query_str "game_cards" game_id card_list in
+    Caqti_request.find ~oneshot:true Caqti_type.unit Caqti_type.int query
+
+  let update_game_cards_query game_id card_list =
+    let query = make_insert_cards_query_str "game_cards" game_id card_list in
+    Caqti_request.find ~oneshot:true Caqti_type.unit Caqti_type.int query
 
   let create_game_query =
     Caqti_request.find Caqti_type.unit Caqti_type.int
@@ -103,11 +116,13 @@ module Q = struct
         );
       |eos}
 
-  let make_update_cards_query_str table =
-      table |> (Printf.sprintf
-      {eos|
-        WITH rows AS (
-            update %s t
+  let update_board_cards_query =
+    (*let args10 = Caqti_type.(let (&) = tup2 in int & int & int & int & int & int & int & int & int & int) in*)
+    let args = Caqti_type.(tup4 (tup3 int int int) (tup3 int int int) (tup3 int int int) int) in
+    Caqti_request.find args Caqti_type.int
+    {eos|
+        with rows as (
+            update board_cards t
             set card_id = m.new_card_id::int
             from (values
                 (?, ?, ?),
@@ -123,16 +138,8 @@ module Q = struct
                 and t.card_id = m.old_card_id::int
             returning 1
         )
-        SELECT count(*) FROM rows;
-      |eos})
-
-  let update_board_cards_query =
-    let args10 = Caqti_type.(let (&) = tup2 in int & int & int & int & int & int & int & int & int & int) in
-    Caqti_request.find args10 Caqti_type.int (make_update_cards_query_str "board_cards")
-
-  let update_game_cards_query =
-    let args10 = Caqti_type.(let (&) = tup2 in int & int & int & int & int & int & int & int & int & int) in
-    Caqti_request.find args10 Caqti_type.int (make_update_cards_query_str "game_cards")
+        select count(*) from rows;
+      |eos}
 
   let find_game_cards_query =
     Caqti_request.collect Caqti_type.(tup3 int int int) Caqti_type.(tup2 int int)
@@ -192,6 +199,35 @@ module Q = struct
             order by random()
             limit ?;
         |eos}
+
+    let delete_game_cards_for_shuffle =
+        let args = Caqti_type.(let (&) = tup2 in (int & (int & int) & (int & int) & (int & int) & int)) in
+        Caqti_request.find args Caqti_type.int
+        {eos|
+            with rows as (
+                delete from game_cards
+                where game_id = ?
+                and (
+                    (idx = ? and card_id = ?)
+                    or (idx = ? and card_id = ?)
+                    or (idx = ? and card_id = ?)
+                    or (idx > ?)
+                )
+                returning id
+            ) select count(*) from rows;
+        |eos}
+
+  let create_shuffle_query =
+    Caqti_request.exec Caqti_type.(tup3 int int int)
+      {eos|
+        insert into shuffles (
+            game_id,
+            player_id,
+            sets_on_board
+        ) values (
+            ?, ?, ?
+        );
+      |eos}
 end
 
 let query_int (module C : Caqti_lwt.CONNECTION) q =
@@ -203,7 +239,7 @@ let query_bool (module C : Caqti_lwt.CONNECTION) q =
 let create_game (module C : Caqti_lwt.CONNECTION) () =
   C.start () >>=? fun () ->
   C.find Q.create_game_query () >>=? fun game_id ->
-  C.exec (Q.create_game_cards_query game_id) () >>=? fun () ->
+  C.find (Q.create_game_cards_query game_id) () >>=? fun _ ->
   C.exec Q.create_board_cards_query (game_id, board_size) >>=? fun () ->
   C.find Q.increment_game_card_idx_query (board_size, game_id) >>=? fun _ ->
   C.commit () >>=? fun () ->
@@ -232,7 +268,7 @@ let create_move (module C : Caqti_lwt.CONNECTION) (game_id, player_id, idx0, car
   let new_card_0_id = Server_util.get_or card_ids 0 81 in
   let new_card_1_id = Server_util.get_or card_ids 1 81 in
   let new_card_2_id = Server_util.get_or card_ids 2 81 in
-  C.find Q.update_board_cards_query (idx0, (card0_id, (new_card_0_id, (idx1, (card1_id, (new_card_1_id, (idx2, (card2_id, (new_card_2_id, game_id))))))))) >>=? fun num_updated ->
+  C.find Q.update_board_cards_query ((idx0, card0_id, new_card_0_id), (idx1, card1_id, new_card_1_id), (idx2, card2_id, new_card_2_id), game_id) >>=? fun num_updated ->
   if num_updated != 3 then C.rollback () else C.commit ()
 
 let shuffle_board (module C : Caqti_lwt.CONNECTION) (game_id, player_id) =
@@ -250,32 +286,73 @@ let shuffle_board (module C : Caqti_lwt.CONNECTION) (game_id, player_id) =
   C.collect_list Q.find_random_board_cards_query (game_id, 3) >>=? fun random_board_cards ->
   if List.length random_board_cards < 3 then C.rollback () else
 
-  (*
-    # GAME CARDS
-    - query all game_cards card_ids for game
-    - delete from game_cards where card_id is the board cards we want to shuffle out
-    - delete from game_cards where idx is > game card_idx
-    - pop 3 from game_cards "deck" and insert where we want to replace from board
-    - append replaced cards from board at end of "deck"
-    - insert new "deck" rows into game cards
-    # BOARD CARDS
-    - similar to "move", replace 3 (idx, card_id) tuples in board_card rows
-      with replaced game cards from above
-    # SHUFFLES
-    - insert row into new table "shuffles" recording the game, player and
-      the number of sets on the board when it occured
-  *)
+  (* delete the 3 random board cards from game_cards, and also cards idx above card_idx *)
+  let to_delete = List.map (fun (_, bc_card_id) ->
+    let ol = List.find_opt (fun (_, g_card_id) ->
+      bc_card_id = g_card_id
+    ) cards_list in
+    match ol with
+    | Some (idx, card_id) -> (idx, card_id)
+    | None -> (0,0)
+  ) random_board_cards
+  |> Array.of_list in
 
+  if Array.length to_delete < 3 then C.rollback () else
 
+  C.find Q.delete_game_cards_for_shuffle (game_id, (to_delete.(0), (to_delete.(1), (to_delete.(2), card_idx + 12)))) >>=? fun num_deleted ->
+
+  if num_deleted < 3 then C.rollback () else
+
+  (* add 3 from card_idx+12 to card_idx+14 top of deck into where deleted board cards were *)
+  let deleted_idx = List.map (fun (idx, _) -> idx) (Array.to_list to_delete) in
+  let new_card_ids = List.map (fun (_, card_id) -> card_id) (CCList.take 3 cards_list) in
+  let new_board_cards = CCList.combine deleted_idx new_card_ids in
+
+  (* shift card_idx+12+3 to 80-3 (78, 79, 80) forward by 3 *)
+  let shifted_deck =
+    let rec aux acc = function
+      | [] -> acc
+      | (idx, card_id) :: tl ->
+        if idx < card_idx+12+3 || idx >= 78 then
+          aux acc tl
+        else
+          aux ((idx-3, card_id) :: acc) tl
+    in
+    aux [] (List.rev cards_list)
+  in
+
+  (* add 3 deleted board cards to idx 78, 79, 80 *)
+  let end_of_deck = List.mapi (fun i (_, card_id) -> (78+i, card_id)) (Array.to_list to_delete) in
+
+  let to_add = new_board_cards @ shifted_deck @ end_of_deck in
+  C.find (Q.update_game_cards_query game_id to_add) () >>=? fun num_added ->
+
+  if num_added < 3 + 3 + 81 - card_idx then C.rollback () else
+
+  let board_update = List.map2 (fun (idx, old_card_id) (_, new_card_id) ->
+    (idx, old_card_id, new_card_id)
+  ) random_board_cards new_board_cards |> Array.of_list in
+
+  C.find Q.update_board_cards_query (board_update.(0), board_update.(1), board_update.(2), game_id) >>=? fun num_updated ->
+
+  if num_updated < 3 then C.rollback () else
+
+  let sets_on_board = List.map (fun (_, card_id) -> card_id) (CCList.take 12 cards_list)
+    |> Card.of_int_list
+    |> Shared_util.compact
+    |> Card.count_sets
+  in
+
+  C.exec Q.create_shuffle_query (game_id, player_id, sets_on_board) >>=? fun () ->
   C.commit ()
 
 let is_game_over (module C : Caqti_lwt.CONNECTION) game_id =
-  (*
-  if there is a set present on board_cards, then false
-  if there is a set present on remaining game_cards, then false
-  else true
-  *)
-  Lwt.return_unit
+  C.find Q.find_game_card_idx_query game_id >>=? fun card_idx ->
+  C.collect_list Q.find_game_cards_query (game_id, card_idx, 81 - card_idx) >>=? fun cards_list ->
+  Lwt.return_ok (not (List.map (fun (_, card_id) -> card_id) cards_list
+    |> Card.of_int_list
+    |> Shared_util.compact
+    |> Card.exists_set))
 
 let update_player_name (module C : Caqti_lwt.CONNECTION) (player_id, name) =
   C.exec Q.update_player_name_query (name, player_id)

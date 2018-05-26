@@ -99,9 +99,16 @@ let complete_game_test db =
         make_move (i+1)
       | None ->
         Db.query_int db (Printf.sprintf "select card_idx from games where id = %d;" game_id) >>=? fun card_idx ->
-        ignore(print_endline @@ "stop: " ^ string_of_int card_idx);
-        assert (card_idx >= (81 - 12));
-        Lwt.return_unit
+        Db.is_game_over db game_id >>=? fun game_over ->
+        if game_over then (
+            ignore(print_endline @@ "stop: " ^ string_of_int card_idx);
+            assert (card_idx >= (81 - 12));
+            Lwt.return_unit
+        ) else (
+            Db.shuffle_board db (game_id, player_id) >>=? fun () ->
+            ignore(print_endline @@ "shuffling: " ^ string_of_int card_idx);
+            make_move (i+1)
+        )
     in
     make_move 1
 
