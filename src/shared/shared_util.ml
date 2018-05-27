@@ -52,3 +52,9 @@ let compact l =
         | None -> aux acc tl
     in
     aux [] (List.rev l)
+
+let card_list_to_string m l =
+    let s = List.map (fun (idx, card_id) ->
+        Printf.sprintf "(idx: %d, card_id: %d)" idx card_id
+    ) l in
+    Printf.sprintf "%s: %s" m (String.concat ", " s)
