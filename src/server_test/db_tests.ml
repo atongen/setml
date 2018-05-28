@@ -81,35 +81,26 @@ let complete_game_test db =
         Db.game_player_presence db (game_id, player_id, true) >>=? fun () ->
         let rec make_move i shuffled =
             Db.find_game_cards db game_id >>=? fun cards_before ->
-            (*ignore(print_endline @@ Shared_util.card_list_to_string "cards_before" cards_before);*)
             Db.find_board_cards db game_id >>=? fun board_card_ids ->
-            let bb = List.mapi (fun idx card_id -> (idx, card_id)) board_card_ids in
-            ignore(print_endline @@ Shared_util.card_list_to_string "board_before" bb);
-            (*
-            let board_cards_from_game_cards = CCList.take 12 cards_before in
-            let board_card_ids_from_game_cards = List.map (fun (_, card_id) -> card_id) board_cards_from_game_cards in
-            assert_equal ~msg:"validate game/board cards" ~printer:string_of_int_list board_card_ids_from_game_cards board_card_ids;
-            *)
+
             if not shuffled then (
-                ignore(print_endline @@ "shuffling " ^ string_of_int i);
                 Db.shuffle_board db (game_id, player_id) >>=? fun did_shuffle ->
                 if not did_shuffle then (
-                    assert_equal ~printer:string_of_int 66 i;
-                    Lwt.return_unit
+                    Db.is_game_over db game_id >>=? fun game_over ->
+                    if game_over then
+                        Lwt.return_unit
+                    else
+                        assert_failure "game not over"
                 ) else (
                     Db.find_game_cards db game_id >>=? fun cards_after ->
-                    (*ignore(print_endline @@ Shared_util.card_list_to_string "cards_after" cards_after);*)
                     Db.find_board_cards db game_id >>=? fun board_after ->
-                    let ba = List.mapi (fun idx card_id -> (idx, card_id)) board_after in
-                    ignore(print_endline @@ Shared_util.card_list_to_string "board_after" ba);
                     assert_bool "cards are different after shuffle" (cards_before != cards_after);
                     let card_ids = List.map (fun (_, card_id) -> card_id) cards_after in
                     let scids = List.sort_uniq compare card_ids in
-                    assert_equal ~printer:string_of_int 81 (List.length scids);
+                    assert_equal ~msg:"sorted unique cards should have length 81 after shuffle" ~printer:string_of_int 81 (List.length scids);
                     make_move i true
                 )
             ) else (
-                ignore(print_endline @@ "making move " ^ string_of_int i);
                 let cards = Card.of_int_list board_card_ids |> Array.of_list in
                 let sets_and_indexes_opt = Card.next_set_and_indexes_of_opt_array cards in
                 match sets_and_indexes_opt with
@@ -118,21 +109,19 @@ let complete_game_test db =
                     Db.create_move db (game_id, player_id, idx0, c0, idx1, c1, idx2, c2) >>=? fun made_move ->
                     assert_bool "made move" made_move;
                     Db.find_scoreboard db game_id >>=? fun scores ->
-                    assert_equal ~printer:string_of_int 1 (List.length scores);
+                    assert_equal ~msg:"number of players should equal 1" ~printer:string_of_int 1 (List.length scores);
                     (match find_player_score scores player_id with
-                    | Some (score) -> assert_equal ~msg:"player score" ~printer:string_of_int i score
+                    | Some (score) -> assert_equal ~msg:"this player should have made all the moves" ~printer:string_of_int i score
                     | None -> assert_failure "player score");
                     Db.query_int db (Printf.sprintf "select card_idx from games where id = %d;" game_id) >>=? fun card_idx ->
-                    assert_equal (12+(3*i)) card_idx;
+                    assert_equal ~msg:"game card_idx should reflect number of moves" ~printer:string_of_int (12+(3*i)) card_idx;
                     make_move (i+1) false
                 | None ->
-                    Db.query_int db (Printf.sprintf "select card_idx from games where id = %d;" game_id) >>=? fun card_idx ->
                     Db.is_game_over db game_id >>=? fun game_over ->
                     if game_over then (
-                        assert (card_idx >= (81 - 12));
                         Lwt.return_unit
                     ) else (
-                        make_move (i+1) false
+                        make_move i false
                     )
             )
     in

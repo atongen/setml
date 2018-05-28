@@ -82,7 +82,7 @@ let create_failed_move_test pool =
     Dbp.find_board_cards pool game_id >>=? fun old_board_idxs ->
     let c0, c1, c2 = (Card.of_int 1, Card.of_int 2, Card.of_int 3) in
     Dbp.create_move pool (game_id, player_id, 0, c0, 1, c1, 2, c2) >>=? fun made_move ->
-    assert_bool "made move" made_move;
+    assert_bool "made move" (not made_move);
     Dbp.find_scoreboard pool game_id >>=? fun scores ->
     assert_equal ~printer:string_of_int 1 (List.length scores);
     (match find_player_score scores player_id with
