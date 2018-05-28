@@ -23,6 +23,6 @@ let update_player_name pool args = with_pool pool Db.update_player_name args
 
 let find_board_cards pool game_id = with_pool pool Db.find_board_cards game_id
 
-let find_scoreboard pool game_id = with_pool pool Db.find_scoreboard game_id
+let find_player_data pool game_id = with_pool pool Db.find_player_data game_id
 
 let delete_all pool () = with_pool pool Db.delete_all ()

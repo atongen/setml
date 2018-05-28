@@ -60,10 +60,10 @@ let create_move_test pool =
       assert_bool "cards are set" (Card.is_set c0 c1 c2);
       Dbp.create_move pool (game_id, player_id, idx0, c0, idx1, c1, idx2, c2) >>=? fun made_move ->
       assert_bool "made move" made_move;
-      Dbp.find_scoreboard pool game_id >>=? fun scores ->
-      assert_equal ~printer:string_of_int 1 (List.length scores);
-      (match find_player_score scores player_id with
-      | Some (score) -> assert_equal ~printer:string_of_int 1 score
+      Dbp.find_player_data pool game_id >>=? fun players_data ->
+      assert_equal ~printer:string_of_int 1 (List.length players_data);
+      (match find_player_data players_data player_id with
+      | Some (player_data) -> assert_equal ~printer:string_of_int 1 player_data.score
       | None -> assert_failure "Player score");
       assert_pool_query_equal pool (12+3) (Printf.sprintf "select card_idx from games where id = %d;" game_id) >>= fun () ->
       Dbp.find_board_cards pool game_id >>=? fun new_board_idxs ->
@@ -83,10 +83,10 @@ let create_failed_move_test pool =
     let c0, c1, c2 = (Card.of_int 1, Card.of_int 2, Card.of_int 3) in
     Dbp.create_move pool (game_id, player_id, 0, c0, 1, c1, 2, c2) >>=? fun made_move ->
     assert_bool "made move" (not made_move);
-    Dbp.find_scoreboard pool game_id >>=? fun scores ->
-    assert_equal ~printer:string_of_int 1 (List.length scores);
-    (match find_player_score scores player_id with
-    | Some (score) -> assert_equal ~printer:string_of_int 0 score
+    Dbp.find_player_data pool game_id >>=? fun players_data ->
+    assert_equal ~printer:string_of_int 1 (List.length players_data);
+    (match find_player_data players_data player_id with
+    | Some (player_data) -> assert_equal ~printer:string_of_int 0 player_data.score
     | None -> assert_failure "Player score");
     assert_pool_query_equal pool 12 (Printf.sprintf "select card_idx from games where id = %d;" game_id) >>= fun () ->
     Dbp.find_board_cards pool game_id >>=? fun new_board_idxs ->

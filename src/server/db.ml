@@ -170,8 +170,8 @@ module Q = struct
             order by idx asc;
         |eos}
 
-    let find_scoreboard_query =
-        Caqti_request.collect Caqti_type.int Caqti_type.(tup4 int string bool int)
+    let find_player_data_query =
+        Caqti_request.collect Caqti_type.int Caqti_type.(tup4 int string bool (tup2 int int))
         {eos|
             select
                 gp.player_id,
@@ -412,8 +412,12 @@ let find_board_cards (module C : Caqti_lwt.CONNECTION) game_id =
 let find_game_cards (module C : Caqti_lwt.CONNECTION) ?(offset=0) game_id =
     C.collect_list Q.find_game_cards_query (game_id, offset, 81 - offset)
 
-let find_scoreboard (module C : Caqti_lwt.CONNECTION) game_id =
-  C.collect_list Q.find_scoreboard_query game_id
+let find_player_data (module C : Caqti_lwt.CONNECTION) game_id =
+  C.collect_list Q.find_player_data_query game_id >>=? fun player_data ->
+  let open Messages in
+  Lwt.return_ok (List.map (fun (player_id, name, presence, (score, shuffles)) ->
+    make_player_data player_id name presence score shuffles
+  ) player_data)
 
 let delete_all (module C : Caqti_lwt.CONNECTION) () =
   C.start () >>=? fun () ->
