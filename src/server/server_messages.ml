@@ -24,6 +24,7 @@ module Server_message_converter : Messages.CONVERT = struct
                     (name_key, `String d.name);
                     (presence_key, `Bool d.presence);
                     (score_key, `Int d.score);
+                    (shuffles_key, `Int d.shuffles);
                 ]
             | Player_name d ->
                 `Assoc [
@@ -68,6 +69,12 @@ module Server_message_converter : Messages.CONVERT = struct
                     (score_key, aux @@ Score d.score);
                     (previous_move_key, aux @@ Previous_move d.previous_move);
                 ]
+            | Shuffles d ->
+                `Assoc [
+                    (type_key, `String (message_type_to_string Shuffles_type));
+                    (player_id_key, `Int d.player_id);
+                    (shuffles_key, `Int d.shuffles);
+                ]
         in
         aux x |> to_string
 
@@ -77,6 +84,7 @@ module Server_message_converter : Messages.CONVERT = struct
         (json |> Util.member name_key |> Util.to_string)
         (json |> Util.member presence_key |> Util.to_bool)
         (json |> Util.member score_key |> Util.to_int)
+        (json |> Util.member shuffles_key |> Util.to_int)
 
     let score_data_of_json json =
         make_score_data
@@ -109,6 +117,11 @@ module Server_message_converter : Messages.CONVERT = struct
         (json |> Util.member player_id_key |> Util.to_int)
         (json |> Util.member presence_key |> Util.to_bool)
 
+    let shuffles_data_of_json json =
+        make_shuffles_data
+        (json |> Util.member player_id_key |> Util.to_int)
+        (json |> Util.member shuffles_key |> Util.to_int)
+
     let of_json str =
         let rec aux json =
             let message_type = json |> Util.member type_key |> Util.to_string |> message_type_of_string in
@@ -132,6 +145,7 @@ module Server_message_converter : Messages.CONVERT = struct
                     let score = json |> Util.member score_key |> score_data_of_json in
                     let previous_move = json |> Util.member previous_move_key |> previous_move_data_of_json in
                     make_move_data score previous_move
+                | Shuffles_type -> Shuffles (shuffles_data_of_json json)
         in
         let json = from_string str in
         aux json

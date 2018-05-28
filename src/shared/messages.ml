@@ -15,6 +15,7 @@ let card1_id_key = "card1_id"
 let card2_id_key = "card2_id"
 let board_data_key = "board_data"
 let game_update_key = "game_update"
+let shuffles_key = "shuffles"
 
 type message_type =
     | Game_data_type
@@ -26,6 +27,7 @@ type message_type =
     | Previous_move_type
     | Player_presence_type
     | Move_data_type
+    | Shuffles_type
 
 let message_type_to_string = function
     | Game_data_type -> "game_data"
@@ -37,6 +39,7 @@ let message_type_to_string = function
     | Previous_move_type -> "previous_move"
     | Player_presence_type -> "presence"
     | Move_data_type -> "move_data"
+    | Shuffles_type -> "shuffles"
 
 let message_type_of_string = function
     | "game_data" -> Game_data_type
@@ -48,6 +51,7 @@ let message_type_of_string = function
     | "previous_move" -> Previous_move_type
     | "presence" -> Player_presence_type
     | "move_data" -> Move_data_type
+    | "shuffles" -> Shuffles_type
     | ts -> raise (Invalid_argument ("Unknown message type string: " ^ ts))
 
 type game_status_data =
@@ -71,6 +75,7 @@ type player_data = {
     name: string;
     presence: bool;
     score: int;
+    shuffles: int;
 }
 
 type player_name_data = {
@@ -115,6 +120,11 @@ type move_data = {
     previous_move: previous_move_data;
 }
 
+type shuffle_data = {
+    player_id: int;
+    shuffles: int;
+}
+
 type t =
     | Game_data of game_data
     | Player_data of player_data
@@ -125,6 +135,7 @@ type t =
     | Previous_move of previous_move_data
     | Player_presence of player_presence_data
     | Move_data of move_data
+    | Shuffles of shuffle_data
 
 let make_game_data player_data board_data game_update =
     Game_data {
@@ -133,12 +144,13 @@ let make_game_data player_data board_data game_update =
         game_update;
     }
 
-let make_player_data player_id name presence score =
+let make_player_data player_id name presence score shuffles =
     {
         player_id;
         name;
         presence;
         score;
+        shuffles;
     }
 
 let make_player_name_data player_id name =
@@ -207,6 +219,15 @@ let make_move_data score previous_move =
         previous_move;
     }
 
+let make_shuffles_data player_id shuffles =
+    {
+        player_id;
+        shuffles;
+    }
+
+let make_shuffles player_id shuffles =
+    Shuffles (make_shuffles_data player_id shuffles)
+
 let card_opt_to_string = function
     | Some c -> Card.to_string c
     | None -> "{NONE}"
@@ -224,8 +245,8 @@ let rec to_string = function
         Printf.sprintf "<message (%s) game_update=%s players=[%s] board=[%s]>"
             (message_type_to_string Game_data_type) game_update players board
     | Player_data d ->
-        Printf.sprintf "<message (%s) id=%d name='%s' presence=%b score=%i>"
-            (message_type_to_string Player_data_type) d.player_id d.name d.presence d.score
+        Printf.sprintf "<message (%s) id=%d name='%s' presence=%b score=%d shuffles=%d>"
+            (message_type_to_string Player_data_type) d.player_id d.name d.presence d.score d.shuffles
     | Player_name d ->
         Printf.sprintf "<message (%s) player_id=%d name='%s'>"
             (message_type_to_string Player_name_type) d.player_id d.name
@@ -249,6 +270,10 @@ let rec to_string = function
         let previous_move = to_string @@ Previous_move d.previous_move in
         Printf.sprintf "<message (%s) score=%s previous_move=%s>"
             (message_type_to_string Move_data_type) score previous_move
+    | Shuffles d ->
+        Printf.sprintf "<message (%s) player_id=%d shuffles=%d>"
+            (message_type_to_string Shuffles_type) d.player_id d.shuffles
+
 
 module type CONVERT = sig
     val to_json : t -> string

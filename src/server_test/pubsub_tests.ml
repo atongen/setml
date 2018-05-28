@@ -57,7 +57,7 @@ let presence_check pubsub =
             assert_equal ~printer:string_of_int 1 (List.length msgs);
             let expMsg = if present then
                 (Messages.make_game_data [
-                    Messages.make_player_data player_id player_name present 0;
+                    Messages.make_player_data player_id player_name present 0 0;
                 ] (Card.of_int_list (0 --^ 12) |> Array.of_list)
                 (make_game_update_data "new" 0))
             else
@@ -83,7 +83,7 @@ let presence_check_accum pubsub =
         assert_equal ~printer:string_of_int 2 (List.length msgs);
         let msgs_arr = Array.of_list msgs in
         let expMsg0 = (Messages.make_game_data [
-            Messages.make_player_data player_id player_name true 0;
+            Messages.make_player_data player_id player_name true 0 0;
         ] (Card.of_int_list (0 --^ 12) |> Array.of_list)
         (make_game_update_data "new" 0)) in
         let expMsg1 = Messages.make_player_presence player_id false in

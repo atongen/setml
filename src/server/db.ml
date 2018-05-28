@@ -182,7 +182,13 @@ module Q = struct
                     from moves
                     where moves.game_id = gp.game_id
                     and moves.player_id = gp.player_id
-                ) as score
+                ) as score,
+                (
+                    select count(*)
+                    from shuffles
+                    where shuffles.game_id = gp.game_id
+                    and shuffles.player_id = gp.player_id
+                ) as shuffles
             from games_players gp
             inner join players p
             on gp.player_id = p.id

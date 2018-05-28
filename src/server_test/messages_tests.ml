@@ -15,11 +15,11 @@ let convert_tests =
   in
   let messages = [
     make_game_data [
-        make_player_data 1 "john" true 5;
-        make_player_data 2 "rich" true 4;
-        make_player_data 3 "bill" false 6;
-        make_player_data 4 "cindy" true 9;
-        make_player_data 5 "carol" true 3;
+        make_player_data 1 "john" true 5 1;
+        make_player_data 2 "rich" true 4 2;
+        make_player_data 3 "bill" false 6 3;
+        make_player_data 4 "cindy" true 9 4;
+        make_player_data 5 "carol" true 3 5;
     ] (Card.of_int_list [
          0;  2;  4;  6;
          8; 10; 33; 52;
@@ -36,7 +36,8 @@ let convert_tests =
     make_previous_move 64 77 80;
     make_player_presence 1 true;
     make_player_presence 1 false;
-    make_move_data (make_score_data 5 15) (make_previous_move_data 1 2 3)
+    make_move_data (make_score_data 5 15) (make_previous_move_data 1 2 3);
+    make_shuffles 4 6
   ]
   in
   cases_of check messages

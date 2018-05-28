@@ -256,11 +256,17 @@ begin
                         p.name,
                         gp.presence,
                         (
-                                select count(*)
-                                from moves
-                                where moves.game_id = gp.game_id
-                                and moves.player_id = gp.player_id
-                        ) as score
+                            select count(*)
+                            from moves
+                            where moves.game_id = gp.game_id
+                            and moves.player_id = gp.player_id
+                        ) as score,
+                        (
+                            select count(*)
+                            from shuffles
+                            where shuffles.game_id = gp.game_id
+                            and shuffles.player_id = gp.player_id
+                        ) as shuffles
                     from games_players gp
                     inner join players p
                     on gp.player_id = p.id
@@ -403,3 +409,30 @@ create trigger moves_insert_trigger
     after insert
     on moves
     for each row execute procedure moves_insert_notify();
+
+-- shuffles created notification
+
+create or replace function shuffles_insert_notify() returns trigger AS $$
+declare
+    shuffles integer;
+    msg text;
+begin
+    select count(*) into shuffles
+    from shuffles
+    where shuffles.game_id = NEW.game_id
+    and shuffles.player_id = NEW.player_id;
+
+    perform pg_notify(concat('game_', NEW.game_id), json_build_object(
+        'type', 'shuffles',
+        'player_id', NEW.player_id,
+        'shuffles', shuffles
+    )::text);
+    return NEW;
+end;
+$$ language plpgsql;
+
+drop trigger if exists shuffles_insert_trigger on shuffles;
+create trigger shuffles_insert_trigger
+    after insert
+    on shuffles
+    for each row execute procedure shuffles_insert_notify();
