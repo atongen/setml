@@ -5,6 +5,7 @@
   (modules (
     db
     dbp
+    dbt
     clients
     crypto
     pubsub
