@@ -4,6 +4,26 @@ module type S = sig
 end
 
 module B: (S with type t := (module Caqti_lwt.CONNECTION)) = struct
+    type mode =
+        | ReadUncommitted
+        | ReadCommitted
+        | RepeatableRead
+        | Serializable
+
+    let string_of_mode = function
+        | ReadUncommitted -> "READ UNCOMMITTED"
+        | ReadCommitted -> "READ COMMITTED"
+        | RepeatableRead -> "REPEATABLE READ"
+        | Serializable -> "SERIALIZABLE"
+
+    let with_transaction ?(mode=ReadCommitted) (module C : Caqti_lwt.CONNECTION) f arg =
+        C.start () >>=? fun () ->
+        C.exec (Q.set_transaction_mode_query (string_of_mode mode)) () >>=? fun () ->
+        f (module C : Caqti_lwt.CONNECTION) arg >>=? fun result ->
+        C.commit () >>=? fun () ->
+        Lwt.return_ok result
+
+
     let query_int c q = Db.query_int c q
 end
 
