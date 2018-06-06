@@ -2,23 +2,27 @@ open Lwt.Infix
 open Shared
 
 let (>>=?) m f =
-  m >>= function
-  | Ok x -> f x
-  | Error err -> Lwt.return (Error err)
+    m >>= function
+    | Ok x -> f x
+    | Error err -> Lwt.return (Error err)
 
-let board_size = 12
+type mode =
+    | ReadUncommitted
+    | ReadCommitted
+    | RepeatableRead
+    | Serializable
+
+let string_of_mode = function
+    | ReadUncommitted -> "READ UNCOMMITTED"
+    | ReadCommitted -> "READ COMMITTED"
+    | RepeatableRead -> "REPEATABLE READ"
+    | Serializable -> "SERIALIZABLE"
 
 module Q = struct
-  let set_transaction_mode_query mode =
+let set_transaction_mode_query mode =
     Caqti_request.exec ~oneshot:true Caqti_type.unit (Printf.sprintf "set transaction isolation level %s;" mode)
 
-  let generic_exec_query q = Caqti_request.exec ~oneshot:true Caqti_type.unit q
-
-  let generic_int_query q = Caqti_request.find ~oneshot:true Caqti_type.unit Caqti_type.int q
-
-  let generic_bool_query q = Caqti_request.find ~oneshot:true Caqti_type.unit Caqti_type.bool q
-
-  let make_insert_cards_query_str table_name game_id card_list =
+let make_insert_cards_query_str table_name game_id card_list =
     let rows = List.map (fun (idx, card_id) ->
         Printf.sprintf "(%d,%d,%d)" game_id idx card_id
       ) card_list in
@@ -33,22 +37,22 @@ module Q = struct
     |eos}
     table_name values
 
-  let create_game_cards_query game_id =
+let create_game_cards_query game_id =
     let open CCList.Infix in
     let card_ids = Shared_util.shuffle_list (0 --^ 81) in
     let card_list = List.mapi (fun idx card_id -> (idx, card_id)) card_ids in
     let query = make_insert_cards_query_str "game_cards" game_id card_list in
     Caqti_request.find ~oneshot:true Caqti_type.unit Caqti_type.int query
 
-  let update_game_cards_query game_id card_list =
+let update_game_cards_query game_id card_list =
     let query = make_insert_cards_query_str "game_cards" game_id card_list in
     Caqti_request.find ~oneshot:true Caqti_type.unit Caqti_type.int query
 
-  let create_game_query =
+let create_game_query =
     Caqti_request.find Caqti_type.unit Caqti_type.int
       "insert into games default values returning id"
 
-  let create_board_cards_query =
+let create_board_cards_query =
     Caqti_request.exec Caqti_type.(tup2 int int)
       {eos|
         insert into board_cards (game_id, idx, card_id)
@@ -59,7 +63,7 @@ module Q = struct
         limit ?
       |eos}
 
-  let find_game_card_idx_query =
+let find_game_card_idx_query =
     Caqti_request.find Caqti_type.int Caqti_type.int
       {eos|
         select card_idx
@@ -67,7 +71,7 @@ module Q = struct
         where id = ?
       |eos}
 
-  let increment_game_card_idx_query =
+let increment_game_card_idx_query =
     Caqti_request.find Caqti_type.(tup2 int int) Caqti_type.int
       {eos|
         update games
@@ -76,19 +80,19 @@ module Q = struct
         returning card_idx;
       |eos}
 
-  let game_exists_query =
+let game_exists_query =
     Caqti_request.find Caqti_type.int Caqti_type.bool
       "select exists (select 1 from games where id = ?)"
 
-  let create_player_query =
+let create_player_query =
     Caqti_request.find Caqti_type.unit Caqti_type.int
       "insert into players default values returning id"
 
-  let player_exists_query =
+let player_exists_query =
     Caqti_request.find Caqti_type.int Caqti_type.bool
       "select exists (select 1 from players where id = ?)"
 
-  let game_player_presence_query =
+let game_player_presence_query =
     Caqti_request.exec Caqti_type.(tup3 int int bool)
       {eos|
         insert into games_players (game_id, player_id, presence, updated_at)
@@ -98,7 +102,7 @@ module Q = struct
         updated_at = excluded.updated_at;
       |eos}
 
-  let create_move_query =
+let create_move_query =
     let args8 = Caqti_type.(let (&) = tup2 in int & int & int & int & int & int & int & int) in
     Caqti_request.exec args8
       {eos|
@@ -116,7 +120,7 @@ module Q = struct
         );
       |eos}
 
-  let update_board_cards_query =
+let update_board_cards_query =
     (*let args10 = Caqti_type.(let (&) = tup2 in int & int & int & int & int & int & int & int & int & int) in*)
     let args = Caqti_type.(tup4 (tup3 int int int) (tup3 int int int) (tup3 int int int) int) in
     Caqti_request.find args Caqti_type.int
@@ -141,7 +145,7 @@ module Q = struct
         select count(*) from rows;
       |eos}
 
-  let find_game_cards_query =
+let find_game_cards_query =
     Caqti_request.collect Caqti_type.(tup3 int int int) Caqti_type.(tup2 int int)
       {eos|
         select idx, card_id
@@ -152,8 +156,8 @@ module Q = struct
         limit ?
       |eos}
 
-    let update_player_name_query =
-        Caqti_request.exec Caqti_type.(tup2 string int)
+let update_player_name_query =
+    Caqti_request.exec Caqti_type.(tup2 string int)
         {eos|
             update players
             set name = ?
@@ -161,8 +165,8 @@ module Q = struct
             limit 1;
         |eos}
 
-    let find_board_cards_query =
-        Caqti_request.collect Caqti_type.int Caqti_type.int
+let find_board_cards_query =
+    Caqti_request.collect Caqti_type.int Caqti_type.int
         {eos|
             select card_id
             from board_cards
@@ -170,8 +174,8 @@ module Q = struct
             order by idx asc;
         |eos}
 
-    let find_player_data_query =
-        Caqti_request.collect Caqti_type.int Caqti_type.(tup4 int string bool (tup2 int int))
+let find_player_data_query =
+    Caqti_request.collect Caqti_type.int Caqti_type.(tup4 int string bool (tup2 int int))
         {eos|
             select
                 gp.player_id,
@@ -195,8 +199,8 @@ module Q = struct
             where gp.game_id = ?;
         |eos}
 
-    let find_random_board_cards_query =
-        Caqti_request.collect Caqti_type.(tup2 int int) Caqti_type.(tup2 int int)
+let find_random_board_cards_query =
+    Caqti_request.collect Caqti_type.(tup2 int int) Caqti_type.(tup2 int int)
         {eos|
             select idx, card_id
             from board_cards
@@ -206,8 +210,8 @@ module Q = struct
             limit ?;
         |eos}
 
-    let delete_game_cards_for_shuffle =
-        let args = Caqti_type.(let (&) = tup2 in (int & (int & int) & (int & int) & (int & int) & int)) in
+let delete_game_cards_for_shuffle =
+    let args = Caqti_type.(let (&) = tup2 in (int & (int & int) & (int & int) & (int & int) & int)) in
         Caqti_request.find args Caqti_type.int
         {eos|
             with rows as (
@@ -223,7 +227,7 @@ module Q = struct
             ) select count(*) from rows;
         |eos}
 
-  let create_shuffle_query =
+let create_shuffle_query =
     Caqti_request.exec Caqti_type.(tup3 int int int)
       {eos|
         insert into shuffles (
@@ -234,34 +238,31 @@ module Q = struct
             ?, ?, ?
         );
       |eos}
+
+    let delete_games_query = Caqti_request.exec Caqti_type.unit "delete from games;"
+    let delete_players_query = Caqti_request.exec Caqti_type.unit "delete from players;"
 end
 
-let query_int (module C : Caqti_lwt.CONNECTION) q =
-  C.find (Q.generic_int_query q) ()
 
-let query_bool (module C : Caqti_lwt.CONNECTION) q =
-  C.find (Q.generic_bool_query q) ()
+module I = struct
+    let create_game (module C : Caqti_lwt.CONNECTION) () =
+        C.find Q.create_game_query () >>=? fun game_id ->
+        C.find (Q.create_game_cards_query game_id) () >>=? fun _ ->
+        C.exec Q.create_board_cards_query (game_id, 12) >>=? fun () ->
+        C.find Q.increment_game_card_idx_query (12, game_id) >>=? fun _ ->
+        Lwt.return_ok game_id
 
-let create_game (module C : Caqti_lwt.CONNECTION) () =
-  C.start () >>=? fun () ->
-  C.find Q.create_game_query () >>=? fun game_id ->
-  C.find (Q.create_game_cards_query game_id) () >>=? fun _ ->
-  C.exec Q.create_board_cards_query (game_id, board_size) >>=? fun () ->
-  C.find Q.increment_game_card_idx_query (board_size, game_id) >>=? fun _ ->
-  C.commit () >>=? fun () ->
-  Lwt.return_ok game_id
+    let game_exists (module C : Caqti_lwt.CONNECTION) game_id =
+        C.find Q.game_exists_query game_id
 
-let game_exists (module C : Caqti_lwt.CONNECTION) game_id =
-  C.find Q.game_exists_query game_id
+    let create_player (module C : Caqti_lwt.CONNECTION) () =
+        C.find Q.create_player_query ()
 
-let create_player (module C : Caqti_lwt.CONNECTION) () =
-  C.find Q.create_player_query ()
+    let player_exists (module C : Caqti_lwt.CONNECTION) player_id =
+        C.find Q.player_exists_query player_id
 
-let player_exists (module C : Caqti_lwt.CONNECTION) player_id =
-  C.find Q.player_exists_query player_id
-
-let game_player_presence (module C : Caqti_lwt.CONNECTION) args =
-  C.exec Q.game_player_presence_query args
+    let game_player_presence (module C : Caqti_lwt.CONNECTION) args =
+        C.exec Q.game_player_presence_query args
 
 let increment_game_card_idx (module C : Caqti_lwt.CONNECTION) (game_id, offset) =
   C.find Q.increment_game_card_idx_query (offset, game_id) >>=? fun card_idx ->
@@ -420,7 +421,66 @@ let find_player_data (module C : Caqti_lwt.CONNECTION) game_id =
   ) player_data)
 
 let delete_all (module C : Caqti_lwt.CONNECTION) () =
-  C.start () >>=? fun () ->
-  C.exec (Q.generic_exec_query "delete from games;") () >>=? fun () ->
-  C.exec (Q.generic_exec_query "delete from players;") () >>=? fun () ->
-  C.commit ()
+  C.exec Q.delete_games_query () >>=? fun () ->
+  C.exec Q.delete_players_query () >>=? fun () ->
+  Lwt.return_ok ()
+end
+
+module type S = sig
+    type t
+    val create_game : t -> unit -> (int, Caqti_error.call_or_retrieve) result Lwt.t
+    val game_exists : t -> int -> (bool, Caqti_error.call_or_retrieve) result Lwt.t
+    val create_player : t -> unit -> (int, Caqti_error.call_or_retrieve) result Lwt.t
+    val player_exists : t -> int -> (bool, Caqti_error.call_or_retrieve) result Lwt.t
+    val game_player_presence : t -> (int * int * bool) -> (unit, Caqti_error.call_or_retrieve) result Lwt.t
+
+    val delete_all : t -> unit -> (unit, Caqti_error.call_or_retrieve) result Lwt.t
+end
+
+module T: (S with type t := (module Caqti_lwt.CONNECTION)) = struct
+    let with_transaction ?(mode=ReadCommitted) (module C : Caqti_lwt.CONNECTION) f arg =
+        C.start () >>=? fun () ->
+        C.exec (Q.set_transaction_mode_query (string_of_mode mode)) () >>=? fun () ->
+        f (module C : Caqti_lwt.CONNECTION) arg >>=? fun result ->
+        C.commit () >>=? fun () ->
+        Lwt.return_ok result
+
+    let create_game c arg = with_transaction c I.create_game arg
+
+    let game_exists c arg = with_transaction c I.game_exists arg
+
+    let create_player c arg = with_transaction c I.create_player arg
+
+    let player_exists c arg = with_transaction c I.player_exists arg
+
+    let game_player_presence c arg = with_transaction c I.game_player_presence arg
+
+    let delete_all c arg = with_transaction c I.delete_all arg
+end
+
+module P: (S with type t := (((module Caqti_lwt.CONNECTION), Caqti_error.call_or_retrieve) Caqti_lwt.Pool.t)) = struct
+    let with_pool pool f arg =
+        Caqti_lwt.Pool.use (fun (module C : Caqti_lwt.CONNECTION) ->
+            f (module C : Caqti_lwt.CONNECTION) arg
+        ) pool
+
+    let create_game p arg = with_pool p I.create_game arg
+
+    let game_exists p arg = with_pool p I.game_exists arg
+
+    let create_player p arg = with_pool p I.create_player arg
+
+    let player_exists p arg = with_pool p I.player_exists arg
+
+    let game_player_presence p arg = with_pool p I.game_player_presence arg
+
+    let create_move p arg = with_pool p I.create_move arg
+
+    let update_player_name p arg = with_pool p I.update_player_name arg
+
+    let find_board_cards p arg = with_pool p I.find_board_cards arg
+
+    let find_player_data p arg = with_pool p I.find_player_data arg
+
+    let delete_all p arg = with_pool p T.delete_all arg
+end
