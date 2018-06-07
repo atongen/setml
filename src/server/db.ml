@@ -264,29 +264,27 @@ module I = struct
     let game_player_presence (module C : Caqti_lwt.CONNECTION) args =
         C.exec Q.game_player_presence_query args
 
-let increment_game_card_idx (module C : Caqti_lwt.CONNECTION) (game_id, offset) =
-  C.find Q.increment_game_card_idx_query (offset, game_id) >>=? fun card_idx ->
-  Lwt.return_ok card_idx
+    let increment_game_card_idx (module C : Caqti_lwt.CONNECTION) (game_id, offset) =
+        C.find Q.increment_game_card_idx_query (offset, game_id) >>=? fun card_idx ->
+        Lwt.return_ok card_idx
 
-let create_move (module C : Caqti_lwt.CONNECTION) (game_id, player_id, idx0, card0, idx1, card1, idx2, card2) =
-  let card0_id, card1_id, card2_id = (Card.to_int card0, Card.to_int card1, Card.to_int card2) in
-  C.start () >>=? fun () ->
-  C.exec (Q.set_transaction_mode_query "serializable") () >>=? fun () ->
-  C.exec Q.create_move_query (game_id, (player_id, (idx0, (card0_id, (idx1, (card1_id, (idx2, card2_id))))))) >>=? fun () ->
-  C.find Q.find_game_card_idx_query game_id >>=? fun deck_card_idx ->
-  C.collect_list Q.find_game_cards_query (game_id, deck_card_idx, 3) >>=? fun cards_list ->
-  let card_ids = List.map (fun (_, card_id) -> card_id) cards_list |> Array.of_list in
-  let new_card_0_id = Server_util.get_or card_ids 0 81 in
-  let new_card_1_id = Server_util.get_or card_ids 1 81 in
-  let new_card_2_id = Server_util.get_or card_ids 2 81 in
-  C.find Q.update_board_cards_query ((idx0, card0_id, new_card_0_id), (idx1, card1_id, new_card_1_id), (idx2, card2_id, new_card_2_id), game_id) >>=? fun num_updated ->
-  if num_updated != 3 then
-    C.rollback () >>=? fun () ->
-    Lwt.return_ok false
-  else
-    C.find Q.increment_game_card_idx_query (3, game_id) >>=? fun card_idx ->
-    C.commit () >>=? fun () ->
-    Lwt.return_ok true
+    let create_move (module C : Caqti_lwt.CONNECTION) (game_id, player_id, idx0, card0, idx1, card1, idx2, card2) =
+        let card0_id, card1_id, card2_id = (Card.to_int card0, Card.to_int card1, Card.to_int card2) in
+        C.exec (Q.set_transaction_mode_query "serializable") () >>=? fun () ->
+        C.exec Q.create_move_query (game_id, (player_id, (idx0, (card0_id, (idx1, (card1_id, (idx2, card2_id))))))) >>=? fun () ->
+        C.find Q.find_game_card_idx_query game_id >>=? fun deck_card_idx ->
+        C.collect_list Q.find_game_cards_query (game_id, deck_card_idx, 3) >>=? fun cards_list ->
+        let card_ids = List.map (fun (_, card_id) -> card_id) cards_list |> Array.of_list in
+        let new_card_0_id = Server_util.get_or card_ids 0 81 in
+        let new_card_1_id = Server_util.get_or card_ids 1 81 in
+        let new_card_2_id = Server_util.get_or card_ids 2 81 in
+        C.find Q.update_board_cards_query ((idx0, card0_id, new_card_0_id), (idx1, card1_id, new_card_1_id), (idx2, card2_id, new_card_2_id), game_id) >>=? fun num_updated ->
+        if num_updated != 3 then
+            C.rollback () >>=? fun () ->
+            Lwt.return_ok false
+        else
+            C.find Q.increment_game_card_idx_query (3, game_id) >>=? fun card_idx ->
+            Lwt.return_ok true
 
 let shuffle_board (module C : Caqti_lwt.CONNECTION) (game_id, player_id) =
   C.start () >>=? fun () ->
@@ -433,6 +431,7 @@ module type S = sig
     val create_player : t -> unit -> (int, Caqti_error.call_or_retrieve) result Lwt.t
     val player_exists : t -> int -> (bool, Caqti_error.call_or_retrieve) result Lwt.t
     val game_player_presence : t -> (int * int * bool) -> (unit, Caqti_error.call_or_retrieve) result Lwt.t
+    val increment_game_card_idx : t -> (int * int) -> (int, Caqti_error.call_or_retrieve) result Lwt.t
 
     val delete_all : t -> unit -> (unit, Caqti_error.call_or_retrieve) result Lwt.t
 end
@@ -442,8 +441,13 @@ module T: (S with type t := (module Caqti_lwt.CONNECTION)) = struct
         C.start () >>=? fun () ->
         C.exec (Q.set_transaction_mode_query (string_of_mode mode)) () >>=? fun () ->
         f (module C : Caqti_lwt.CONNECTION) arg >>=? fun result ->
-        C.commit () >>=? fun () ->
-        Lwt.return_ok result
+        match result with
+        | Ok a ->
+            C.commit () >>=? fun () ->
+            Lwt.return_ok a
+        | Error e ->
+            C.rollback () >>=? fun () ->
+            Lwt.return_error e
 
     let create_game c arg = with_transaction c I.create_game arg
 
@@ -455,6 +459,8 @@ module T: (S with type t := (module Caqti_lwt.CONNECTION)) = struct
 
     let game_player_presence c arg = with_transaction c I.game_player_presence arg
 
+    let increment_game_card_idx c arg = with_transaction c I.increment_game_card_idx arg
+
     let delete_all c arg = with_transaction c I.delete_all arg
 end
 
@@ -464,23 +470,25 @@ module P: (S with type t := (((module Caqti_lwt.CONNECTION), Caqti_error.call_or
             f (module C : Caqti_lwt.CONNECTION) arg
         ) pool
 
-    let create_game p arg = with_pool p I.create_game arg
+    let create_game p arg = with_pool p T.create_game arg
 
-    let game_exists p arg = with_pool p I.game_exists arg
+    let game_exists p arg = with_pool p T.game_exists arg
 
-    let create_player p arg = with_pool p I.create_player arg
+    let create_player p arg = with_pool p T.create_player arg
 
-    let player_exists p arg = with_pool p I.player_exists arg
+    let player_exists p arg = with_pool p T.player_exists arg
 
-    let game_player_presence p arg = with_pool p I.game_player_presence arg
+    let game_player_presence p arg = with_pool p T.game_player_presence arg
 
-    let create_move p arg = with_pool p I.create_move arg
+    let increment_game_card_idx p arg = with_pool p T.increment_game_card_idx arg
 
-    let update_player_name p arg = with_pool p I.update_player_name arg
+    let create_move p arg = with_pool p T.create_move arg
 
-    let find_board_cards p arg = with_pool p I.find_board_cards arg
+    let update_player_name p arg = with_pool p T.update_player_name arg
 
-    let find_player_data p arg = with_pool p I.find_player_data arg
+    let find_board_cards p arg = with_pool p T.find_board_cards arg
+
+    let find_player_data p arg = with_pool p T.find_player_data arg
 
     let delete_all p arg = with_pool p T.delete_all arg
 end
