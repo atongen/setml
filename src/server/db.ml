@@ -4,7 +4,7 @@ open Shared
 let (>>=?) m f =
     m >>= function
     | Ok x -> f x
-    | Error err -> Lwt.return (Error err)
+    | Error err -> Lwt.return_error (Caqti_error.show err)
 
 type mode =
     | ReadUncommitted
@@ -19,145 +19,145 @@ let string_of_mode = function
     | Serializable -> "SERIALIZABLE"
 
 module Q = struct
-let set_transaction_mode_query mode =
-    Caqti_request.exec ~oneshot:true Caqti_type.unit (Printf.sprintf "set transaction isolation level %s;" mode)
+    let set_transaction_mode_query mode =
+        Caqti_request.exec ~oneshot:true Caqti_type.unit (Printf.sprintf "set transaction isolation level %s;" mode)
 
-let make_insert_cards_query_str table_name game_id card_list =
-    let rows = List.map (fun (idx, card_id) ->
-        Printf.sprintf "(%d,%d,%d)" game_id idx card_id
-      ) card_list in
-    let values = String.concat "," rows in
-    Printf.sprintf
-    {eos|
-        with rows as (
-            insert into %s (game_id, idx, card_id)
-            values %s
-            returning id
-        ) select count(*) from rows;
-    |eos}
-    table_name values
+    let make_insert_cards_query_str table_name game_id card_list =
+        let rows = List.map (fun (idx, card_id) ->
+            Printf.sprintf "(%d,%d,%d)" game_id idx card_id
+        ) card_list in
+        let values = String.concat "," rows in
+        Printf.sprintf
+        {eos|
+            with rows as (
+                insert into %s (game_id, idx, card_id)
+                values %s
+                returning id
+            ) select count(*) from rows;
+        |eos}
+        table_name values
 
-let create_game_cards_query game_id =
-    let open CCList.Infix in
-    let card_ids = Shared_util.shuffle_list (0 --^ 81) in
-    let card_list = List.mapi (fun idx card_id -> (idx, card_id)) card_ids in
-    let query = make_insert_cards_query_str "game_cards" game_id card_list in
-    Caqti_request.find ~oneshot:true Caqti_type.unit Caqti_type.int query
+    let create_game_cards_query game_id =
+        let open CCList.Infix in
+        let card_ids = Shared_util.shuffle_list (0 --^ 81) in
+        let card_list = List.mapi (fun idx card_id -> (idx, card_id)) card_ids in
+        let query = make_insert_cards_query_str "game_cards" game_id card_list in
+        Caqti_request.find ~oneshot:true Caqti_type.unit Caqti_type.int query
 
-let update_game_cards_query game_id card_list =
-    let query = make_insert_cards_query_str "game_cards" game_id card_list in
-    Caqti_request.find ~oneshot:true Caqti_type.unit Caqti_type.int query
+    let update_game_cards_query game_id card_list =
+        let query = make_insert_cards_query_str "game_cards" game_id card_list in
+        Caqti_request.find ~oneshot:true Caqti_type.unit Caqti_type.int query
 
-let create_game_query =
-    Caqti_request.find Caqti_type.unit Caqti_type.int
-      "insert into games default values returning id"
+    let create_game_query =
+        Caqti_request.find Caqti_type.unit Caqti_type.int
+        "insert into games default values returning id"
 
-let create_board_cards_query =
-    Caqti_request.exec Caqti_type.(tup2 int int)
-      {eos|
-        insert into board_cards (game_id, idx, card_id)
-        select game_id, idx, card_id
-        from game_cards
-        where game_id = ?
-        order by idx asc
-        limit ?
-      |eos}
+    let create_board_cards_query =
+        Caqti_request.exec Caqti_type.(tup2 int int)
+        {eos|
+            insert into board_cards (game_id, idx, card_id)
+            select game_id, idx, card_id
+            from game_cards
+            where game_id = ?
+            order by idx asc
+            limit ?
+        |eos}
 
-let find_game_card_idx_query =
-    Caqti_request.find Caqti_type.int Caqti_type.int
-      {eos|
-        select card_idx
-        from games
-        where id = ?
-      |eos}
+    let find_game_card_idx_query =
+        Caqti_request.find Caqti_type.int Caqti_type.int
+        {eos|
+            select card_idx
+            from games
+            where id = ?
+        |eos}
 
-let increment_game_card_idx_query =
-    Caqti_request.find Caqti_type.(tup2 int int) Caqti_type.int
-      {eos|
-        update games
-        set card_idx = card_idx + ?
-        where id = ?
-        returning card_idx;
-      |eos}
+    let increment_game_card_idx_query =
+        Caqti_request.find Caqti_type.(tup2 int int) Caqti_type.int
+        {eos|
+            update games
+            set card_idx = card_idx + ?
+            where id = ?
+            returning card_idx;
+        |eos}
 
-let game_exists_query =
-    Caqti_request.find Caqti_type.int Caqti_type.bool
-      "select exists (select 1 from games where id = ?)"
+    let game_exists_query =
+        Caqti_request.find Caqti_type.int Caqti_type.bool
+        "select exists (select 1 from games where id = ?)"
 
-let create_player_query =
-    Caqti_request.find Caqti_type.unit Caqti_type.int
-      "insert into players default values returning id"
+    let create_player_query =
+        Caqti_request.find Caqti_type.unit Caqti_type.int
+        "insert into players default values returning id"
 
-let player_exists_query =
-    Caqti_request.find Caqti_type.int Caqti_type.bool
-      "select exists (select 1 from players where id = ?)"
+    let player_exists_query =
+        Caqti_request.find Caqti_type.int Caqti_type.bool
+        "select exists (select 1 from players where id = ?)"
 
-let game_player_presence_query =
-    Caqti_request.exec Caqti_type.(tup3 int int bool)
-      {eos|
-        insert into games_players (game_id, player_id, presence, updated_at)
-        values (?, ?, ?, now())
-        on conflict (game_id, player_id)
-        do update set presence = excluded.presence,
-        updated_at = excluded.updated_at;
-      |eos}
+    let game_player_presence_query =
+        Caqti_request.exec Caqti_type.(tup3 int int bool)
+        {eos|
+            insert into games_players (game_id, player_id, presence, updated_at)
+            values (?, ?, ?, now())
+            on conflict (game_id, player_id)
+            do update set presence = excluded.presence,
+            updated_at = excluded.updated_at;
+        |eos}
 
-let create_move_query =
-    let args8 = Caqti_type.(let (&) = tup2 in int & int & int & int & int & int & int & int) in
-    Caqti_request.exec args8
-      {eos|
-        insert into moves (
-            game_id,
-            player_id,
-            idx0,
-            card0_id,
-            idx1,
-            card1_id,
-            idx2,
-            card2_id
-        ) values (
-            ?, ?, ?, ?, ?, ?, ?, ?
-        );
-      |eos}
+    let create_move_query =
+        let args8 = Caqti_type.(let (&) = tup2 in int & int & int & int & int & int & int & int) in
+        Caqti_request.exec args8
+        {eos|
+            insert into moves (
+                game_id,
+                player_id,
+                idx0,
+                card0_id,
+                idx1,
+                card1_id,
+                idx2,
+                card2_id
+            ) values (
+                ?, ?, ?, ?, ?, ?, ?, ?
+            );
+        |eos}
 
-let update_board_cards_query =
-    (*let args10 = Caqti_type.(let (&) = tup2 in int & int & int & int & int & int & int & int & int & int) in*)
-    let args = Caqti_type.(tup4 (tup3 int int int) (tup3 int int int) (tup3 int int int) int) in
-    Caqti_request.find args Caqti_type.int
-    {eos|
-        with rows as (
-            update board_cards t
-            set card_id = m.new_card_id::int
-            from (values
-                (?, ?, ?),
-                (?, ?, ?),
-                (?, ?, ?)
-            ) as m (
-                idx,
-                old_card_id,
-                new_card_id
+    let update_board_cards_query =
+        (*let args10 = Caqti_type.(let (&) = tup2 in int & int & int & int & int & int & int & int & int & int) in*)
+        let args = Caqti_type.(tup4 (tup3 int int int) (tup3 int int int) (tup3 int int int) int) in
+        Caqti_request.find args Caqti_type.int
+        {eos|
+            with rows as (
+                update board_cards t
+                set card_id = m.new_card_id::int
+                from (values
+                    (?, ?, ?),
+                    (?, ?, ?),
+                    (?, ?, ?)
+                ) as m (
+                    idx,
+                    old_card_id,
+                    new_card_id
+                )
+                where t.game_id = ?
+                    and t.idx = m.idx::int
+                    and t.card_id = m.old_card_id::int
+                returning 1
             )
-            where t.game_id = ?
-                and t.idx = m.idx::int
-                and t.card_id = m.old_card_id::int
-            returning 1
-        )
-        select count(*) from rows;
-      |eos}
+            select count(*) from rows;
+        |eos}
 
-let find_game_cards_query =
-    Caqti_request.collect Caqti_type.(tup3 int int int) Caqti_type.(tup2 int int)
-      {eos|
-        select idx, card_id
-        from game_cards
-        where game_id = ?
-        and idx >= ?
-        order by idx asc
-        limit ?
-      |eos}
+    let find_game_cards_query =
+        Caqti_request.collect Caqti_type.(tup3 int int int) Caqti_type.(tup2 int int)
+        {eos|
+            select idx, card_id
+            from game_cards
+            where game_id = ?
+            and idx >= ?
+            order by idx asc
+            limit ?
+        |eos}
 
-let update_player_name_query =
-    Caqti_request.exec Caqti_type.(tup2 string int)
+    let update_player_name_query =
+        Caqti_request.exec Caqti_type.(tup2 string int)
         {eos|
             update players
             set name = ?
@@ -165,8 +165,8 @@ let update_player_name_query =
             limit 1;
         |eos}
 
-let find_board_cards_query =
-    Caqti_request.collect Caqti_type.int Caqti_type.int
+    let find_board_cards_query =
+        Caqti_request.collect Caqti_type.int Caqti_type.int
         {eos|
             select card_id
             from board_cards
@@ -174,8 +174,8 @@ let find_board_cards_query =
             order by idx asc;
         |eos}
 
-let find_player_data_query =
-    Caqti_request.collect Caqti_type.int Caqti_type.(tup4 int string bool (tup2 int int))
+    let find_player_data_query =
+        Caqti_request.collect Caqti_type.int Caqti_type.(tup4 int string bool (tup2 int int))
         {eos|
             select
                 gp.player_id,
@@ -199,8 +199,8 @@ let find_player_data_query =
             where gp.game_id = ?;
         |eos}
 
-let find_random_board_cards_query =
-    Caqti_request.collect Caqti_type.(tup2 int int) Caqti_type.(tup2 int int)
+    let find_random_board_cards_query =
+        Caqti_request.collect Caqti_type.(tup2 int int) Caqti_type.(tup2 int int)
         {eos|
             select idx, card_id
             from board_cards
@@ -210,8 +210,8 @@ let find_random_board_cards_query =
             limit ?;
         |eos}
 
-let delete_game_cards_for_shuffle =
-    let args = Caqti_type.(let (&) = tup2 in (int & (int & int) & (int & int) & (int & int) & int)) in
+    let delete_game_cards_for_shuffle =
+        let args = Caqti_type.(let (&) = tup2 in (int & (int & int) & (int & int) & (int & int) & int)) in
         Caqti_request.find args Caqti_type.int
         {eos|
             with rows as (
@@ -227,17 +227,17 @@ let delete_game_cards_for_shuffle =
             ) select count(*) from rows;
         |eos}
 
-let create_shuffle_query =
-    Caqti_request.exec Caqti_type.(tup3 int int int)
-      {eos|
-        insert into shuffles (
-            game_id,
-            player_id,
-            sets_on_board
-        ) values (
-            ?, ?, ?
-        );
-      |eos}
+    let create_shuffle_query =
+        Caqti_request.exec Caqti_type.(tup3 int int int)
+        {eos|
+            insert into shuffles (
+                game_id,
+                player_id,
+                sets_on_board
+            ) values (
+                ?, ?, ?
+            );
+        |eos}
 
     let delete_games_query = Caqti_request.exec Caqti_type.unit "delete from games;"
     let delete_players_query = Caqti_request.exec Caqti_type.unit "delete from players;"
@@ -280,11 +280,10 @@ module I = struct
         let new_card_2_id = Server_util.get_or card_ids 2 81 in
         C.find Q.update_board_cards_query ((idx0, card0_id, new_card_0_id), (idx1, card1_id, new_card_1_id), (idx2, card2_id, new_card_2_id), game_id) >>=? fun num_updated ->
         if num_updated != 3 then
-            C.rollback () >>=? fun () ->
-            Lwt.return_ok false
+            Lwt.return_error "it failed!"
         else
             C.find Q.increment_game_card_idx_query (3, game_id) >>=? fun card_idx ->
-            Lwt.return_ok true
+            Lwt.return_ok card_idx
 
 let shuffle_board (module C : Caqti_lwt.CONNECTION) (game_id, player_id) =
   C.start () >>=? fun () ->
@@ -424,71 +423,40 @@ let delete_all (module C : Caqti_lwt.CONNECTION) () =
   Lwt.return_ok ()
 end
 
-module type S = sig
-    type t
-    val create_game : t -> unit -> (int, Caqti_error.call_or_retrieve) result Lwt.t
-    val game_exists : t -> int -> (bool, Caqti_error.call_or_retrieve) result Lwt.t
-    val create_player : t -> unit -> (int, Caqti_error.call_or_retrieve) result Lwt.t
-    val player_exists : t -> int -> (bool, Caqti_error.call_or_retrieve) result Lwt.t
-    val game_player_presence : t -> (int * int * bool) -> (unit, Caqti_error.call_or_retrieve) result Lwt.t
-    val increment_game_card_idx : t -> (int * int) -> (int, Caqti_error.call_or_retrieve) result Lwt.t
+let with_transaction ?(mode=ReadCommitted) (module C : Caqti_lwt.CONNECTION) f arg =
+    C.start () >>=? fun () ->
+    C.exec (Q.set_transaction_mode_query (string_of_mode mode)) () >>=? fun () ->
+    f (module C : Caqti_lwt.CONNECTION) arg >>= function
+    | Ok a ->
+        C.commit () >>=? fun () ->
+        Lwt.return_ok a
+    | Error e ->
+        C.rollback () >>=? fun () ->
+        Lwt.return_error e
 
-    val delete_all : t -> unit -> (unit, Caqti_error.call_or_retrieve) result Lwt.t
-end
+let with_pool ?(mode=ReadCommitted) pool f arg =
+    Caqti_lwt.Pool.use (fun (module C : Caqti_lwt.CONNECTION) ->
+        with_transaction ~mode (module C : Caqti_lwt.CONNECTION) f arg
+    ) pool
 
-module T: (S with type t := (module Caqti_lwt.CONNECTION)) = struct
-    let with_transaction ?(mode=ReadCommitted) (module C : Caqti_lwt.CONNECTION) f arg =
-        C.start () >>=? fun () ->
-        C.exec (Q.set_transaction_mode_query (string_of_mode mode)) () >>=? fun () ->
-        f (module C : Caqti_lwt.CONNECTION) arg >>=? fun result ->
-        match result with
-        | Ok a ->
-            C.commit () >>=? fun () ->
-            Lwt.return_ok a
-        | Error e ->
-            C.rollback () >>=? fun () ->
-            Lwt.return_error e
+let create_game p arg = with_pool p I.create_game arg
 
-    let create_game c arg = with_transaction c I.create_game arg
+let game_exists p arg = with_pool p I.game_exists arg
 
-    let game_exists c arg = with_transaction c I.game_exists arg
+let create_player p arg = with_pool p I.create_player arg
 
-    let create_player c arg = with_transaction c I.create_player arg
+let player_exists p arg = with_pool p I.player_exists arg
 
-    let player_exists c arg = with_transaction c I.player_exists arg
+let game_player_presence p arg = with_pool p I.game_player_presence arg
 
-    let game_player_presence c arg = with_transaction c I.game_player_presence arg
+let increment_game_card_idx p arg = with_pool p I.increment_game_card_idx arg
 
-    let increment_game_card_idx c arg = with_transaction c I.increment_game_card_idx arg
+let create_move p arg = with_pool p I.create_move arg
 
-    let delete_all c arg = with_transaction c I.delete_all arg
-end
+let update_player_name p arg = with_pool p I.update_player_name arg
 
-module P: (S with type t := (((module Caqti_lwt.CONNECTION), Caqti_error.call_or_retrieve) Caqti_lwt.Pool.t)) = struct
-    let with_pool pool f arg =
-        Caqti_lwt.Pool.use (fun (module C : Caqti_lwt.CONNECTION) ->
-            f (module C : Caqti_lwt.CONNECTION) arg
-        ) pool
+let find_board_cards p arg = with_pool p I.find_board_cards arg
 
-    let create_game p arg = with_pool p T.create_game arg
+let find_player_data p arg = with_pool p I.find_player_data arg
 
-    let game_exists p arg = with_pool p T.game_exists arg
-
-    let create_player p arg = with_pool p T.create_player arg
-
-    let player_exists p arg = with_pool p T.player_exists arg
-
-    let game_player_presence p arg = with_pool p T.game_player_presence arg
-
-    let increment_game_card_idx p arg = with_pool p T.increment_game_card_idx arg
-
-    let create_move p arg = with_pool p T.create_move arg
-
-    let update_player_name p arg = with_pool p T.update_player_name arg
-
-    let find_board_cards p arg = with_pool p T.find_board_cards arg
-
-    let find_player_data p arg = with_pool p T.find_player_data arg
-
-    let delete_all p arg = with_pool p T.delete_all arg
-end
+let delete_all p arg = with_pool p I.delete_all arg
