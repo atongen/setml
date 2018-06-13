@@ -79,27 +79,27 @@ let make_handler pool pubsub =
         match Server_util.form_value myBody "token" with
         | Some (token) ->
           if session.token = token then (
-            Dbp.create_game pool () >>=? fun game_id ->
+            Db.create_game pool () >>=? fun game_id ->
             redirect (Route.game_show_uri game_id)
           ) else render_forbidden
         | None -> render_forbidden)
     | Route.Game_show (game_id) -> (
         match session.player_id with
         | Some (_) ->
-          Dbp.game_exists pool game_id >>=? (fun exists ->
+          Db.game_exists pool game_id >>=? (fun exists ->
               if exists then (render_game game_id session.token)
               else render_not_found
             )
         | None ->
-          Dbp.create_player pool () >>=? (fun player_id ->
+          Db.create_player pool () >>=? (fun player_id ->
               let headers = Session.set_player_id_headers session crypto player_id in
               redirect ~headers (Route.game_show_uri game_id)))
     | Route.Ws_show (game_id) -> (
-        Dbp.game_exists pool game_id >>=? fun game_exists ->
+        Db.game_exists pool game_id >>=? fun game_exists ->
         if game_exists then (
           match session.player_id with
           | Some(player_id) -> (
-              Dbp.player_exists pool player_id >>=? fun player_exists ->
+              Db.player_exists pool player_id >>=? fun player_exists ->
               if player_exists then (
                 Cohttp_lwt.Body.drain_body body
                 >>= fun () ->
@@ -111,7 +111,7 @@ let make_handler pool pubsub =
                       ignore (
                         Clients.remove clients game_id player_id;
                         if not (Clients.game_has_players clients game_id) then Pubsub.unsubscribe pubsub game_id;
-                        Dbp.game_player_presence pool (game_id, player_id, false) >>=* fun () ->
+                        Db.game_player_presence pool (game_id, player_id, false) >>=* fun () ->
                         log ("Player " ^ (string_of_int player_id) ^ " left game " ^ string_of_int game_id);
                       )
                     | _ ->
@@ -121,7 +121,7 @@ let make_handler pool pubsub =
                 (* websocket onopen *)
                 Pubsub.subscribe pubsub game_id;
                 Clients.add clients game_id player_id frames_out_fn;
-                Dbp.game_player_presence pool (game_id, player_id, true) >>=? fun () ->
+                Db.game_player_presence pool (game_id, player_id, true) >>=? fun () ->
                 ignore (log ("Player " ^ (string_of_int player_id) ^ " joined game " ^ string_of_int game_id));
                 Lwt.return (resp, (body :> Cohttp_lwt.Body.t))
               ) else render_not_found)
