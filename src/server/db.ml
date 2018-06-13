@@ -253,16 +253,20 @@ module I = struct
         Lwt.return_ok game_id
 
     let game_exists (module C : Caqti_lwt.CONNECTION) game_id =
-        C.find Q.game_exists_query game_id
+        C.find Q.game_exists_query game_id >>=? fun exists ->
+        Lwt.return_ok exists
 
     let create_player (module C : Caqti_lwt.CONNECTION) () =
-        C.find Q.create_player_query ()
+        C.find Q.create_player_query () >>=? fun player_id ->
+        Lwt.return_ok player_id
 
     let player_exists (module C : Caqti_lwt.CONNECTION) player_id =
-        C.find Q.player_exists_query player_id
+        C.find Q.player_exists_query player_id >>=? fun exists ->
+        Lwt.return_ok exists
 
     let game_player_presence (module C : Caqti_lwt.CONNECTION) args =
-        C.exec Q.game_player_presence_query args
+        C.exec Q.game_player_presence_query args >>=? fun () ->
+        Lwt.return_ok ()
 
     let increment_game_card_idx (module C : Caqti_lwt.CONNECTION) (game_id, offset) =
         C.find Q.increment_game_card_idx_query (offset, game_id) >>=? fun card_idx ->
@@ -280,147 +284,141 @@ module I = struct
         let new_card_2_id = Server_util.get_or card_ids 2 81 in
         C.find Q.update_board_cards_query ((idx0, card0_id, new_card_0_id), (idx1, card1_id, new_card_1_id), (idx2, card2_id, new_card_2_id), game_id) >>=? fun num_updated ->
         if num_updated != 3 then
-            Lwt.return_error "it failed!"
+            Lwt.return_error "3 board cards were not updated"
         else
             C.find Q.increment_game_card_idx_query (3, game_id) >>=? fun card_idx ->
             Lwt.return_ok card_idx
 
-let shuffle_board (module C : Caqti_lwt.CONNECTION) (game_id, player_id) =
-  C.start () >>=? fun () ->
-  C.exec (Q.set_transaction_mode_query "serializable") () >>=? fun () ->
-  C.find Q.find_game_card_idx_query game_id >>=? fun deck_card_idx ->
-  (* include board in deck *)
-  let card_idx = deck_card_idx - 12 in
+    let shuffle_board (module C : Caqti_lwt.CONNECTION) (game_id, player_id) =
+        C.exec (Q.set_transaction_mode_query "serializable") () >>=? fun () ->
+        C.find Q.find_game_card_idx_query game_id >>=? fun deck_card_idx ->
+        (* include board in deck *)
+        let card_idx = deck_card_idx - 12 in
 
-  (* ensure we have at least board size 12 + 3 cards left to swap *)
-  if card_idx < 0 || deck_card_idx >= 81 then
-    C.rollback () >>=? fun () ->
-    Lwt.return_ok false
-  else
-
-  (* get a list of all (idx, card_id) remaining for this game (including the board) *)
-  C.collect_list Q.find_game_cards_query (game_id, 0, 81) >>=? fun cards_list ->
-
-  (* get a list of all (idx, card_id) for cards currently on the board *)
-  C.collect_list Q.find_random_board_cards_query (game_id, 3) >>=? fun random_board_cards ->
-  if List.length random_board_cards < 3 then
-    C.rollback () >>=? fun () ->
-    Lwt.return_ok false
-  else
-
-  (* delete the 3 random board cards from game_cards, and also cards idx higher than card_idx *)
-  let to_delete_list =
-    let rec aux acc = function
-    | [] -> acc
-    | (_, bc_card_id) :: tl ->
-      let ol = List.find_opt (fun (_, g_card_id) ->
-        bc_card_id = g_card_id
-      ) cards_list in
-      match ol with
-      | Some x -> aux (x :: acc) tl
-      | None -> aux acc tl
-    in
-    aux [] (List.rev random_board_cards)
-  in
-
-  if List.length to_delete_list < 3 then
-    C.rollback () >>=? fun () ->
-    Lwt.return_ok false
-  else
-
-  let to_delete = Array.of_list to_delete_list in
-
-  C.find Q.delete_game_cards_for_shuffle (game_id, (to_delete.(0), (to_delete.(1), (to_delete.(2), deck_card_idx)))) >>=? fun num_deleted ->
-
-  let num_should_delete = 3 + 81 - deck_card_idx in
-  if num_deleted < num_should_delete then
-    C.rollback () >>=? fun () ->
-    Lwt.return_ok false
-  else
-
-  let deck = CCList.drop deck_card_idx cards_list in
-
-  (* add 3 from card_idx+12 to card_idx+14 top of deck into where deleted board cards were *)
-  let deleted_idx = List.map (fun (idx, _) -> idx) to_delete_list in
-  let new_card_ids = List.map (fun (_, card_id) -> card_id) (CCList.take 3 deck) in
-  let new_board_cards = CCList.combine deleted_idx new_card_ids in
-
-  (* shift card_idx+12+3 to 80-3 (78, 79, 80) forward by 3 *)
-  let shifted_deck =
-    let rec aux acc = function
-      | [] -> acc
-      | (idx, card_id) :: tl ->
-        if idx < deck_card_idx+3 then
-          aux acc tl
+        (* ensure we have at least board size 12 + 3 cards left to swap *)
+        if card_idx < 0 || deck_card_idx >= 81 then
+            Lwt.return_error "invalid game card index for shuffle"
         else
-          aux ((idx-3, card_id) :: acc) tl
-    in
-    aux [] (List.rev cards_list)
-  in
 
-  (* add 3 deleted board cards to idx 78, 79, 80 *)
-  let end_of_deck = List.mapi (fun i (_, card_id) -> (78+i, card_id)) to_delete_list in
+        (* get a list of all (idx, card_id) remaining for this game (including the board) *)
+        C.collect_list Q.find_game_cards_query (game_id, 0, 81) >>=? fun cards_list ->
 
-  let to_add = new_board_cards @ shifted_deck @ end_of_deck in
-  C.find (Q.update_game_cards_query game_id to_add) () >>=? fun num_added ->
+        (* get a list of all (idx, card_id) for cards currently on the board *)
+        C.collect_list Q.find_random_board_cards_query (game_id, 3) >>=? fun random_board_cards ->
+        if List.length random_board_cards < 3 then
+            Lwt.return_error "unable to get at least 3 random cards from board"
+        else
 
-  let num_should_added = 3 + 81 - deck_card_idx in
-  if num_added < num_should_added then
-    C.rollback () >>=? fun () ->
-    Lwt.return_ok false
-  else
+        (* delete the 3 random board cards from game_cards, and also cards idx higher than card_idx *)
+        let to_delete_list =
+            let rec aux acc = function
+            | [] -> acc
+            | (_, bc_card_id) :: tl ->
+                let ol = List.find_opt (fun (_, g_card_id) ->
+                    bc_card_id = g_card_id
+                ) cards_list in
+                match ol with
+                | Some x -> aux (x :: acc) tl
+                | None -> aux acc tl
+            in
+            aux [] (List.rev random_board_cards)
+        in
 
-  C.collect_list Q.find_board_cards_query game_id >>=? fun board_card_ids ->
-  let sets_on_board = Card.of_int_list board_card_ids
-    |> Shared_util.compact
-    |> Card.count_sets in
+        if List.length to_delete_list < 3 then
+            Lwt.return_error "unable to find 3 random cards to delete from board"
+        else
 
-  let board_update = List.map2 (fun (idx, old_card_id) (_, new_card_id) ->
-    (idx, old_card_id, new_card_id)
-  ) random_board_cards new_board_cards |> Array.of_list in
+        let to_delete = Array.of_list to_delete_list in
 
-  C.find Q.update_board_cards_query (board_update.(0), board_update.(1), board_update.(2), game_id) >>=? fun num_updated ->
+        C.find Q.delete_game_cards_for_shuffle (game_id, (to_delete.(0), (to_delete.(1), (to_delete.(2), deck_card_idx)))) >>=? fun num_deleted ->
 
-  if num_updated < 3 then
-    C.rollback () >>=? fun () ->
-    Lwt.return_ok false
-  else
+        let num_should_delete = 3 + 81 - deck_card_idx in
+        if num_deleted < num_should_delete then
+            Lwt.return_error "number of cards deleted for shuffle was less than required"
+        else
 
-  C.exec Q.create_shuffle_query (game_id, player_id, sets_on_board) >>=? fun () ->
-  C.commit () >>=? fun () ->
-  Lwt.return_ok true
+        let deck = CCList.drop deck_card_idx cards_list in
 
-let is_game_over (module C : Caqti_lwt.CONNECTION) game_id =
-  C.find Q.find_game_card_idx_query game_id >>=? fun card_idx ->
-  if card_idx >= 81 then
-    Lwt.return_ok true
-  else
-    C.collect_list Q.find_game_cards_query (game_id, card_idx, 81 - card_idx) >>=? fun cards_list ->
-    Lwt.return_ok (not (List.map (fun (_, card_id) -> card_id) cards_list
-        |> Card.of_int_list
-        |> Shared_util.compact
-        |> Card.exists_set))
+        (* add 3 from card_idx+12 to card_idx+14 top of deck into where deleted board cards were *)
+        let deleted_idx = List.map (fun (idx, _) -> idx) to_delete_list in
+        let new_card_ids = List.map (fun (_, card_id) -> card_id) (CCList.take 3 deck) in
+        let new_board_cards = CCList.combine deleted_idx new_card_ids in
 
-let update_player_name (module C : Caqti_lwt.CONNECTION) (player_id, name) =
-  C.exec Q.update_player_name_query (name, player_id)
+        (* shift card_idx+12+3 to 80-3 (78, 79, 80) forward by 3 *)
+        let shifted_deck =
+            let rec aux acc = function
+            | [] -> acc
+            | (idx, card_id) :: tl ->
+                if idx < deck_card_idx+3 then
+                aux acc tl
+                else
+                aux ((idx-3, card_id) :: acc) tl
+            in
+            aux [] (List.rev cards_list)
+        in
 
-let find_board_cards (module C : Caqti_lwt.CONNECTION) game_id =
-  C.collect_list Q.find_board_cards_query game_id
+        (* add 3 deleted board cards to idx 78, 79, 80 *)
+        let end_of_deck = List.mapi (fun i (_, card_id) -> (78+i, card_id)) to_delete_list in
 
-let find_game_cards (module C : Caqti_lwt.CONNECTION) ?(offset=0) game_id =
-    C.collect_list Q.find_game_cards_query (game_id, offset, 81 - offset)
+        let to_add = new_board_cards @ shifted_deck @ end_of_deck in
+        C.find (Q.update_game_cards_query game_id to_add) () >>=? fun num_added ->
 
-let find_player_data (module C : Caqti_lwt.CONNECTION) game_id =
-  C.collect_list Q.find_player_data_query game_id >>=? fun player_data ->
-  let open Messages in
-  Lwt.return_ok (List.map (fun (player_id, name, presence, (score, shuffles)) ->
-    make_player_data player_id name presence score shuffles
-  ) player_data)
+        let num_should_added = 3 + 81 - deck_card_idx in
+        if num_added < num_should_added then
+            Lwt.return_error "number of cards added for shuffle was less than required"
+        else
 
-let delete_all (module C : Caqti_lwt.CONNECTION) () =
-  C.exec Q.delete_games_query () >>=? fun () ->
-  C.exec Q.delete_players_query () >>=? fun () ->
-  Lwt.return_ok ()
+        C.collect_list Q.find_board_cards_query game_id >>=? fun board_card_ids ->
+        let sets_on_board = Card.of_int_list board_card_ids
+            |> Shared_util.compact
+            |> Card.count_sets in
+
+        let board_update = List.map2 (fun (idx, old_card_id) (_, new_card_id) ->
+            (idx, old_card_id, new_card_id)
+        ) random_board_cards new_board_cards |> Array.of_list in
+
+        C.find Q.update_board_cards_query (board_update.(0), board_update.(1), board_update.(2), game_id) >>=? fun num_updated ->
+        if num_updated < 3 then
+            Lwt.return_error "less than 3 cards updated on board after shuffle"
+        else
+
+        C.exec Q.create_shuffle_query (game_id, player_id, sets_on_board) >>=? fun () ->
+        Lwt.return_ok true
+
+    let is_game_over (module C : Caqti_lwt.CONNECTION) game_id =
+        C.find Q.find_game_card_idx_query game_id >>=? fun card_idx ->
+        if card_idx >= 81 then
+            Lwt.return_ok true
+        else
+            C.collect_list Q.find_game_cards_query (game_id, card_idx, 81 - card_idx) >>=? fun cards_list ->
+            Lwt.return_ok (not (List.map (fun (_, card_id) -> card_id) cards_list
+                |> Card.of_int_list
+                |> Shared_util.compact
+                |> Card.exists_set))
+
+    let update_player_name (module C : Caqti_lwt.CONNECTION) (player_id, name) =
+        C.exec Q.update_player_name_query (name, player_id) >>=? fun () ->
+        Lwt.return_ok ()
+
+    let find_board_cards (module C : Caqti_lwt.CONNECTION) game_id =
+        C.collect_list Q.find_board_cards_query game_id >>=? fun result ->
+        Lwt.return_ok result
+
+    let find_game_cards (module C : Caqti_lwt.CONNECTION) (game_id, offset) =
+        C.collect_list Q.find_game_cards_query (game_id, offset, 81 - offset) >>=? fun result ->
+        Lwt.return_ok result
+
+    let find_player_data (module C : Caqti_lwt.CONNECTION) game_id =
+        C.collect_list Q.find_player_data_query game_id >>=? fun player_data ->
+        let open Messages in
+        Lwt.return_ok (List.map (fun (player_id, name, presence, (score, shuffles)) ->
+            make_player_data player_id name presence score shuffles
+        ) player_data)
+
+    let delete_all (module C : Caqti_lwt.CONNECTION) () =
+        C.exec Q.delete_games_query () >>=? fun () ->
+        C.exec Q.delete_players_query () >>=? fun () ->
+        Lwt.return_ok ()
 end
 
 let with_transaction ?(mode=ReadCommitted) (module C : Caqti_lwt.CONNECTION) f arg =
@@ -439,6 +437,8 @@ let with_pool ?(mode=ReadCommitted) pool f arg =
         with_transaction ~mode (module C : Caqti_lwt.CONNECTION) f arg
     ) pool
 
+let create  = ""
+
 let create_game p arg = with_pool p I.create_game arg
 
 let game_exists p arg = with_pool p I.game_exists arg
@@ -451,11 +451,17 @@ let game_player_presence p arg = with_pool p I.game_player_presence arg
 
 let increment_game_card_idx p arg = with_pool p I.increment_game_card_idx arg
 
-let create_move p arg = with_pool p I.create_move arg
+let create_move p arg = with_pool ~mode:Serializable p I.create_move arg
+
+let shuffle_board p arg = with_pool ~mode:Serializable p I.shuffle_board arg
+
+let is_game_over p arg = with_pool p I.is_game_over arg
 
 let update_player_name p arg = with_pool p I.update_player_name arg
 
 let find_board_cards p arg = with_pool p I.find_board_cards arg
+
+let find_game_cards p arg = with_pool p I.find_game_cards arg
 
 let find_player_data p arg = with_pool p I.find_player_data arg
 
