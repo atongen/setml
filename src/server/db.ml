@@ -1,10 +1,12 @@
 open Lwt.Infix
 open Shared
 
+type t = (Caqti_lwt.connection, Caqti_error.t) Caqti_lwt.Pool.t
+
 let (>>=?) m f =
     m >>= function
     | Ok x -> f x
-    | Error err -> Lwt.return_error (Caqti_error.show err)
+    | Error err -> (Lwt.return_error err)
 
 type mode =
     | ReadUncommitted
@@ -21,6 +23,8 @@ let string_of_mode = function
 module Q = struct
     let set_transaction_mode_query mode =
         Caqti_request.exec ~oneshot:true Caqti_type.unit (Printf.sprintf "set transaction isolation level %s;" mode)
+
+    let test_query = Caqti_request.exec Caqti_type.unit "select 1;"
 
     let make_insert_cards_query_str table_name game_id card_list =
         let rows = List.map (fun (idx, card_id) ->
@@ -245,6 +249,10 @@ end
 
 
 module I = struct
+    let test (module C : Caqti_lwt.CONNECTION) () =
+        C.exec Q.test_query () >>=? fun () ->
+        Lwt.return_ok ()
+
     let create_game (module C : Caqti_lwt.CONNECTION) () =
         C.find Q.create_game_query () >>=? fun game_id ->
         C.find (Q.create_game_cards_query game_id) () >>=? fun _ ->
@@ -432,12 +440,11 @@ let with_transaction ?(mode=ReadCommitted) (module C : Caqti_lwt.CONNECTION) f a
         C.rollback () >>=? fun () ->
         Lwt.return_error e
 
-let with_pool ?(mode=ReadCommitted) pool f arg =
+
+let with_pool ?(mode=ReadCommitted) (pool: t) f arg =
     Caqti_lwt.Pool.use (fun (module C : Caqti_lwt.CONNECTION) ->
         with_transaction ~mode (module C : Caqti_lwt.CONNECTION) f arg
     ) pool
-
-let create  = ""
 
 let create_game p arg = with_pool p I.create_game arg
 

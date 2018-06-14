@@ -47,13 +47,13 @@ let (>>=?) m f =
   m >>= function
   | Ok x -> f x
   | Error e ->
-    Caqti_error.show e |> log >>= fun _ -> ();
     render_error "Oh no!"
 
 let (>>=*) m f =
   m >>= function
-  | Ok (x) -> f x
-  | Error (err) -> Caqti_error.show err |> log
+  | Ok x -> f x
+  | Error err -> (*Caqti_error.show err |> log*)
+    log "shit"
 
 let make_handler pool pubsub =
   fun (conn : Conduit_lwt_unix.flow * Cohttp.Connection.t)
@@ -144,7 +144,7 @@ let start_server host port () =
     Cohttp_lwt_unix.Server.create
       ~mode:(`TCP (`Port port))
       (Cohttp_lwt_unix.Server.make ~callback:(make_handler pool pubsub) ~conn_closed ())
-  | Error err ->
+  | Error _ ->
     Lwt.return (print_endline ("Failed to connect to db!"))
 
 let () =
