@@ -5,14 +5,17 @@ type err =
     | Server_error of Caqti_error.t
     | Client_error of string
 
-type t = {
-    pool: (Caqti_lwt.connection, Caqti_error.t) Caqti_lwt.Pool.t
-}
+type t = (Caqti_lwt.connection, Caqti_error.t) Caqti_lwt.Pool.t
 
 let (>>=?) m f =
     m >>= function
     | Ok x -> f x
     | Error e -> (Lwt.return_error (Server_error e))
+
+let (>>=*) m f =
+    m >>= function
+    | Ok x -> f x
+    | Error e -> (Lwt.return (Error e))
 
 type mode =
     | ReadUncommitted
@@ -436,15 +439,15 @@ module I = struct
 end
 
 let with_transaction ?(mode=ReadCommitted) (module C : Caqti_lwt.CONNECTION) f arg =
-    C.start () >>=? fun () ->
-    C.exec (Q.set_transaction_mode_query (string_of_mode mode)) () >>=? fun () ->
+    C.start () >>=* fun () ->
+    C.exec (Q.set_transaction_mode_query (string_of_mode mode)) () >>=* fun () ->
     f (module C : Caqti_lwt.CONNECTION) arg >>= function
     | Ok a ->
-        C.commit () >>=? fun () ->
+        C.commit () >>=* fun () ->
         Lwt.return_ok a
     | Error e ->
-        C.rollback () >>=? fun () ->
-        Lwt.return_error e
+        C.rollback () >>=* fun () ->
+        Lwt.return_error (Server_error e)
 
 
 let with_pool ?(mode=ReadCommitted) (pool: t) f arg =
@@ -452,9 +455,11 @@ let with_pool ?(mode=ReadCommitted) (pool: t) f arg =
         with_transaction ~mode (module C : Caqti_lwt.CONNECTION) f arg
     ) pool
 
-let create ?(max_size=8) uri: t = {
-    pool = Caqti_lwt.connect_pool ~max_size (Uri.of_string uri)
-}
+let create ?(max_size=8) uri =
+    let pool = Caqti_lwt.connect_pool ~max_size (Uri.of_string uri) in
+    match pool with
+    | Ok p -> p
+    | Error e -> raise (Invalid_argument "shit")
 
 let create_game p arg = with_pool p I.create_game arg
 

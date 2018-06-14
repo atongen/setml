@@ -1,6 +1,6 @@
 type t
 type err
-val create : ?max_size:int -> string -> (t, err) result
+val create : ?max_size:int -> string -> t
 val create_game : t -> unit -> (int, err) result Lwt.t
 val game_exists : t -> int -> (bool, err) result Lwt.t
 val create_player : t -> unit -> (int, err) result Lwt.t
