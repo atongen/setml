@@ -1,12 +1,18 @@
 open Lwt.Infix
 open Shared
 
-type t = (Caqti_lwt.connection, Caqti_error.t) Caqti_lwt.Pool.t
+type err =
+    | Server_error of Caqti_error.t
+    | Client_error of string
+
+type t = {
+    pool: (Caqti_lwt.connection, Caqti_error.t) Caqti_lwt.Pool.t
+}
 
 let (>>=?) m f =
     m >>= function
     | Ok x -> f x
-    | Error err -> (Lwt.return_error err)
+    | Error e -> (Lwt.return_error (Server_error e))
 
 type mode =
     | ReadUncommitted
@@ -292,7 +298,7 @@ module I = struct
         let new_card_2_id = Server_util.get_or card_ids 2 81 in
         C.find Q.update_board_cards_query ((idx0, card0_id, new_card_0_id), (idx1, card1_id, new_card_1_id), (idx2, card2_id, new_card_2_id), game_id) >>=? fun num_updated ->
         if num_updated != 3 then
-            Lwt.return_error "3 board cards were not updated"
+            Lwt.return_error (Client_error "3 board cards were not updated")
         else
             C.find Q.increment_game_card_idx_query (3, game_id) >>=? fun card_idx ->
             Lwt.return_ok card_idx
@@ -305,7 +311,7 @@ module I = struct
 
         (* ensure we have at least board size 12 + 3 cards left to swap *)
         if card_idx < 0 || deck_card_idx >= 81 then
-            Lwt.return_error "invalid game card index for shuffle"
+            Lwt.return_error (Client_error "invalid game card index for shuffle")
         else
 
         (* get a list of all (idx, card_id) remaining for this game (including the board) *)
@@ -314,7 +320,7 @@ module I = struct
         (* get a list of all (idx, card_id) for cards currently on the board *)
         C.collect_list Q.find_random_board_cards_query (game_id, 3) >>=? fun random_board_cards ->
         if List.length random_board_cards < 3 then
-            Lwt.return_error "unable to get at least 3 random cards from board"
+            Lwt.return_error (Client_error "unable to get at least 3 random cards from board")
         else
 
         (* delete the 3 random board cards from game_cards, and also cards idx higher than card_idx *)
@@ -333,7 +339,7 @@ module I = struct
         in
 
         if List.length to_delete_list < 3 then
-            Lwt.return_error "unable to find 3 random cards to delete from board"
+            Lwt.return_error (Client_error "unable to find 3 random cards to delete from board")
         else
 
         let to_delete = Array.of_list to_delete_list in
@@ -342,7 +348,7 @@ module I = struct
 
         let num_should_delete = 3 + 81 - deck_card_idx in
         if num_deleted < num_should_delete then
-            Lwt.return_error "number of cards deleted for shuffle was less than required"
+            Lwt.return_error (Client_error "number of cards deleted for shuffle was less than required")
         else
 
         let deck = CCList.drop deck_card_idx cards_list in
@@ -373,7 +379,7 @@ module I = struct
 
         let num_should_added = 3 + 81 - deck_card_idx in
         if num_added < num_should_added then
-            Lwt.return_error "number of cards added for shuffle was less than required"
+            Lwt.return_error (Client_error "number of cards added for shuffle was less than required")
         else
 
         C.collect_list Q.find_board_cards_query game_id >>=? fun board_card_ids ->
@@ -387,7 +393,7 @@ module I = struct
 
         C.find Q.update_board_cards_query (board_update.(0), board_update.(1), board_update.(2), game_id) >>=? fun num_updated ->
         if num_updated < 3 then
-            Lwt.return_error "less than 3 cards updated on board after shuffle"
+            Lwt.return_error (Client_error "less than 3 cards updated on board after shuffle")
         else
 
         C.exec Q.create_shuffle_query (game_id, player_id, sets_on_board) >>=? fun () ->
@@ -445,6 +451,10 @@ let with_pool ?(mode=ReadCommitted) (pool: t) f arg =
     Caqti_lwt.Pool.use (fun (module C : Caqti_lwt.CONNECTION) ->
         with_transaction ~mode (module C : Caqti_lwt.CONNECTION) f arg
     ) pool
+
+let create ?(max_size=8) uri: t = {
+    pool = Caqti_lwt.connect_pool ~max_size (Uri.of_string uri)
+}
 
 let create_game p arg = with_pool p I.create_game arg
 
