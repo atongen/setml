@@ -15,7 +15,7 @@ let (>>=?) m f =
 let (>>=*) m f =
     m >>= function
     | Ok x -> f x
-    | Error e -> (Lwt.return (Error e))
+    | Error e -> (Lwt.return_error e)
 
 type mode =
     | ReadUncommitted
@@ -446,8 +446,14 @@ let with_transaction ?(mode=ReadCommitted) (module C : Caqti_lwt.CONNECTION) f a
         C.commit () >>=* fun () ->
         Lwt.return_ok a
     | Error e ->
-        C.rollback () >>=* fun () ->
-        Lwt.return_error (Server_error e)
+        match e with
+        | Server_error se ->
+            C.rollback () >>=* fun () ->
+            Lwt.return_error se
+        | Client_error ce ->
+            let r = Caqti_error.response_rejected ~query:"" ~uri:(Uri.of_string "") (Caqti_error.Msg ce) in
+            C.rollback () >>=* fun () ->
+            Lwt.return_error r
 
 
 let with_pool ?(mode=ReadCommitted) (pool: t) f arg =
@@ -455,7 +461,7 @@ let with_pool ?(mode=ReadCommitted) (pool: t) f arg =
         with_transaction ~mode (module C : Caqti_lwt.CONNECTION) f arg
     ) pool
 
-let create ?(max_size=8) uri =
+let create ?(max_size=8) uri: t =
     let pool = Caqti_lwt.connect_pool ~max_size (Uri.of_string uri) in
     match pool with
     | Ok p -> p
