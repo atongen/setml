@@ -29,16 +29,6 @@ let do_async_tests ?(name="lwt test") tests =
               | `Exn x -> raise x) in
       name >::: ounit_tests)
 
-let assert_query_equal db exp q =
-  Db.query_int db q >>=?  fun got ->
-  assert_equal ~printer:string_of_int exp got;
-  Lwt.return_unit
-
-let assert_pool_query_equal pool exp q =
-  Dbp.query_int pool q >>=?  fun got ->
-  assert_equal ~printer:string_of_int exp got;
-  Lwt.return_unit
-
 let refute_bool msg got = assert_bool msg (not got)
 
 let card_not_equal c0 c1 = not (Card.equal c0 c1)

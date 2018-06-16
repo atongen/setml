@@ -273,6 +273,10 @@ module I = struct
         C.find Q.game_exists_query game_id >>=? fun exists ->
         Lwt.return_ok exists
 
+    let find_game_card_idx (module C : Caqti_lwt.CONNECTION) game_id =
+        C.find Q.find_game_card_idx_query game_id >>=? fun card_idx ->
+        Lwt.return_ok card_idx
+
     let create_player (module C : Caqti_lwt.CONNECTION) () =
         C.find Q.create_player_query () >>=? fun player_id ->
         Lwt.return_ok player_id
@@ -461,15 +465,13 @@ let with_pool ?(mode=ReadCommitted) (pool: t) f arg =
         with_transaction ~mode (module C : Caqti_lwt.CONNECTION) f arg
     ) pool
 
-let create ?(max_size=8) uri: t =
-    let pool = Caqti_lwt.connect_pool ~max_size (Uri.of_string uri) in
-    match pool with
-    | Ok p -> p
-    | Error e -> raise (Invalid_argument "shit")
+let create ?(max_size=8) uri: t = Caqti_lwt.connect_pool ~max_size (Uri.of_string uri)
 
 let create_game p arg = with_pool p I.create_game arg
 
 let game_exists p arg = with_pool p I.game_exists arg
+
+let find_game_card_idx p arg = with_pool p I.find_game_card_idx arg
 
 let create_player p arg = with_pool p I.create_player arg
 

@@ -2,6 +2,7 @@ type t
 val create : ?max_size:int -> string -> t
 val create_game : t -> unit -> (int, Caqti_error.t) result Lwt.t
 val game_exists : t -> int -> (bool, Caqti_error.t) result Lwt.t
+val find_game_card_idx : t -> int -> (int, Caqti_error.t) result Lwt.t
 val create_player : t -> unit -> (int, Caqti_error.t) result Lwt.t
 val player_exists : t -> int -> (bool, Caqti_error.t) result Lwt.t
 val game_player_presence : t -> (int * int * bool) -> (unit, Caqti_error.t) result Lwt.t

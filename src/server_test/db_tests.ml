@@ -68,7 +68,8 @@ let create_move_test db =
                 (match find_player_data players_data player_id with
                 | Some (player_data) -> assert_equal ~printer:string_of_int 1 player_data.score
                 | None -> assert_failure "Player score");
-                assert_query_equal db (12+3) (Printf.sprintf "select card_idx from games where id = %d;" game_id) >>= fun () ->
+                Db.find_game_card_idx db game_id >>=? fun card_idx ->
+                assert_equal (12+3) card_idx;
                 Db.find_board_cards db game_id >>=? fun new_board_idxs ->
                 let board = List.map Card.of_int new_board_idxs |> Array.of_list in
                 refute_card_equal c0 board.(idx0);

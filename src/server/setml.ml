@@ -137,7 +137,7 @@ let start_server host port () =
       (Sexplib.Sexp.to_string_hum (Conduit_lwt_unix.sexp_of_flow ch))
   in
   Lwt_io.eprintf "[SERV] Listening for HTTP on port %d\n%!" port >>= fun () ->
-  Lwt.return (Caqti_lwt.connect_pool ~max_size:8 (Uri.of_string "postgresql://atongen:at1234@localhost:5435/setml_development")) >>= function
+  (Lwt.return (Db.create ~max_size:8 "postgresql://atongen:at1234@localhost:5435/setml_development")) >>= function
   | Ok pool ->
     let pubsub = Pubsub.make "user=atongen password=at1234 port=5435 host=localhost dbname=setml_development" clients in
     ignore (Lwt_preemptive.detach Pubsub.start pubsub);
