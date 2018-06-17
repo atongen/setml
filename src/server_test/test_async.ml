@@ -24,7 +24,7 @@ let suite db =
 let _ =
     Crypto.init ();
     Lwt_main.run (begin
-        Lwt.return (Db.create ~max_size:8 "postgresql://atongen:at1234@localhost:5435/setml_test") >>=? fun db ->
+        Db.create ~max_size:8 "postgresql://atongen:at1234@localhost:5435/setml_test" >>=? fun db ->
         Db.delete_all db () >>=? fun () ->
         suite db >|= OUnit2.run_test_tt_main
     end)

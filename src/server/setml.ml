@@ -111,7 +111,7 @@ let make_handler pool pubsub =
                       ignore (
                         Clients.remove clients game_id player_id;
                         if not (Clients.game_has_players clients game_id) then Pubsub.unsubscribe pubsub game_id;
-                        Db.game_player_presence pool (game_id, player_id, false) >>=* fun () ->
+                        Db.set_game_player_presence pool (game_id, player_id, false) >>=* fun () ->
                         log ("Player " ^ (string_of_int player_id) ^ " left game " ^ string_of_int game_id);
                       )
                     | _ ->
@@ -121,7 +121,7 @@ let make_handler pool pubsub =
                 (* websocket onopen *)
                 Pubsub.subscribe pubsub game_id;
                 Clients.add clients game_id player_id frames_out_fn;
-                Db.game_player_presence pool (game_id, player_id, true) >>=? fun () ->
+                Db.set_game_player_presence pool (game_id, player_id, true) >>=? fun () ->
                 ignore (log ("Player " ^ (string_of_int player_id) ^ " joined game " ^ string_of_int game_id));
                 Lwt.return (resp, (body :> Cohttp_lwt.Body.t))
               ) else render_not_found)
@@ -137,14 +137,14 @@ let start_server host port () =
       (Sexplib.Sexp.to_string_hum (Conduit_lwt_unix.sexp_of_flow ch))
   in
   Lwt_io.eprintf "[SERV] Listening for HTTP on port %d\n%!" port >>= fun () ->
-  (Lwt.return (Db.create ~max_size:8 "postgresql://atongen:at1234@localhost:5435/setml_development")) >>= function
+  Db.create ~max_size:8 "postgresql://atongen:at1234@localhost:5435/setml_development" >>= function
   | Ok pool ->
     let pubsub = Pubsub.make "user=atongen password=at1234 port=5435 host=localhost dbname=setml_development" clients in
     ignore (Lwt_preemptive.detach Pubsub.start pubsub);
     Cohttp_lwt_unix.Server.create
-      ~mode:(`TCP (`Port port))
-      (Cohttp_lwt_unix.Server.make ~callback:(make_handler pool pubsub) ~conn_closed ())
-  | Error _ ->
+        ~mode:(`TCP (`Port port))
+        (Cohttp_lwt_unix.Server.make ~callback:(make_handler pool pubsub) ~conn_closed ())
+  | Error e ->
     Lwt.return (print_endline ("Failed to connect to db!"))
 
 let () =

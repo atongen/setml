@@ -105,7 +105,7 @@ module Q = struct
         Caqti_request.find Caqti_type.int Caqti_type.bool
         "select exists (select 1 from players where id = ?)"
 
-    let game_player_presence_query =
+    let set_game_player_presence_query =
         Caqti_request.exec Caqti_type.(tup3 int int bool)
         {eos|
             insert into games_players (game_id, player_id, presence, updated_at)
@@ -113,6 +113,18 @@ module Q = struct
             on conflict (game_id, player_id)
             do update set presence = excluded.presence,
             updated_at = excluded.updated_at;
+        |eos}
+
+    let find_game_player_presence_query =
+        Caqti_request.find Caqti_type.(tup2 int int) Caqti_type.bool
+        {eos|
+            select exists(
+                select 1
+                from games_players
+                where game_id = ?
+                and player_id = ?
+                and presence = true
+            )
         |eos}
 
     let create_move_query =
@@ -285,9 +297,13 @@ module I = struct
         C.find Q.player_exists_query player_id >>=? fun exists ->
         Lwt.return_ok exists
 
-    let game_player_presence (module C : Caqti_lwt.CONNECTION) args =
-        C.exec Q.game_player_presence_query args >>=? fun () ->
+    let set_game_player_presence (module C : Caqti_lwt.CONNECTION) args =
+        C.exec Q.set_game_player_presence_query args >>=? fun () ->
         Lwt.return_ok ()
+
+    let find_game_player_presence (module C : Caqti_lwt.CONNECTION) args =
+        C.find Q.find_game_player_presence_query args >>=? fun result ->
+        Lwt.return_ok result
 
     let increment_game_card_idx (module C : Caqti_lwt.CONNECTION) (game_id, offset) =
         C.find Q.increment_game_card_idx_query (offset, game_id) >>=? fun card_idx ->
@@ -318,7 +334,7 @@ module I = struct
 
         (* ensure we have at least board size 12 + 3 cards left to swap *)
         if card_idx < 0 || deck_card_idx >= 81 then
-            Lwt.return_error (Client_error "invalid game card index for shuffle")
+            Lwt.return_ok false
         else
 
         (* get a list of all (idx, card_id) remaining for this game (including the board) *)
@@ -455,17 +471,18 @@ let with_transaction ?(mode=ReadCommitted) (module C : Caqti_lwt.CONNECTION) f a
             C.rollback () >>=* fun () ->
             Lwt.return_error se
         | Client_error ce ->
-            let r = Caqti_error.response_rejected ~query:"" ~uri:(Uri.of_string "") (Caqti_error.Msg ce) in
+            let r = Caqti_error.response_rejected ~query:"client error" ~uri:(Uri.of_string "") (Caqti_error.Msg ce) in
             C.rollback () >>=* fun () ->
             Lwt.return_error r
 
 
-let with_pool ?(mode=ReadCommitted) (pool: t) f arg =
-    Caqti_lwt.Pool.use (fun (module C : Caqti_lwt.CONNECTION) ->
+let with_pool ?(priority=0.0) ?(mode=ReadCommitted) (pool: t) f arg =
+    Caqti_lwt.Pool.use ~priority (fun (module C : Caqti_lwt.CONNECTION) ->
         with_transaction ~mode (module C : Caqti_lwt.CONNECTION) f arg
     ) pool
 
-let create ?(max_size=8) uri: t = Caqti_lwt.connect_pool ~max_size (Uri.of_string uri)
+let create ?(max_size=8) uri: (t, Caqti_error.t) result Lwt.t =
+    Lwt.return (Caqti_lwt.connect_pool ~max_size (Uri.of_string uri))
 
 let create_game p arg = with_pool p I.create_game arg
 
@@ -477,13 +494,15 @@ let create_player p arg = with_pool p I.create_player arg
 
 let player_exists p arg = with_pool p I.player_exists arg
 
-let game_player_presence p arg = with_pool p I.game_player_presence arg
+let set_game_player_presence p arg = with_pool p I.set_game_player_presence arg
+
+let find_game_player_presence p arg = with_pool p I.find_game_player_presence arg
 
 let increment_game_card_idx p arg = with_pool p I.increment_game_card_idx arg
 
-let create_move p arg = with_pool ~mode:Serializable p I.create_move arg
+let create_move p arg = with_pool ~priority:2.0 ~mode:Serializable p I.create_move arg
 
-let shuffle_board p arg = with_pool ~mode:Serializable p I.shuffle_board arg
+let shuffle_board p arg = with_pool ~priority:1.0 ~mode:Serializable p I.shuffle_board arg
 
 let is_game_over p arg = with_pool p I.is_game_over arg
 
