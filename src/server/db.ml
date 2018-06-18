@@ -128,8 +128,8 @@ module Q = struct
         |eos}
 
     let create_move_query =
-        let args8 = Caqti_type.(let (&) = tup2 in int & int & int & int & int & int & int & int) in
-        Caqti_request.exec args8
+        let args = Caqti_type.(tup3 int int (tup3 (tup2 int int) (tup2 int int) (tup2 int int))) in
+        Caqti_request.exec args
         {eos|
             insert into moves (
                 game_id,
@@ -191,9 +191,9 @@ module Q = struct
         |eos}
 
     let find_board_cards_query =
-        Caqti_request.collect Caqti_type.int Caqti_type.int
+        Caqti_request.collect Caqti_type.int Caqti_type.(tup2 int int)
         {eos|
-            select card_id
+            select idx, card_id
             from board_cards
             where game_id = ?
             order by idx asc;
@@ -309,10 +309,10 @@ module I = struct
         C.find Q.increment_game_card_idx_query (offset, game_id) >>=? fun card_idx ->
         Lwt.return_ok card_idx
 
-    let create_move (module C : Caqti_lwt.CONNECTION) (game_id, player_id, idx0, card0, idx1, card1, idx2, card2) =
+    let create_move (module C : Caqti_lwt.CONNECTION) (game_id, player_id, ((idx0, card0), (idx1, card1), (idx2, card2))) =
         let card0_id, card1_id, card2_id = (Card.to_int card0, Card.to_int card1, Card.to_int card2) in
         C.exec (Q.set_transaction_mode_query "serializable") () >>=? fun () ->
-        C.exec Q.create_move_query (game_id, (player_id, (idx0, (card0_id, (idx1, (card1_id, (idx2, card2_id))))))) >>=? fun () ->
+        C.exec Q.create_move_query (game_id, player_id, ((idx0, card0_id), (idx1, card1_id), (idx2, card2_id))) >>=? fun () ->
         C.find Q.find_game_card_idx_query game_id >>=? fun deck_card_idx ->
         C.collect_list Q.find_game_cards_query (game_id, deck_card_idx, 3) >>=? fun cards_list ->
         let card_ids = List.map (fun (_, card_id) -> card_id) cards_list |> Array.of_list in
@@ -405,7 +405,8 @@ module I = struct
             Lwt.return_error (Client_error "number of cards added for shuffle was less than required")
         else
 
-        C.collect_list Q.find_board_cards_query game_id >>=? fun board_card_ids ->
+        C.collect_list Q.find_board_cards_query game_id >>=? fun board_cards ->
+        let board_card_ids = List.map (fun (_, card_id) -> card_id) board_cards in
         let sets_on_board = Card.of_int_list board_card_ids
             |> Shared_util.compact
             |> Card.count_sets in
@@ -438,12 +439,16 @@ module I = struct
         Lwt.return_ok ()
 
     let find_board_cards (module C : Caqti_lwt.CONNECTION) game_id =
-        C.collect_list Q.find_board_cards_query game_id >>=? fun result ->
-        Lwt.return_ok result
+        C.collect_list Q.find_board_cards_query game_id >>=? fun board_cards ->
+        Lwt.return_ok (List.map (fun (idx, card_id) ->
+            (idx, Shared.Card.of_int card_id)
+        ) board_cards)
 
     let find_game_cards (module C : Caqti_lwt.CONNECTION) (game_id, offset) =
-        C.collect_list Q.find_game_cards_query (game_id, offset, 81 - offset) >>=? fun result ->
-        Lwt.return_ok result
+        C.collect_list Q.find_game_cards_query (game_id, offset, 81 - offset) >>=? fun game_cards ->
+        Lwt.return_ok (List.map (fun (idx, card_id) ->
+            (idx, Shared.Card.of_int card_id)
+        ) game_cards)
 
     let find_player_data (module C : Caqti_lwt.CONNECTION) game_id =
         C.collect_list Q.find_player_data_query game_id >>=? fun player_data ->
