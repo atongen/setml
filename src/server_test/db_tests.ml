@@ -47,15 +47,14 @@ let create_move_test db =
         Db.create_game db () >>=? fun game_id ->
         Db.create_player db () >>=? fun player_id ->
         Db.set_game_player_presence db (game_id, player_id, true) >>=? fun () ->
-        Db.find_board_cards db game_id >>=? fun board_idxs ->
-        let cards = Card.of_int_list board_idxs in
+        Db.find_board_cards db game_id >>=? fun cards ->
         let cc = Shared_util.compact cards in
         if Card.exists_set cc then (
             let sets_and_indexes_opt = Card.next_set_and_indexes_of_opt_array (Array.of_list cards) in
             match sets_and_indexes_opt with
             | Some ((idx0, c0), (idx1, c1), (idx2, c2)) ->
                 assert_bool "cards are set" (Card.is_set c0 c1 c2);
-                Db.create_move db (game_id, player_id, idx0, c0, idx1, c1, idx2, c2) >>=? fun made_move ->
+                Db.create_move db (game_id, player_id, ((idx0, c0), (idx1, c1), (idx2, c2))) >>=? fun made_move ->
                 assert_equal 15 made_move;
                 Db.find_player_data db game_id >>=? fun players_data ->
                 assert_equal ~printer:string_of_int 1 (List.length players_data);
@@ -64,11 +63,13 @@ let create_move_test db =
                 | None -> assert_failure "Player score");
                 Db.find_game_card_idx db game_id >>=? fun card_idx ->
                 assert_equal (12+3) card_idx;
-                Db.find_board_cards db game_id >>=? fun new_board_idxs ->
-                let board = List.map Card.of_int new_board_idxs |> Array.of_list in
-                refute_card_equal c0 board.(idx0);
-                refute_card_equal c1 board.(idx1);
-                refute_card_equal c2 board.(idx2);
+                Db.find_board_cards db game_id >>=? fun board_cards ->
+                let board = board_cards |> Array.of_list in
+                List.iter (fun (idx, c_orig) ->
+                    match board.(idx) with
+                    | Some c -> refute_card_equal c_orig c
+                    | None -> assert_failure "board card not found"
+                ) [(idx0, c0); (idx1, c1); (idx2, c2)];
                 Lwt.return_unit
             | None -> assert_failure "No sets/indexes found"
         ) else (
@@ -87,7 +88,7 @@ let complete_game_test db =
         Db.set_game_player_presence db (game_id, player_id, true) >>=? fun () ->
         let rec make_move i j shuffled =
             Db.find_game_cards db (game_id, 0) >>=? fun cards_before ->
-            Db.find_board_cards db game_id >>=? fun board_card_ids ->
+            Db.find_board_cards db game_id >>=? fun board_cards ->
 
             if not shuffled then (
                 Db.shuffle_board db (game_id, player_id) >>=? fun did_shuffle ->
@@ -114,12 +115,12 @@ let complete_game_test db =
                     make_move i (j+1) true
                 )
             ) else (
-                let cards = Card.of_int_list board_card_ids |> Array.of_list in
+                let cards = Array.of_list board_cards in
                 let sets_and_indexes_opt = Card.next_set_and_indexes_of_opt_array cards in
                 match sets_and_indexes_opt with
                 | Some ((idx0, c0), (idx1, c1), (idx2, c2)) ->
                     assert_bool "cards are set" (Card.is_set c0 c1 c2);
-                    Db.create_move db (game_id, player_id, idx0, c0, idx1, c1, idx2, c2) >>=? fun made_move ->
+                    Db.create_move db (game_id, player_id, ((idx0, c0), (idx1, c1), (idx2, c2))) >>=? fun made_move ->
                     assert (made_move > 12);
 
                     Db.find_player_data db game_id >>=? fun players_data ->
@@ -149,7 +150,7 @@ let create_failed_move_test db =
         Db.set_game_player_presence db (game_id, player_id, true) >>=? fun () ->
         Db.find_board_cards db game_id >>=? fun old_board_idxs ->
         let c0, c1, c2 = (Card.of_int 1, Card.of_int 2, Card.of_int 3) in
-        Db.create_move db (game_id, player_id, 0, c0, 1, c1, 2, c2) >>= function
+        Db.create_move db (game_id, player_id, ((0, c0), (1, c1), (2, c2))) >>= function
         | Ok _ -> assert_failure "should not have made move"
         | Error e ->
             Db.find_player_data db game_id >>=? fun players_data ->

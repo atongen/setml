@@ -191,9 +191,9 @@ module Q = struct
         |eos}
 
     let find_board_cards_query =
-        Caqti_request.collect Caqti_type.int Caqti_type.(tup2 int int)
+        Caqti_request.collect Caqti_type.int Caqti_type.int
         {eos|
-            select idx, card_id
+            select card_id
             from board_cards
             where game_id = ?
             order by idx asc;
@@ -405,8 +405,7 @@ module I = struct
             Lwt.return_error (Client_error "number of cards added for shuffle was less than required")
         else
 
-        C.collect_list Q.find_board_cards_query game_id >>=? fun board_cards ->
-        let board_card_ids = List.map (fun (_, card_id) -> card_id) board_cards in
+        C.collect_list Q.find_board_cards_query game_id >>=? fun board_card_ids ->
         let sets_on_board = Card.of_int_list board_card_ids
             |> Shared_util.compact
             |> Card.count_sets in
@@ -439,10 +438,8 @@ module I = struct
         Lwt.return_ok ()
 
     let find_board_cards (module C : Caqti_lwt.CONNECTION) game_id =
-        C.collect_list Q.find_board_cards_query game_id >>=? fun board_cards ->
-        Lwt.return_ok (List.map (fun (idx, card_id) ->
-            (idx, Shared.Card.of_int card_id)
-        ) board_cards)
+        C.collect_list Q.find_board_cards_query game_id >>=? fun board_card_ids ->
+        Lwt.return_ok (Shared.Card.of_int_list board_card_ids)
 
     let find_game_cards (module C : Caqti_lwt.CONNECTION) (game_id, offset) =
         C.collect_list Q.find_game_cards_query (game_id, offset, 81 - offset) >>=? fun game_cards ->

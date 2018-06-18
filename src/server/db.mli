@@ -12,7 +12,7 @@ val create_move : t -> (int * int * ((int * Shared.Card.t) * (int * Shared.Card.
 val shuffle_board : t -> (int * int) -> (bool, Caqti_error.t) result Lwt.t
 val is_game_over : t -> int -> (bool, Caqti_error.t) result Lwt.t
 val update_player_name : t -> (int * string) -> (unit, Caqti_error.t) result Lwt.t
-val find_board_cards : t -> int -> ((int * Shared.Card.t) list, Caqti_error.t) result Lwt.t
+val find_board_cards : t -> int -> (Shared.Card.t option list, Caqti_error.t) result Lwt.t
 val find_game_cards : t -> (int * int) -> ((int * Shared.Card.t) list, Caqti_error.t) result Lwt.t
 val find_player_data : t -> int -> (Shared.Messages.player_data list, Caqti_error.t) result Lwt.t
 val delete_all : t -> unit -> (unit, Caqti_error.t) result Lwt.t
