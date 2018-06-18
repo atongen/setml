@@ -5,14 +5,14 @@ let page_tpl id page_title token =
     html (list [
         head (list [
             title (string page_title);
-            meta ~charset:"UTF-8" empty;
-            meta ~name:"token" ~content:token empty;
-            link ~rel:"stylesheet" ~href:(Uri.of_string "/css/style.css") empty;
+            meta ~charset:"UTF-8" [];
+            meta ~name:"token" ~content:token [];
+            link ~rel:"stylesheet" (Uri.of_string "/css/style.css");
           ]);
 
         body (list [
             div ~id:id empty;
-            script ~src:("/js/" ^ id ^ ".js") empty;
+            script ~src:(Uri.of_string ("/js/" ^ id ^ ".js")) empty;
           ])
       ])
   )
@@ -26,7 +26,7 @@ let error_tpl msg =
     html (list [
         head (list [
             title (string "Error!");
-            meta ~charset:"UTF-8" empty;
+            meta ~charset:"UTF-8" [];
           ]);
 
         body (list [
