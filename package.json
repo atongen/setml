@@ -25,6 +25,7 @@
     "reason-react": "^0.3.4"
   },
   "devDependencies": {
+    "@glennsl/bs-jest": "^0.4.2",
     "bs-platform": "^2.2.3",
     "concurrently": "^3.5.0",
     "webpack": "^4.0.1",

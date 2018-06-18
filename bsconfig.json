@@ -15,6 +15,7 @@
         "bs-webapi",
         "@glennsl/bs-json"
     ],
+    "bs-dev-dependencies": ["@glennsl/bs-jest"],
     "sources": [
         {
             "dir": "src",
@@ -22,6 +23,10 @@
                 "client",
                 "shared"
             ]
+        },
+        {
+            "dir": "__tests__",
+            "type": "dev"
         }
     ],
     "package-specs": {
