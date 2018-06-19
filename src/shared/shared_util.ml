@@ -31,11 +31,19 @@ let rec firstk k = function
     | hd :: tl -> if k=1 then [hd] else
         hd :: firstk (k-1) tl
 
+let array_mem x a =
+    let n = Array.length a in
+    let rec loop i =
+        if i = n then false
+        else if compare (Array.unsafe_get a i) x = 0 then true
+        else loop (succ i) in
+    loop 0
+
 let random_sample ar n =
     let a = [||] in
     while Array.length a < n do
         let i = Random.int n in
-        if not (Array.mem i a) then
+        if not (array_mem i a) then
         Array.set a (Array.length a) i
     done;
     Array.map (fun i -> ar.(i)) a

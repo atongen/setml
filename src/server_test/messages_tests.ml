@@ -37,7 +37,8 @@ let convert_tests =
     make_player_presence 1 true;
     make_player_presence 1 false;
     make_move_data (make_score_data 5 15) (make_previous_move_data 1 2 3);
-    make_shuffles 4 6
+    make_shuffles 4 6;
+    Player_data (make_player_data 6 "willie" true 9 8)
   ]
   in
   cases_of check messages

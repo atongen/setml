@@ -20,6 +20,7 @@ module Server_message_converter : Messages.CONVERT = struct
                 ]
             | Player_data d ->
                 `Assoc [
+                    (type_key, `String (message_type_to_string Player_data_type));
                     (player_id_key, `Int d.player_id);
                     (name_key, `String d.name);
                     (presence_key, `Bool d.presence);
