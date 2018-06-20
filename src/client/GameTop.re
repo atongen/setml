@@ -12,7 +12,7 @@ type action =
 type state = {
   ws: ref(option(WebSockets.WebSocket.t)),
   board: list(Card.t),
-  players: list(scoreboard_player_data),
+  players: list(string),
 };
 
 let handleMessage = (evt, self) => {
@@ -20,20 +20,10 @@ let handleMessage = (evt, self) => {
   self.ReasonReact.send(ReceiveMessage(str));
 };
 
-let rec handleReceiveMessage = (state, msg) =>
-  switch (msg) {
-  | Scoreboard(d) => ReasonReact.Update({...state, board: d.board, players: d.players})
-  | Player_name(d) => ReasonReact.NoUpdate
-  | Board_card(d) => ReasonReact.NoUpdate
-  | Game_card_idx(d) => ReasonReact.NoUpdate
-  | Game_status(d) => ReasonReact.NoUpdate
-  | Score(d) => ReasonReact.NoUpdate
-  | Previous_move(d) => ReasonReact.NoUpdate
-  | Player_presence(d) => ReasonReact.NoUpdate
-  | Batch(d) =>
-    List.map(d, handleReceiveMessage(state));
-    ReasonReact.NoUpdate;
-  };
+let rec handleReceiveMessage = (state, msg) => {
+  Js.log("wow!");
+  ReasonReact.NoUpdate;
+};
 
 let updateFrame = self => ();
 

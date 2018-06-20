@@ -24,8 +24,11 @@ test_sequential: all
 test_async: all
 	./bin/test_async -runner processes
 
+test_client:
+	npm run-script test
+
 # Build and run tests
-test: test_processes test_sequential test_async
+test: test_processes test_sequential test_async test_client
 
 # Clean up
 clean:

@@ -25,10 +25,21 @@
     "reason-react": "^0.3.4"
   },
   "devDependencies": {
+    "@babel/core": "^7.0.0-beta.51",
     "@glennsl/bs-jest": "^0.4.2",
+    "babel-core": "^7.0.0-bridge.0",
+    "babel-jest": "^23.0.1",
+    "babel-preset-env": "^1.7.0",
     "bs-platform": "^2.2.3",
     "concurrently": "^3.5.0",
+    "jest": "^23.1.0",
+    "regenerator-runtime": "^0.11.1",
     "webpack": "^4.0.1",
     "webpack-cli": "^2.0.10"
+  },
+  "jest": {
+    "transformIgnorePatterns": [
+      "node_modules/(?!(bs-platform)/)"
+    ]
   }
 }

@@ -4,8 +4,8 @@ const isProd = process.env.NODE_ENV === "production";
 
 module.exports = {
   entry: {
-    index: "./lib/es6/src/client/Index.js",
-    game: "./lib/es6/src/client/Game.js",
+    index: "./lib/js/src/client/Index.js",
+    game: "./lib/js/src/client/Game.js",
   },
   mode: isProd ? "production" : "development",
   output: {
