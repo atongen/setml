@@ -11,8 +11,8 @@ type action =
 
 type state = {
   ws: ref(option(WebSockets.WebSocket.t)),
-  board: list(Card.t),
-  players: list(string),
+  board: array(option(Card.t)),
+  players: list(player_data),
 };
 
 let handleMessage = (evt, self) => {
@@ -20,10 +20,29 @@ let handleMessage = (evt, self) => {
   self.ReasonReact.send(ReceiveMessage(str));
 };
 
-let rec handleReceiveMessage = (state, msg) => {
-  Js.log("wow!");
-  ReasonReact.NoUpdate;
-};
+let handleReceiveMessage = (state, msg) =>
+  switch (msg) {
+  | Game_data(d) =>
+    ReasonReact.Update({...state, board: d.board_data, players: d.player_data});
+  | Player_data(d) =>
+    ReasonReact.NoUpdate;
+  | Player_name(d) =>
+    ReasonReact.NoUpdate;
+  | Board_card(d) =>
+    ReasonReact.NoUpdate;
+  | Game_update(d) =>
+    ReasonReact.NoUpdate;
+  | Score(d) =>
+    ReasonReact.NoUpdate;
+  | Previous_move(d) =>
+    ReasonReact.NoUpdate;
+  | Player_presence(d) =>
+    ReasonReact.NoUpdate;
+  | Move_data(d) =>
+    ReasonReact.NoUpdate;
+  | Shuffles(d) =>
+    ReasonReact.NoUpdate;
+  };
 
 let updateFrame = self => ();
 
@@ -45,7 +64,7 @@ let make = _children => {
       };
       ReasonReact.NoUpdate;
     },
-  initialState: () => {ws: ref(None), board: [], players: []},
+  initialState: () => {ws: ref(None), board: [||], players: []},
   didMount: self => {
     switch (ClientUtil.ws_url()) {
     | Some(ws_url) =>

@@ -95,7 +95,7 @@ type game_update_data = {
 
 type game_data = {
     player_data: player_data list;
-    board_data: (Card.t option) array;
+    board_data: Card.t option array;
     game_update: game_update_data;
 }
 
