@@ -193,6 +193,31 @@ let moves_insert_check pubsub =
         teardown_player pubsub player_id;
         teardown_game pubsub game_id
 
+let shuffles_insert_check pubsub =
+    fun test_ctx ->
+        let game_id = setup_game pubsub in
+        let player_id, player_name = setup_player pubsub in
+        Pubsub.empty_query pubsub @@ Printf.sprintf
+            {eos|
+                insert into shuffles (
+                    game_id,
+                    player_id,
+                    sets_on_board
+                ) values (
+                    %d, %d, 13
+                )
+            |eos} game_id player_id;
+
+        let msgs = Pubsub.get_notifications pubsub in
+        assert_equal ~printer:string_of_int 1 (List.length msgs);
+        let expMsg = Messages.make_shuffles player_id 13 in
+        let gotMsg = (List.hd msgs).extra |> Server_message_converter.of_json in
+        assert_equal ~ctxt:test_ctx expMsg gotMsg ~printer:Messages.to_string;
+
+        teardown_player pubsub player_id;
+        teardown_game pubsub game_id
+
+
 let pubsub_tests pubsub =
     let check f = f pubsub in
     cases_of check [
