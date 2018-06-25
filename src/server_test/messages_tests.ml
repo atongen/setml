@@ -14,31 +14,32 @@ let convert_tests =
     ae v d ~printer:Messages.to_string
   in
   let messages = [
-    make_game_data [
+    make_server_game [
         make_player_data 1 "john" true 5 1;
         make_player_data 2 "rich" true 4 2;
         make_player_data 3 "bill" false 6 3;
         make_player_data 4 "cindy" true 9 4;
         make_player_data 5 "carol" true 3 5;
-    ] (Card.of_int_list [
+    ] (make_board_cards_data [
          0;  2;  4;  6;
          8; 10; 33; 52;
         78; 79; 80; 81;
-    ] |> Array.of_list) (make_game_update_data "started" 15);
-    make_player_name 2 "andrew2";
-    make_board_card 5 7;
-    make_game_update "new" 13;
-    make_game_update "started" 17;
-    make_game_update "complete" 19;
-    make_score 6 4;
-    make_previous_move 10 20 30;
-    make_previous_move 11 21 31;
-    make_previous_move 64 77 80;
-    make_player_presence 1 true;
-    make_player_presence 1 false;
-    make_move_data (make_score_data 5 15) (make_previous_move_data 1 2 3);
-    make_shuffles 4 6;
-    Player_data (make_player_data 6 "willie" true 9 8)
+    ]) (make_game_update_data 15 "started");
+    make_server_name 2 "andrew2";
+    make_server_board_card 5 7;
+    make_server_game_update 13 "new";
+    make_server_game_update 17 "started";
+    make_server_game_update 19 "complete";
+    make_server_score 6 4;
+    make_server_move (1, 10) (2, 20) (3, 30);
+    make_server_move (4, 11) (5, 21) (6, 31);
+    make_server_move (7, 64) (8, 77) (9, 80);
+    make_server_presence 1 true;
+    make_server_presence 1 false;
+    make_server_move_info (make_score_data 5 15) (make_move_data (1,1) (2,2) (3, 3));
+    make_server_shuffles 4 6;
+    make_server_player 6 "willie" true 9 8;
+    make_client_move "wow" (make_move_data (1,1) (2,2) (3, 3));
   ]
   in
   cases_of check messages

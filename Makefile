@@ -24,7 +24,10 @@ test_sequential: all
 test_async: all
 	./bin/test_async -runner processes
 
-test_client:
+build_client:
+	npm run-script build
+
+test_client: build_client
 	npm run-script test
 
 # Build and run tests
@@ -32,5 +35,7 @@ test: test_processes test_sequential test_async test_client
 
 # Clean up
 clean:
-# Remove files produced by jbuilder.
+	# Remove files produced by jbuilder.
 	jbuilder clean
+	# Remove files produced by npm
+	npm run-script clean

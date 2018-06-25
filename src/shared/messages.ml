@@ -117,6 +117,8 @@ let make_board_card_data idx card_id = {
     card = Card.of_int_opt card_id;
 }
 
+let make_board_cards_data l = List.mapi make_board_card_data l
+
 let board_card_data_to_string d =
     Printf.sprintf "(%d, %d)" d.idx (Card.to_int_opt d.card)
 

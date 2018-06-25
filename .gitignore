@@ -1,6 +1,7 @@
 *.byte
 *.native
 *.mo
+setml.install
 .merlin
 .bsb.lock
 /_build
