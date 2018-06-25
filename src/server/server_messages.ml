@@ -4,78 +4,93 @@ open Shared.Messages
 module Server_message_converter : Messages.CONVERT = struct
     open Yojson.Basic
 
+    let card_data_to_json card_data =
+        `Assoc [
+            (type_key, `String (message_type_to_string Server_card_type));
+            (idx_key, `Int card_data.idx);
+            (card_id_key, `Int (Card.to_int card_data.card));
+        ]
+
     let to_json x =
         let rec aux = function
-            | Game_data d ->
-                let player_data = List.map (fun pd -> aux @@ Player_data pd ) d.player_data in
-                let board_data = make_board_cards d.board_data
-                    |> Array.to_list
-                    |> List.map aux
-                in
+            | Server_game d ->
+                let player_data = List.map (fun pd -> aux @@ Server_player pd) d.player_data in
+                let board_card_data = List.map (fun c -> aux @@ Server_board_card c) d.board_card_data in
+                let game_update_data = Server_game_update d.game_update_data in
                 `Assoc [
-                    (type_key, `String (message_type_to_string Game_data_type));
+                    (type_key, `String (message_type_to_string Server_game_type));
                     (player_data_key, `List player_data);
-                    (board_data_key, `List board_data);
-                    (game_update_key, aux @@ Game_update d.game_update);
+                    (card_data_key, `List board_card_data);
+                    (game_update_key, aux @@ game_update_data);
                 ]
-            | Player_data d ->
+            | Server_player d ->
                 `Assoc [
-                    (type_key, `String (message_type_to_string Player_data_type));
+                    (type_key, `String (message_type_to_string Server_player_type));
                     (player_id_key, `Int d.player_id);
                     (name_key, `String d.name);
                     (presence_key, `Bool d.presence);
                     (score_key, `Int d.score);
                     (shuffles_key, `Int d.shuffles);
                 ]
-            | Player_name d ->
+            | Server_name d ->
                 `Assoc [
-                    (type_key, `String (message_type_to_string Player_name_type));
+                    (type_key, `String (message_type_to_string Server_name_type));
                     (player_id_key, `Int d.player_id);
                     (name_key, `String d.name);
                 ]
-            | Board_card d ->
+            | Server_card d -> card_data_to_json d
+            | Server_board_card d ->
                 `Assoc [
-                    (type_key, `String (message_type_to_string Board_card_type));
+                    (type_key, `String (message_type_to_string Server_board_card_type));
                     (idx_key, `Int d.idx);
                     (card_id_key, `Int (Card.to_int_opt d.card));
                 ]
-            | Game_update d ->
+            | Server_game_update d ->
                 `Assoc [
-                    (type_key, `String (message_type_to_string Game_update_type));
+                    (type_key, `String (message_type_to_string Server_game_update_type));
                     (card_idx_key, `Int d.card_idx);
                     (status_key, `String (game_status_data_to_string d.status));
                 ]
-            | Score d ->
+            | Server_score d ->
                 `Assoc [
-                    (type_key, `String (message_type_to_string Score_type));
+                    (type_key, `String (message_type_to_string Server_score_type));
                     (player_id_key, `Int d.player_id);
                     (score_key, `Int d.score);
                 ]
-            | Previous_move d ->
+            | Server_move d ->
                 `Assoc [
-                    (type_key, `String (message_type_to_string Previous_move_type));
-                    (card0_id_key, `Int (Card.to_int d.card0));
-                    (card1_id_key, `Int (Card.to_int d.card1));
-                    (card2_id_key, `Int (Card.to_int d.card2));
+                    (type_key, `String (message_type_to_string Server_move_type));
+                    (card0_key, card_data_to_json d.card0);
+                    (card1_key, card_data_to_json d.card1);
+                    (card2_key, card_data_to_json d.card2);
                 ]
-            | Player_presence d ->
+            | Server_presence d ->
                 `Assoc [
-                    (type_key, `String (message_type_to_string Player_presence_type));
+                    (type_key, `String (message_type_to_string Server_presence_type));
                     (player_id_key, `Int d.player_id);
                     (presence_key, `Bool d.presence);
                 ]
-            | Move_data d ->
+            | Server_move_info d ->
                 `Assoc [
-                    (type_key, `String (message_type_to_string Move_data_type));
-                    (score_key, aux @@ Score d.score);
-                    (previous_move_key, aux @@ Previous_move d.previous_move);
+                    (type_key, `String (message_type_to_string Server_move_info_type));
+                    (score_data_key, aux @@ Server_score d.score_data);
+                    (move_data_key, aux @@ Server_move d.move_data);
                 ]
-            | Shuffles d ->
+            | Server_shuffles d ->
                 `Assoc [
-                    (type_key, `String (message_type_to_string Shuffles_type));
+                    (type_key, `String (message_type_to_string Server_shuffles_type));
                     (player_id_key, `Int d.player_id);
                     (shuffles_key, `Int d.shuffles);
                 ]
+            | Client_move (token, d) ->
+                `Assoc [
+                    (type_key, `String (message_type_to_string Client_move_type));
+                    (token_key, `String (token_to_string token));
+                    (card0_key, card_data_to_json d.card0);
+                    (card1_key, card_data_to_json d.card1);
+                    (card2_key, card_data_to_json d.card2);
+                ]
+
         in
         aux x |> to_string
 
@@ -92,29 +107,36 @@ module Server_message_converter : Messages.CONVERT = struct
         (json |> Util.member player_id_key |> Util.to_int)
         (json |> Util.member score_key |> Util.to_int)
 
-    let previous_move_data_of_json json =
-        make_previous_move_data
-        (json |> Util.member card0_id_key |> Util.to_int)
-        (json |> Util.member card1_id_key |> Util.to_int)
-        (json |> Util.member card2_id_key |> Util.to_int)
+    let card_data_of_json json =
+        make_card_data
+        (json |> Util.member idx_key |> Util.to_int)
+        (json |> Util.member card_id_key |> Util.to_int)
 
     let board_card_data_of_json json =
         make_board_card_data
         (json |> Util.member idx_key |> Util.to_int)
         (json |> Util.member card_id_key |> Util.to_int)
 
+    let move_data_of_json json = {
+        card0 = (json |> Util.member card0_key |> card_data_of_json);
+        card1 = (json |> Util.member card1_key |> card_data_of_json);
+        card2 = (json |> Util.member card2_key |> card_data_of_json);
+    }
+
+    (* HERE *)
+
     let game_update_data_of_json json =
         make_game_update_data
-        (json |> Util.member status_key |> Util.to_string)
         (json |> Util.member card_idx_key |> Util.to_int)
+        (json |> Util.member status_key |> Util.to_string)
 
-    let player_name_data_of_json json =
-        make_player_name_data
+    let name_data_of_json json =
+        make_name_data
         (json |> Util.member player_id_key |> Util.to_int)
         (json |> Util.member name_key |> Util.to_string)
 
-    let player_presence_data_of_json json =
-        make_player_presence_data
+    let presence_data_of_json json =
+        make_presence_data
         (json |> Util.member player_id_key |> Util.to_int)
         (json |> Util.member presence_key |> Util.to_bool)
 
@@ -127,26 +149,30 @@ module Server_message_converter : Messages.CONVERT = struct
         let rec aux json =
             let message_type = json |> Util.member type_key |> Util.to_string |> message_type_of_string in
             match message_type with
-                | Game_data_type ->
-                    let player_data = json |> Util.member player_data_key |> Util.to_list
+                | Server_game_type ->
+                    let player_data = json |> Util.member player_key |> Util.to_list
                         |> List.map player_data_of_json in
-                    let board_data = json |> Util.member board_data_key |> Util.to_list
-                        |> List.map (fun json -> json |> Util.member card_id_key |> Util.to_int |> Card.of_int_opt)
-                        |> Array.of_list in
+                    let board_card_data = json |> Util.member board_card_key |> Util.to_list
+                        |> List.map board_card_data_of_json in
                     let game_update = json |> Util.member game_update_key |> game_update_data_of_json in
-                    make_game_data player_data board_data game_update
-                | Player_data_type -> Player_data (player_data_of_json json)
-                | Player_name_type -> Player_name (player_name_data_of_json json)
-                | Board_card_type -> Board_card (board_card_data_of_json json)
-                | Game_update_type -> Game_update (game_update_data_of_json json)
-                | Score_type -> Score (score_data_of_json json)
-                | Previous_move_type -> Previous_move (previous_move_data_of_json json)
-                | Player_presence_type -> Player_presence (player_presence_data_of_json json)
-                | Move_data_type ->
+                    make_server_game player_data board_card_data game_update
+                | Server_player_type -> Player_data (player_data_of_json json)
+                | Server_name_type -> Player_name (player_name_data_of_json json)
+                | Server_card_type -> Board_card (board_card_data_of_json json)
+                | Server_board_card_type -> Board_card (board_card_data_of_json json)
+                | Server_game_update_type -> Game_update (game_update_data_of_json json)
+                | Server_score_type -> Score (score_data_of_json json)
+                | Server_move_type -> Previous_move (previous_move_data_of_json json)
+                | Server_presence_type -> Player_presence (player_presence_data_of_json json)
+                | Server_move_info_type ->
                     let score = json |> Util.member score_key |> score_data_of_json in
-                    let previous_move = json |> Util.member previous_move_key |> previous_move_data_of_json in
+                    let previous_move = json |> Util.member move_key |> move_data_of_json in
                     make_move_data score previous_move
-                | Shuffles_type -> Shuffles (shuffles_data_of_json json)
+                | Server_shuffles_type -> Shuffles (shuffles_data_of_json json)
+                | Client_move_type ->
+                    let token = json |> Util.member token_key |> Util.to_string |> token_of_string in
+                    let move = json |> Util.member move_key |> move_data_of_json in
+                    Client_move (token, move_data_of_json json)
         in
         let json = from_string str in
         aux json

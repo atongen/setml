@@ -381,22 +381,25 @@ begin
         row_to_json(data)::text into msg
     from (
         select
-        'move_data' as type,
+        'move_info_data' as type,
         (
             select json_build_object(
                 'type', 'score',
                 'player_id', NEW.player_id,
                 'score', score
             )
-        ) as score,
+        ) as score_data,
         (
             select json_build_object(
-                'type', 'previous_move',
+                'type', 'move',
+                'idx0', NEW.idx0,
                 'card0_id', NEW.card0_id,
+                'idx1', NEW.idx1,
                 'card1_id', NEW.card1_id,
+                'idx2', NEW.idx2,
                 'card2_id', NEW.card2_id
             )
-        ) as previous_move
+        ) as move_data
     ) as data;
 
     perform pg_notify(concat('game_', NEW.game_id), msg);

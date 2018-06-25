@@ -1,57 +1,68 @@
 let type_key = "type"
+let token_key = "token"
 let game_id_key = "game_id"
 let player_id_key = "player_id"
 let name_key = "name"
+let name_data_key = "name_data"
 let presence_key = "presence"
+let presence_data_key = "presence_data"
 let idx_key = "idx"
 let card_id_key = "card_id"
 let card_idx_key = "card_idx"
 let score_key = "score"
-let previous_move_key = "previous_move"
+let score_data_key = "score_data"
+let move_data_key = "move_data"
 let player_data_key = "player_data"
-let status_key = "status"
-let card0_id_key = "card0_id"
-let card1_id_key = "card1_id"
-let card2_id_key = "card2_id"
-let board_data_key = "board_data"
+let status_key = "status_data"
+let card0_key = "card0"
+let card1_key = "card1"
+let card2_key = "card2"
+let card_data_key = "card_data"
+let board_card_data_key = "board_card_data"
 let game_update_key = "game_update"
 let shuffles_key = "shuffles"
 
 type message_type =
-    | Game_data_type
-    | Player_data_type
-    | Player_name_type
-    | Board_card_type
-    | Game_update_type
-    | Score_type
-    | Previous_move_type
-    | Player_presence_type
-    | Move_data_type
-    | Shuffles_type
+    | Server_game_type
+    | Server_player_type
+    | Server_name_type
+    | Server_card_type
+    | Server_board_card_type
+    | Server_game_update_type
+    | Server_score_type
+    | Server_move_type
+    | Server_presence_type
+    | Server_move_info_type
+    | Server_shuffles_type
+    | Client_move_type
 
 let message_type_to_string = function
-    | Game_data_type -> "game_data"
-    | Player_data_type -> "player_data"
-    | Player_name_type -> "player_name"
-    | Board_card_type -> "board_card"
-    | Game_update_type -> "game_update"
-    | Score_type -> "score"
-    | Previous_move_type -> "previous_move"
-    | Player_presence_type -> "presence"
-    | Move_data_type -> "move_data"
-    | Shuffles_type -> "shuffles"
+    | Server_game_type -> "server_game"
+    | Server_player_type -> "server_player"
+    | Server_name_type -> "server_name"
+    | Server_card_type -> "server_card"
+    | Server_board_card_type -> "server_board_card"
+    | Server_game_update_type -> "server_game_update"
+    | Server_score_type -> "server_score"
+    | Server_move_type -> "server_move"
+    | Server_presence_type -> "server_presence"
+    | Server_move_info_type -> "server_move"
+    | Server_shuffles_type -> "server_shuffles"
+    | Client_move_type -> "client_move"
 
 let message_type_of_string = function
-    | "game_data" -> Game_data_type
-    | "player_data" -> Player_data_type
-    | "player_name" -> Player_name_type
-    | "board_card" -> Board_card_type
-    | "game_update" -> Game_update_type
-    | "score" -> Score_type
-    | "previous_move" -> Previous_move_type
-    | "presence" -> Player_presence_type
-    | "move_data" -> Move_data_type
-    | "shuffles" -> Shuffles_type
+    | "server_game" -> Server_game_type
+    | "server_player" -> Server_player_type
+    | "server_name" -> Server_name_type
+    | "server_card" -> Server_card_type
+    | "server_board_card" -> Server_board_card_type
+    | "server_game_update" -> Server_game_update_type
+    | "server_score" -> Server_score_type
+    | "server_move" -> Server_move_type
+    | "server_presence" -> Server_presence_type
+    | "server_move_info" -> Server_move_info_type
+    | "server_shuffles" -> Server_shuffles_type
+    | "client_move" -> Client_move_type
     | ts -> raise (Invalid_argument ("Unknown message type string: " ^ ts))
 
 type game_status_data =
@@ -78,9 +89,22 @@ type player_data = {
     shuffles: int;
 }
 
-type player_name_data = {
+let make_player_data player_id name presence score shuffles = {
+    player_id;
+    name;
+    presence;
+    score;
+    shuffles;
+}
+
+type name_data = {
     player_id: int;
     name: string;
+}
+
+let make_name_data player_id name = {
+    player_id;
+    name;
 }
 
 type board_card_data = {
@@ -88,15 +112,59 @@ type board_card_data = {
     card: Card.t option;
 }
 
+let make_board_card_data idx card_id = {
+    idx;
+    card = Card.of_int_opt card_id;
+}
+
+let board_card_data_to_string d =
+    Printf.sprintf "(%d, %d)" d.idx (Card.to_int_opt d.card)
+
+type card_data = {
+    idx: int;
+    card: Card.t
+}
+
+let make_card_data idx card_id = {
+    idx;
+    card = Card.of_int card_id;
+}
+
+let card_data_to_string d =
+    Printf.sprintf "(%d, %d)" d.idx (Card.to_int d.card)
+
+type move_data = {
+    card0: card_data;
+    card1: card_data;
+    card2: card_data;
+}
+
+let make_move_data (idx0, card0_id) (idx1, card1_id) (idx2, card2_id) = {
+    card0 = make_card_data idx0 card0_id;
+    card1 = make_card_data idx1 card1_id;
+    card2 = make_card_data idx2 card2_id;
+}
+
 type game_update_data = {
     card_idx: int;
     status: game_status_data;
 }
 
+let make_game_update_data card_idx status = {
+    card_idx;
+    status = game_status_data_of_string status;
+}
+
 type game_data = {
     player_data: player_data list;
-    board_data: Card.t option array;
-    game_update: game_update_data;
+    board_card_data: board_card_data list;
+    game_update_data: game_update_data;
+}
+
+let make_game_data player_data board_card_data game_update_data = {
+    player_data;
+    board_card_data;
+    game_update_data;
 }
 
 type score_data = {
@@ -104,20 +172,29 @@ type score_data = {
     score: int;
 }
 
-type previous_move_data = {
-    card0: Card.t;
-    card1: Card.t;
-    card2: Card.t;
+let make_score_data player_id score = {
+    player_id;
+    score;
 }
 
-type player_presence_data = {
+type move_info_data = {
+    score_data: score_data;
+    move_data: move_data;
+}
+
+let make_move_info_data score_data move_data = {
+    score_data;
+    move_data;
+}
+
+type presence_data = {
     player_id: int;
     presence: bool;
 }
 
-type move_data = {
-    score: score_data;
-    previous_move: previous_move_data;
+let make_presence_data player_id presence = {
+    player_id;
+    presence;
 }
 
 type shuffle_data = {
@@ -125,155 +202,117 @@ type shuffle_data = {
     shuffles: int;
 }
 
+let make_shuffles_data player_id shuffles = {
+    player_id;
+    shuffles;
+}
+
+type token = string
+
+let token_of_string (s: string): token = s
+let token_to_string (t: token): string = t
+
 type t =
-    | Game_data of game_data
-    | Player_data of player_data
-    | Player_name of player_name_data
-    | Board_card of board_card_data
-    | Game_update of game_update_data
-    | Score of score_data
-    | Previous_move of previous_move_data
-    | Player_presence of player_presence_data
-    | Move_data of move_data
-    | Shuffles of shuffle_data
+    | Server_game of game_data
+    | Server_player of player_data
+    | Server_name of name_data
+    | Server_card of card_data
+    | Server_board_card of board_card_data
+    | Server_game_update of game_update_data
+    | Server_score of score_data
+    | Server_move of move_data
+    | Server_presence of presence_data
+    | Server_move_info of move_info_data
+    | Server_shuffles of shuffle_data
+    | Client_move of (token * move_data)
 
-let make_game_data player_data board_data game_update =
-    Game_data {
-        player_data;
-        board_data;
-        game_update;
-    }
+let make_server_game player_data card_data game_update_data =
+    Server_game (make_game_data player_data card_data game_update_data)
 
-let make_player_data player_id name presence score shuffles =
-    {
-        player_id;
-        name;
-        presence;
-        score;
-        shuffles;
-    }
+let make_server_player player_id name presence score shuffles =
+    Server_player (make_player_data player_id name presence score shuffles)
 
-let make_player_name_data player_id name =
-    {
-        player_id;
-        name;
-    }
+let make_server_name player_id name =
+    Server_name (make_name_data player_id name)
 
-let make_player_name player_id name =
-    Player_name (make_player_name_data player_id name)
+let make_server_card idx card_id =
+    Server_card (make_card_data idx card_id)
 
-let make_board_card_data idx card_id =
-    {
-        idx;
-        card = Card.of_int_opt card_id;
-    }
+let make_server_board_card idx card_id =
+    Server_board_card (make_board_card_data idx card_id)
 
-let make_board_card idx card_id =
-    Board_card (make_board_card_data idx card_id)
+let make_server_game_update status card_idx =
+    Server_game_update (make_game_update_data status card_idx)
 
-let make_board_cards bc_arr =
-    Array.mapi (fun idx card ->
-        Board_card {idx; card}
-    ) bc_arr
+let make_server_score player_id score =
+    Server_score (make_score_data player_id score)
 
-let make_game_update_data status card_idx =
-    {
-       status = (game_status_data_of_string status);
-       card_idx;
-    }
+let make_server_move (idx0, card0_id) (idx1, card1_id) (idx2, card2_id) =
+    Server_move (make_move_data (idx0, card0_id) (idx1, card1_id) (idx2, card2_id))
 
-let make_game_update status card_idx =
-    Game_update (make_game_update_data status card_idx)
+let make_server_presence player_id presence =
+    Server_presence (make_presence_data player_id presence)
 
-let make_score_data player_id score =
-    {
-        player_id;
-        score;
-    }
+let make_server_move_info score_data move_data =
+    Server_move_info (make_move_info_data score_data move_data)
 
-let make_score player_id score =
-    Score (make_score_data player_id score)
+let make_server_shuffles player_id shuffles =
+    Server_shuffles (make_shuffles_data player_id shuffles)
 
-let make_previous_move_data card0_id card1_id card2_id =
-    {
-        card0 = Card.of_int card0_id;
-        card1 = Card.of_int card1_id;
-        card2 = Card.of_int card2_id;
-    }
-
-let make_previous_move card0_id card1_id card2_id =
-    Previous_move (make_previous_move_data card0_id card1_id card2_id)
-
-let make_player_presence_data player_id presence =
-    {
-        player_id;
-        presence;
-    }
-
-let make_player_presence player_id presence =
-    Player_presence (make_player_presence_data player_id presence)
-
-let make_move_data score previous_move =
-    Move_data {
-        score;
-        previous_move;
-    }
-
-let make_shuffles_data player_id shuffles =
-    {
-        player_id;
-        shuffles;
-    }
-
-let make_shuffles player_id shuffles =
-    Shuffles (make_shuffles_data player_id shuffles)
+let make_client_move token move_data =
+    Client_move (token, move_data)
 
 let card_opt_to_string = function
     | Some c -> Card.to_string c
     | None -> "{NONE}"
 
 let rec to_string = function
-    | Game_data d ->
-        let player_strs = List.map (fun pd -> Player_data pd |> to_string) d.player_data in
+    | Server_game d ->
+        let player_strs = List.map (fun pd -> Server_player pd |> to_string) d.player_data in
         let players = String.concat ", " player_strs in
-        let board_strs = make_board_cards d.board_data
-            |> Array.to_list
-            |> List.map to_string
-        in
-        let board = String.concat ", " board_strs in
-        let game_update = to_string @@ Game_update d.game_update in
-        Printf.sprintf "<message (%s) game_update=%s players=[%s] board=[%s]>"
-            (message_type_to_string Game_data_type) game_update players board
-    | Player_data d ->
+        let board_card_strs = List.map (fun c -> Server_board_card c |> to_string) d.board_card_data in
+        let board_cards = String.concat ", " board_card_strs in
+        let game_update = to_string @@ Server_game_update d.game_update_data in
+        Printf.sprintf "<message (%s) game_update=%s players=[%s] board_cards=[%s]>"
+            (message_type_to_string Server_game_type) game_update players board_cards
+    | Server_player d ->
         Printf.sprintf "<message (%s) id=%d name='%s' presence=%b score=%d shuffles=%d>"
-            (message_type_to_string Player_data_type) d.player_id d.name d.presence d.score d.shuffles
-    | Player_name d ->
+            (message_type_to_string Server_player_type) d.player_id d.name d.presence d.score d.shuffles
+    | Server_name d ->
         Printf.sprintf "<message (%s) player_id=%d name='%s'>"
-            (message_type_to_string Player_name_type) d.player_id d.name
-    | Board_card d ->
+            (message_type_to_string Server_name_type) d.player_id d.name
+    | Server_card d ->
         Printf.sprintf "<message (%s) idx=%d card=%s>"
-            (message_type_to_string Board_card_type) d.idx (card_opt_to_string d.card)
-    | Game_update d ->
+            (message_type_to_string Server_card_type) d.idx (Card.to_string d.card)
+    | Server_board_card d ->
+        Printf.sprintf "<message (%s) idx=%d board_card=%s>"
+            (message_type_to_string Server_board_card_type) d.idx (card_opt_to_string d.card)
+    | Server_game_update d ->
         Printf.sprintf "<message (%s) card_idx=%d status=%s>"
-            (message_type_to_string Game_update_type) d.card_idx (game_status_data_to_string d.status)
-    | Score d ->
+            (message_type_to_string Server_game_update_type) d.card_idx (game_status_data_to_string d.status)
+    | Server_score d ->
         Printf.sprintf "<message (%s) player_id=%d score=%d>"
-            (message_type_to_string Score_type) d.player_id d.score
-    | Previous_move d ->
+            (message_type_to_string Server_score_type) d.player_id d.score
+    | Server_move d ->
         Printf.sprintf "<message (%s) card0=%s card1=%s card2=%s>"
-            (message_type_to_string Previous_move_type) (Card.to_string d.card0) (Card.to_string d.card1) (Card.to_string d.card2)
-    | Player_presence d ->
+            (message_type_to_string Server_move_type) (card_data_to_string d.card0) (card_data_to_string d.card1) (card_data_to_string d.card2)
+    | Server_presence d ->
         Printf.sprintf "<message (%s) player_id=%d presence=%b>"
-            (message_type_to_string Player_presence_type) d.player_id d.presence
-    | Move_data d ->
-        let score = to_string @@ Score d.score in
-        let previous_move = to_string @@ Previous_move d.previous_move in
-        Printf.sprintf "<message (%s) score=%s previous_move=%s>"
-            (message_type_to_string Move_data_type) score previous_move
-    | Shuffles d ->
+            (message_type_to_string Server_player_type) d.player_id d.presence
+    | Server_move_info d ->
+        let score = to_string @@ Server_score d.score_data in
+        let move = to_string @@ Server_move d.move_data in
+        Printf.sprintf "<message (%s) score=%s move=%s>"
+            (message_type_to_string Server_move_type) score move
+    | Server_shuffles d ->
         Printf.sprintf "<message (%s) player_id=%d shuffles=%d>"
-            (message_type_to_string Shuffles_type) d.player_id d.shuffles
-
+            (message_type_to_string Server_shuffles_type) d.player_id d.shuffles
+    | Client_move (_, d) ->
+        Printf.sprintf "<message (%s) %s, %s, %s>"
+            (message_type_to_string Client_move_type)
+            (card_data_to_string d.card0)
+            (card_data_to_string d.card1)
+            (card_data_to_string d.card2)
 
 module type CONVERT = sig
     val to_json : t -> string
