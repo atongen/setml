@@ -186,7 +186,7 @@ let moves_insert_check pubsub =
 
         let msgs = Pubsub.get_notifications pubsub in
         assert_equal ~printer:string_of_int 1 (List.length msgs);
-        let expMsg = Messages.make_server_move_info (make_score_data player_id 1) (make_move_data (1,2) (2,12) (3,22)) in
+        let expMsg = Messages.make_server_move_info (make_score_data player_id 1) (make_move_data (1,2) (11,12) (21,22)) in
         let gotMsg = (List.hd msgs).extra |> Server_message_converter.of_json in
         assert_equal ~ctxt:test_ctx expMsg gotMsg ~printer:Messages.to_string;
 

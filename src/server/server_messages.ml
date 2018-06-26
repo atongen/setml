@@ -20,7 +20,7 @@ module Server_message_converter : Messages.CONVERT = struct
                 `Assoc [
                     (type_key, `String (message_type_to_string Server_game_type));
                     (player_data_key, `List player_data);
-                    (card_data_key, `List board_card_data);
+                    (board_card_data_key, `List board_card_data);
                     (game_update_key, aux @@ game_update_data);
                 ]
             | Server_player d ->
@@ -169,7 +169,7 @@ module Server_message_converter : Messages.CONVERT = struct
                 | Server_shuffles_type -> Server_shuffles (shuffles_data_of_json json)
                 | Client_move_type ->
                     let token = json |> Util.member token_key |> Util.to_string |> token_of_string in
-                    let move_data = json |> Util.member move_data_key |> move_data_of_json in
+                    let move_data = move_data_of_json json in
                     Client_move (token, move_data)
         in
         let json = from_string str in

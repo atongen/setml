@@ -13,7 +13,7 @@ let score_key = "score"
 let score_data_key = "score_data"
 let move_data_key = "move_data"
 let player_data_key = "player_data"
-let status_key = "status_data"
+let status_key = "status"
 let card0_key = "card0"
 let card1_key = "card1"
 let card2_key = "card2"
@@ -46,7 +46,7 @@ let message_type_to_string = function
     | Server_score_type -> "server_score"
     | Server_move_type -> "server_move"
     | Server_presence_type -> "server_presence"
-    | Server_move_info_type -> "server_move"
+    | Server_move_info_type -> "server_move_info"
     | Server_shuffles_type -> "server_shuffles"
     | Client_move_type -> "client_move"
 
@@ -300,12 +300,12 @@ let rec to_string = function
             (message_type_to_string Server_move_type) (card_data_to_string d.card0) (card_data_to_string d.card1) (card_data_to_string d.card2)
     | Server_presence d ->
         Printf.sprintf "<message (%s) player_id=%d presence=%b>"
-            (message_type_to_string Server_player_type) d.player_id d.presence
+            (message_type_to_string Server_presence_type) d.player_id d.presence
     | Server_move_info d ->
         let score = to_string @@ Server_score d.score_data in
         let move = to_string @@ Server_move d.move_data in
         Printf.sprintf "<message (%s) score=%s move=%s>"
-            (message_type_to_string Server_move_type) score move
+            (message_type_to_string Server_move_info_type) score move
     | Server_shuffles d ->
         Printf.sprintf "<message (%s) player_id=%d shuffles=%d>"
             (message_type_to_string Server_shuffles_type) d.player_id d.shuffles

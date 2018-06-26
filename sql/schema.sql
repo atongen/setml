@@ -222,7 +222,7 @@ create trigger set_game_id_trigger
 create or replace function games_update_notify() returns trigger AS $$
 begin
     perform pg_notify(concat('game_', NEW.id), json_build_object(
-        'type', 'game_update',
+        'type', 'server_game_update',
         'card_idx', NEW.card_idx,
         'status', NEW.status
     )::text);
@@ -247,7 +247,7 @@ begin
             row_to_json(data)::text into msg
         from (
             select
-            'game_data' as type,
+            'server_game' as type,
             (
                 select json_agg(p)
                 from (
@@ -278,17 +278,17 @@ begin
                 select json_agg(b)
                 from (
                     select
-                        'board_card' as type,
+                        'server_board_card' as type,
                         idx,
                         card_id
                     from board_cards
                     where game_id = NEW.game_id
                     order by idx asc
                 ) b
-            ) as board_data,
+            ) as board_card_data,
             (
                 select json_build_object(
-                    'type', 'game_update',
+                    'type', 'server_game_update',
                     'card_idx', card_idx,
                     'status', status
                 )
@@ -298,7 +298,7 @@ begin
         ) data;
     else
         msg := json_build_object(
-            'type', 'presence',
+            'type', 'server_presence',
             'player_id', NEW.player_id,
             'presence', NEW.presence
         )::text;
@@ -329,7 +329,7 @@ begin
         and presence = 't'
     loop
         perform pg_notify(concat('game_', game_id), json_build_object(
-            'type', 'player_name',
+            'type', 'server_name',
             'player_id', NEW.id,
             'name', NEW.name
         )::text);
@@ -350,7 +350,7 @@ create trigger players_name_change_trigger
 create or replace function board_card_change_notify() returns trigger AS $$
 begin
     perform pg_notify(concat('game_', NEW.game_id), json_build_object(
-        'type', 'board_card',
+        'type', 'server_board_card',
         'idx', NEW.idx,
         'card_id', NEW.card_id
     )::text);
@@ -381,23 +381,29 @@ begin
         row_to_json(data)::text into msg
     from (
         select
-        'move_info_data' as type,
+        'server_move_info' as type,
         (
             select json_build_object(
-                'type', 'score',
+                'type', 'server_score',
                 'player_id', NEW.player_id,
                 'score', score
             )
         ) as score_data,
         (
             select json_build_object(
-                'type', 'move',
-                'idx0', NEW.idx0,
-                'card0_id', NEW.card0_id,
-                'idx1', NEW.idx1,
-                'card1_id', NEW.card1_id,
-                'idx2', NEW.idx2,
-                'card2_id', NEW.card2_id
+                'type', 'server_move',
+                'card0', json_build_object(
+                    'idx', NEW.idx0,
+                    'card_id', NEW.card0_id
+                ),
+                'card1', json_build_object(
+                    'idx', NEW.idx1,
+                    'card_id', NEW.card1_id
+                ),
+                'card2', json_build_object(
+                    'idx', NEW.idx2,
+                    'card_id', NEW.card2_id
+                )
             )
         ) as move_data
     ) as data;
@@ -426,7 +432,7 @@ begin
     and shuffles.player_id = NEW.player_id;
 
     perform pg_notify(concat('game_', NEW.game_id), json_build_object(
-        'type', 'shuffles',
+        'type', 'server_shuffles',
         'player_id', NEW.player_id,
         'shuffles', shuffles
     )::text);
