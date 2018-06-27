@@ -41,14 +41,14 @@ let game_player_presence_test db =
 
     Lwt.return_unit
 
+(* HERE *)
 let create_move_test db =
   fun () ->
     let rec aux i =
         Db.create_game db () >>=? fun game_id ->
         Db.create_player db () >>=? fun player_id ->
         Db.set_game_player_presence db (game_id, player_id, true) >>=? fun () ->
-        Db.find_board_cards db game_id >>=? fun cards ->
-        let cc = Shared_util.compact cards in
+        Db.find_board_cards db game_id >>=? fun board_cards ->
         if Card.exists_set cc then (
             let sets_and_indexes_opt = Card.next_set_and_indexes_of_opt_array (Array.of_list cards) in
             match sets_and_indexes_opt with

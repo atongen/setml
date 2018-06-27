@@ -127,7 +127,7 @@ let makeDims = (rect, ratio, columns, rows) => {
   };
 };
 
-let printSets = boardCards =>
+let printSets = boardCards : list(Messages.board_card_data) =>
   switch (Card.next_set_and_indexes_of_opt_array(boardCards)) {
   | Some(((idx0, _), (idx1, _), (idx2, _))) => Js.log(Printf.sprintf("Set: (%d, %d, %d)", idx0, idx1, idx2))
   | None => Js.log("No sets on board!")
