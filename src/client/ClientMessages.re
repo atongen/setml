@@ -1,78 +1,95 @@
 open Messages;
 
 module ClientMessageConverter: CONVERT = {
+  let card_data_to_json = card_data => {
+    open! Json.Encode;
+    object_([
+      (type_key, string(message_type_to_string(Server_card_type))),
+      (idx_key, int(card_data.idx)),
+      (card_id_key, int(Card.to_int(card_data.card))),
+    ]);
+  };
   let to_json = x => {
     open! Json.Encode;
     let rec aux =
       fun
-      | Game_data(d) => {
-          let player_data = List.map(pd => aux(Player_data(pd)), d.player_data) |> Array.of_list;
-          let board_data = make_board_cards(d.board_data) |> Array.map(aux);
-          let game_update = aux(Game_update(d.game_update));
+      | Server_game(d) => {
+          let player_data = List.map(pd => aux(Server_player(pd)), d.player_data) |> Array.of_list;
+          let board_card_data = List.map(bc => aux(Server_board_card(bc)), d.board_card_data) |> Array.of_list;
+          let game_update = Server_game_update(d.game_update_data);
           object_([
-            (type_key, string(message_type_to_string(Game_data_type))),
+            (type_key, string(message_type_to_string(Server_game_type))),
             (player_data_key, jsonArray(player_data)),
-            (board_data_key, jsonArray(board_data)),
-            (game_update_key, game_update)
+            (board_card_data_key, jsonArray(board_card_data)),
+            (game_update_key, aux(game_update)),
           ]);
         }
-      | Player_data(d) =>
+      | Server_player(d) =>
         object_([
-          (type_key, string(message_type_to_string(Player_data_type))),
+          (type_key, string(message_type_to_string(Server_player_type))),
           (player_id_key, int(d.player_id)),
           (name_key, string(d.name)),
           (presence_key, bool(d.presence)),
           (score_key, int(d.score)),
           (shuffles_key, int(d.shuffles)),
         ])
-      | Player_name(d) =>
+      | Server_name(d) =>
         object_([
-          (type_key, string(message_type_to_string(Player_name_type))),
+          (type_key, string(message_type_to_string(Server_name_type))),
           (player_id_key, int(d.player_id)),
           (name_key, string(d.name)),
         ])
-      | Board_card(d) =>
+      | Server_card(d) => card_data_to_json(d)
+      | Server_board_card(d) =>
         object_([
-          (type_key, string(message_type_to_string(Board_card_type))),
+          (type_key, string(message_type_to_string(Server_board_card_type))),
           (idx_key, int(d.idx)),
           (card_id_key, int(Card.to_int_opt(d.card))),
         ])
-      | Game_update(d) =>
+      | Server_game_update(d) =>
         object_([
-          (type_key, string(message_type_to_string(Game_update_type))),
+          (type_key, string(message_type_to_string(Server_game_update_type))),
           (card_idx_key, int(d.card_idx)),
           (status_key, string(game_status_data_to_string(d.status))),
         ])
-      | Score(d) =>
+      | Server_score(d) =>
         object_([
-          (type_key, string(message_type_to_string(Score_type))),
+          (type_key, string(message_type_to_string(Server_score_type))),
           (player_id_key, int(d.player_id)),
           (score_key, int(d.score)),
         ])
-      | Previous_move(d) =>
+      | Server_move(d) =>
         object_([
-          (type_key, string(message_type_to_string(Previous_move_type))),
-          (card0_id_key, int(Card.to_int(d.card0))),
-          (card1_id_key, int(Card.to_int(d.card1))),
-          (card2_id_key, int(Card.to_int(d.card2))),
+          (type_key, string(message_type_to_string(Server_move_type))),
+          (card0_key, card_data_to_json(d.card0)),
+          (card1_key, card_data_to_json(d.card1)),
+          (card2_key, card_data_to_json(d.card2)),
         ])
-      | Player_presence(d) =>
+      | Server_presence(d) =>
         object_([
-          (type_key, string(message_type_to_string(Player_presence_type))),
+          (type_key, string(message_type_to_string(Server_presence_type))),
           (player_id_key, int(d.player_id)),
           (presence_key, bool(d.presence)),
         ])
-      | Move_data(d) =>
+      | Server_move_info(d) =>
         object_([
-          (type_key, string(message_type_to_string(Move_data_type))),
-          (score_key, aux(Score(d.score))),
-          (previous_move_key, aux(Previous_move(d.previous_move)))
+          (type_key, string(message_type_to_string(Server_move_info_type))),
+          (score_data_key, aux(Server_score(d.score_data))),
+          (move_data_key, aux(Server_move(d.move_data))),
         ])
-      | Shuffles(d) =>
+      | Server_shuffles(d) =>
         object_([
-          (type_key, string(message_type_to_string(Shuffles_type))),
+          (type_key, string(message_type_to_string(Server_shuffles_type))),
           (player_id_key, int(d.player_id)),
-          (shuffles_key, int(d.shuffles))
+          (shuffles_key, int(d.shuffles)),
+        ])
+      | Client_move((token, d)) =>
+        object_([
+          (type_key, string(message_type_to_string(Client_move_type))),
+          (token_key, string(token_to_string(token))),
+          (card0_key, card_data_to_json(d.card0)),
+          (card1_key, card_data_to_json(d.card1)),
+          (card2_key, card_data_to_json(d.card2)),
         ]);
     aux(x) |> Json.stringify;
   };
@@ -83,87 +100,72 @@ module ClientMessageConverter: CONVERT = {
       json |> field(name_key, string),
       json |> field(presence_key, bool),
       json |> field(score_key, int),
-      json |> field(shuffles_key, int)
-    )
-  };
-  let board_card_data_decoder = json => {
-    open! Json.Decode;
-    make_board_card_data(
-        json |> field(idx_key, int),
-        json |> field(card_id_key, int)
-    )
-  };
-  let board_card_decoder = json => {
-    open! Json.Decode;
-    json |> field(card_id_key, int) |> Card.of_int_opt
-  };
-  let game_update_data_decoder = json => {
-    open! Json.Decode;
-    make_game_update_data(
-        json |> field(status_key, string),
-        json |> field(card_idx_key, int)
-    )
-  };
-  let player_name_data_decoder = json => {
-    open! Json.Decode;
-    make_player_name_data(
-      json |> field(player_id_key, int),
-      json |> field(name_key, string)
-    )
+      json |> field(shuffles_key, int),
+    );
   };
   let score_data_decoder = json => {
     open! Json.Decode;
-    make_score_data(
-      json |> field(player_id_key, int),
-      json |> field(score_key, int)
-    )
+    make_score_data(json |> field(player_id_key, int), json |> field(score_key, int));
   };
-  let previous_move_data_decoder = json => {
+  let card_data_decoder = json => {
     open! Json.Decode;
-    make_previous_move_data(
-      json |> field(card0_id_key, int),
-      json |> field(card1_id_key, int),
-      json |> field(card2_id_key, int)
-    )
+    make_card_data(json |> field(idx_key, int), json |> field(card_id_key, int));
   };
-  let player_presence_data_decoder = json => {
+  let board_card_data_decoder = json => {
     open! Json.Decode;
-    make_player_presence_data(
-      json |> field(player_id_key, int),
-      json |> field(presence_key, bool)
-    )
+    make_board_card_data(json |> field(idx_key, int), json |> field(card_id_key, int));
+  };
+  let move_data_decoder = json => {
+    open! Json.Decode;
+    {
+      card0: json |> field(card0_key, card_data_decoder),
+      card1: json |> field(card1_key, card_data_decoder),
+      card2: json |> field(card2_key, card_data_decoder),
+    };
+  };
+  let game_update_data_decoder = json => {
+    open! Json.Decode;
+    make_game_update_data(json |> field(card_idx_key, int), json |> field(status_key, string));
+  };
+  let name_data_decoder = json => {
+    open! Json.Decode;
+    make_name_data(json |> field(player_id_key, int), json |> field(name_key, string));
+  };
+  let presence_data_decoder = json => {
+    open! Json.Decode;
+    make_presence_data(json |> field(player_id_key, int), json |> field(presence_key, bool));
   };
   let shuffles_data_decoder = json => {
     open! Json.Decode;
-    make_shuffles_data(
-      json |> field(player_id_key, int),
-      json |> field(shuffles_key, int)
-    )
+    make_shuffles_data(json |> field(player_id_key, int), json |> field(shuffles_key, int));
   };
   let of_json = str => {
     open! Json.Decode;
-    let rec aux = json => {
+    let aux = json => {
       let msgType = json |> field(type_key, string) |> message_type_of_string;
       switch (msgType) {
-      | Game_data_type =>
+      | Server_game_type =>
         let player_data = json |> field(player_data_key, array(player_data_decoder)) |> Array.to_list;
-        let board_data = json |> field(board_data_key, array(board_card_decoder));
+        let board_card_data = json |> field(board_card_data_key, array(board_card_data_decoder)) |> Array.to_list;
         let game_update = json |> field(game_update_key, game_update_data_decoder);
-        make_game_data(player_data, board_data, game_update);
-      | Player_data_type =>
-        Player_data(player_data_decoder(json))
-      | Player_name_type =>
-        Player_name(player_name_data_decoder(json))
-      | Board_card_type => Board_card(board_card_data_decoder(json))
-      | Game_update_type => Game_update(game_update_data_decoder(json))
-      | Score_type => Score(score_data_decoder(json))
-      | Previous_move_type => Previous_move(previous_move_data_decoder(json))
-      | Player_presence_type => Player_presence(player_presence_data_decoder(json))
-      | Move_data_type =>
-        let score = json |> field(score_key, score_data_decoder);
-        let previous_move = json |> field(previous_move_key, previous_move_data_decoder);
-        make_move_data(score, previous_move)
-      | Shuffles_type => Shuffles(shuffles_data_decoder(json))
+        make_server_game(player_data, board_card_data, game_update);
+      | Server_player_type => Server_player(player_data_decoder(json))
+      | Server_name_type => Server_name(name_data_decoder(json))
+      | Server_card_type => Server_card(card_data_decoder(json))
+      | Server_board_card_type => Server_board_card(board_card_data_decoder(json))
+      | Server_game_update_type => Server_game_update(game_update_data_decoder(json))
+      | Server_score_type => Server_score(score_data_decoder(json))
+      | Server_move_type => Server_move(move_data_decoder(json))
+      | Server_presence_type => Server_presence(presence_data_decoder(json))
+      | Server_move_info_type =>
+        let score_data = json |> field(score_data_key, score_data_decoder);
+        let move_data = json |> field(move_data_key, move_data_decoder);
+        Server_move_info({score_data, move_data});
+      | Server_shuffles_type => Server_shuffles(shuffles_data_decoder(json))
+      | Client_move_type =>
+        let token = json |> field(token_key, string) |> token_of_string;
+        let move_data = move_data_decoder(json);
+        Client_move((token, move_data))
       };
     };
     let json = Json.parseOrRaise(str);

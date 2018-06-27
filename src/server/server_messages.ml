@@ -144,7 +144,7 @@ module Server_message_converter : Messages.CONVERT = struct
         (json |> Util.member shuffles_key |> Util.to_int)
 
     let of_json str =
-        let rec aux json =
+        let aux json =
             let message_type = json |> Util.member type_key |> Util.to_string |> message_type_of_string in
             match message_type with
                 | Server_game_type ->

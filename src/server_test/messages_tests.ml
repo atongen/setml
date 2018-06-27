@@ -26,6 +26,7 @@ let convert_tests =
         78; 79; 80; 81;
     ]) (make_game_update_data 15 "started");
     make_server_name 2 "andrew2";
+    make_server_card 5 7;
     make_server_board_card 5 7;
     make_server_game_update 13 "new";
     make_server_game_update 17 "started";

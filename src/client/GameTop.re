@@ -11,7 +11,7 @@ type action =
 
 type state = {
   ws: ref(option(WebSockets.WebSocket.t)),
-  board: array(option(Card.t)),
+  board: list(Messages.board_card_data),
   players: list(player_data),
 };
 
@@ -22,25 +22,19 @@ let handleMessage = (evt, self) => {
 
 let handleReceiveMessage = (state, msg) =>
   switch (msg) {
-  | Game_data(d) =>
-    ReasonReact.Update({...state, board: d.board_data, players: d.player_data});
-  | Player_data(d) =>
-    ReasonReact.NoUpdate;
-  | Player_name(d) =>
-    ReasonReact.NoUpdate;
-  | Board_card(d) =>
-    ReasonReact.NoUpdate;
-  | Game_update(d) =>
-    ReasonReact.NoUpdate;
-  | Score(d) =>
-    ReasonReact.NoUpdate;
-  | Previous_move(d) =>
-    ReasonReact.NoUpdate;
-  | Player_presence(d) =>
-    ReasonReact.NoUpdate;
-  | Move_data(d) =>
-    ReasonReact.NoUpdate;
-  | Shuffles(d) =>
+  | Server_game(d) => ReasonReact.Update({...state, board: d.board_card_data, players: d.player_data})
+  | Server_player(d) => ReasonReact.NoUpdate
+  | Server_name(d) => ReasonReact.NoUpdate
+  | Server_card(d) => ReasonReact.NoUpdate
+  | Server_board_card(d) => ReasonReact.NoUpdate
+  | Server_game_update(d) => ReasonReact.NoUpdate
+  | Server_score(d) => ReasonReact.NoUpdate
+  | Server_move(d) => ReasonReact.NoUpdate
+  | Server_presence(d) => ReasonReact.NoUpdate
+  | Server_move_info(d) => ReasonReact.NoUpdate
+  | Server_shuffles(d) => ReasonReact.NoUpdate
+  | Client_move(d) =>
+    Js.log("Client received a client message");
     ReasonReact.NoUpdate;
   };
 

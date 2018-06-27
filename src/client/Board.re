@@ -24,7 +24,7 @@ type state = {
   hovered: option(int),
   selected: Set.Int.t,
   context: ref(option(Canvas2dRe.t)),
-  boardCards: array(option(Card.t)),
+  boardCards: list(Messages.board_card_data),
 };
 
 let component = ReasonReact.reducerComponent("Board");
@@ -78,13 +78,19 @@ let blockSize = (width, height, columns, rows) => {
 
 let border = (width, height) => min(width, height) /. 25.;
 
-let drawBoard = (ctx, dims, cards: array(option(Card.t))) => {
+let getBoardCard = (boardCards: list(Messages.board_card_data), idx) =>
+  switch (List.getBy(boardCards, bcd => bcd.idx == idx)) {
+  | Some(bcd) => bcd.card
+  | None => None
+  };
+
+let drawBoard = (ctx, dims, cards: list(Messages.board_card_data)) => {
   drawRect(ctx, randomColor(), dims.border);
   for (i in 0 to dims.rows - 1) {
     for (j in 0 to dims.columns - 1) {
       let idx = i * dims.columns + j;
-      switch (dims.blocks[idx], Array.get(cards, idx)) {
-      | (Some(rect), Some(cardOpt)) => drawBlock(ctx, randomColor(), idx, rect, cardOpt)
+      switch (dims.blocks[idx], getBoardCard(cards, idx)) {
+      | (Some(rect), Some(card) as cardOpt) => drawBlock(ctx, randomColor(), idx, rect, cardOpt)
       | (Some(rect), None) =>
         Js.log("drawBoard error: No board card provided at idx" ++ string_of_int(idx) ++ "!");
         drawBlock(ctx, randomColor(), idx, rect, None);
@@ -121,38 +127,31 @@ let makeDims = (rect, ratio, columns, rows) => {
   };
 };
 
-let printBoardCards = boardCards => {
-    Array.forEachWithIndex(boardCards, (i, c) =>
-        switch(c) {
-        | Some(card) => Js.log(string_of_int(i) ++ ": " ++ Card.to_string(card));
-        | None =>  Js.log(string_of_int(i) ++ ": NONE");
-        }
-    );
-};
-
 let printSets = boardCards =>
-    switch(Card.next_set_and_indexes_of_opt_array(boardCards)) {
-    | Some(((idx0, _), (idx1, _), (idx2, _))) => Js.log(Printf.sprintf("Set: (%d, %d, %d)", idx0, idx1, idx2));
-    | None => Js.log("No sets on board!");
-    };
+  switch (Card.next_set_and_indexes_of_opt_array(boardCards)) {
+  | Some(((idx0, _), (idx1, _), (idx2, _))) => Js.log(Printf.sprintf("Set: (%d, %d, %d)", idx0, idx1, idx2))
+  | None => Js.log("No sets on board!")
+  };
 
-let shouldRedraw = (oldState: state, newState: state) => {
-  (oldState.dims.size != newState.dims.size) || (oldState.boardCards != newState.boardCards);
-};
+let shouldRedraw = (oldState: state, newState: state) =>
+  oldState.dims.size != newState.dims.size || oldState.boardCards != newState.boardCards;
 
-let isSet = (boardCards, idxs) =>
-    if (Array.length(boardCards) != 12 || Set.Int.size(idxs) != 3) {
-        false
-    } else {
-        let idxa = Set.Int.toArray(idxs);
-        let c0o = Array.getExn(boardCards, Array.getExn(idxa, 0));
-        let c1o = Array.getExn(boardCards, Array.getExn(idxa, 1));
-        let c2o = Array.getExn(boardCards, Array.getExn(idxa, 2));
-        switch (c0o, c1o, c2o) {
-        | (Some(c0), Some(c1), Some(c2)) => Card.is_set(c0, c1, c2);
-        | (_, _, _) => false;
-        }
+let isSet = (boardCards: list(Messages.board_card_data), idxs) =>
+  if (List.length(boardCards) != 12 || Set.Int.size(idxs) != 3) {
+    false;
+  } else {
+    let idxa = Set.Int.toArray(idxs);
+    let idx0 = Array.getExn(idxa, 0);
+    let idx1 = Array.getExn(idxa, 1);
+    let idx2 = Array.getExn(idxa, 2);
+    let c0o = getBoardCard(boardCards, idx0);
+    let c1o = getBoardCard(boardCards, idx1);
+    let c2o = getBoardCard(boardCards, idx2);
+    switch (c0o, c1o, c2o) {
+    | (Some(c0), Some(c1), Some(c2)) => Card.is_set(c0, c1, c2)
+    | (_, _, _) => false
     };
+  };
 
 let make = (_children, ~rect, ~ratio, ~columns, ~rows, ~boardCards) => {
   ...component,
@@ -162,24 +161,32 @@ let make = (_children, ~rect, ~ratio, ~columns, ~rows, ~boardCards) => {
       switch (Rect.findRect(state.dims.blocks, (x, y))) {
       | Some(idx) =>
         if (Set.Int.has(state.selected, idx)) {
-            let newSelected = Set.Int.remove(state.selected, idx);
-            Js.log("Current selections: (" ++ String.concat(",", List.map(Set.Int.toList(newSelected), string_of_int)) ++ ")");
-            ReasonReact.Update({...state, selected: newSelected});
+          let newSelected = Set.Int.remove(state.selected, idx);
+          Js.log(
+            "Current selections: ("
+            ++ String.concat(",", List.map(Set.Int.toList(newSelected), string_of_int))
+            ++ ")",
+          );
+          ReasonReact.Update({...state, selected: newSelected});
         } else {
-            let newSelected = Set.Int.add(state.selected, idx);
-            let l = Set.Int.size(newSelected);
-            if (l < 3) {
-                Js.log("Current selections: (" ++ String.concat(",", List.map(Set.Int.toList(newSelected), string_of_int)) ++ ")");
-                ReasonReact.Update({...state, selected: newSelected});
+          let newSelected = Set.Int.add(state.selected, idx);
+          let l = Set.Int.size(newSelected);
+          if (l < 3) {
+            Js.log(
+              "Current selections: ("
+              ++ String.concat(",", List.map(Set.Int.toList(newSelected), string_of_int))
+              ++ ")",
+            );
+            ReasonReact.Update({...state, selected: newSelected});
+          } else {
+            if (isSet(state.boardCards, newSelected)) {
+              Js.log("You got a set!");
             } else {
-                if (isSet(state.boardCards, newSelected)) {
-                    Js.log("You got a set!");
-                } else {
-                    Js.log("That's not a set, dummy!");
-                };
-                Js.log("Current selections: ()");
-                ReasonReact.Update({...state, selected: Set.Int.empty});
+              Js.log("That's not a set, dummy!");
             };
+            Js.log("Current selections: ()");
+            ReasonReact.Update({...state, selected: Set.Int.empty});
+          };
         }
       | None => ReasonReact.NoUpdate
       }
@@ -231,7 +238,7 @@ let make = (_children, ~rect, ~ratio, ~columns, ~rows, ~boardCards) => {
       | _ => Js.log("Unable to redraw blocks: No context found!")
       };
     },
-  render: ({state, send}) => {
+  render: ({state, send}) =>
     <canvas
       id="board"
       width=(Shared_util.roundis(state.dims.size.w))
@@ -239,6 +246,5 @@ let make = (_children, ~rect, ~ratio, ~columns, ~rows, ~boardCards) => {
       style=(Rect.toStyle(rect))
       onClick=(evt => send(getClick(evt)))
       onMouseMove=(evt => send(getHover(evt)))
-    />
-  }
+    />,
 };
