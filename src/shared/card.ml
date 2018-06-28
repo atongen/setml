@@ -1,5 +1,3 @@
-open Shared_util
-
 type attr =
   | AttrZero
   | AttrOne
@@ -122,34 +120,8 @@ let complete c0 c1 =
     shape = complete_attr c0.shape c1.shape;
   }
 
-let triples cards =
-  let s = List.sort_uniq compare cards in
-  let arrays = List.map Array.of_list (Combinatorics.comb0 s 3) in
-  let rec aux acc = function
-    | [] -> acc
-    | hd :: tl -> if Array.length hd = 3 then
-        aux ((hd.(0), hd.(1), hd.(2)) :: acc) tl
-      else
-        raise (Invalid_argument("Triple combination with length other than 3"))
-  in aux [] arrays
-
-let triple_generator cards =
-  let s = List.sort_uniq compare cards in
-  let gen = Combinatorics.comb_generator s 3 in
-  let tg () =
-    match gen () with
-    | Some(l) ->
-      if List.length l = 3 then
-        let a = Array.of_list l in
-        Some(a.(0), a.(1), a.(2))
-      else
-        raise (Invalid_argument("Triple combination with length other than 3"))
-    | None -> None
-  in
-  tg
-
 let find_sets cards =
-  let tg = triple_generator cards in
+  let tg = Combinatorics.triple_generator ~comp:compare cards in
   let rec aux acc = function
     | Some (triple) -> if is_triple_set triple then
         aux (triple :: acc) (tg ())
@@ -160,7 +132,7 @@ let find_sets cards =
   aux [] (tg ())
 
 let find_non_sets cards =
-  let tg = triple_generator cards in
+  let tg = Combinatorics.triple_generator ~comp:compare cards in
   let rec aux acc = function
     | Some (triple) -> if not (is_triple_set triple) then
         aux (triple :: acc) (tg ())
@@ -171,7 +143,7 @@ let find_non_sets cards =
   aux [] (tg ())
 
 let count_sets cards =
-  let tg = triple_generator cards in
+  let tg = Combinatorics.triple_generator ~comp:compare cards in
   let rec aux acc = function
     | Some (triple) -> if is_triple_set triple then
         aux (acc + 1) (tg ())
@@ -186,7 +158,7 @@ let count_non_sets cards =
   l - (count_sets cards)
 
 let exists_set cards =
-  let tg = triple_generator cards in
+  let tg = Combinatorics.triple_generator ~comp:compare cards in
   let rec aux = function
     | Some (triple) -> if is_triple_set triple then true
       else aux (tg ())
@@ -194,48 +166,50 @@ let exists_set cards =
   in aux (tg ())
 
 let exists_non_set cards =
-  let tg = triple_generator cards in
+  let tg = Combinatorics.triple_generator ~comp:compare cards in
   let rec aux = function
     | Some (triple) -> if not (is_triple_set triple) then true
       else aux (tg ())
     | None -> false
   in aux (tg ())
 
-let find_idx x l =
-  let rec aux x c = function
-    | [] -> None
-    | hd::tl -> if (equal hd x) then Some(c) else aux x (c+1) tl
-  in aux x 0 l
-
-let triple_with_indexes cards (c0, c1, c2) =
-  let oc0 = find_idx c0 cards in
-  let oc1 = find_idx c1 cards in
-  let oc2 = find_idx c2 cards in
-  match (oc0, oc1, oc2) with
-  | (Some(idx0), Some(idx1), Some(idx2)) ->
-    Some((
-        (idx0, c0),
-        (idx1, c1),
-        (idx2, c2)
-      ))
-  | _ -> None
-
-let next_set_and_indexes cards =
-  let tg = triple_generator cards in
-  let rec aux = function
-    | Some (triple) -> if is_triple_set triple then
-        triple_with_indexes cards triple
-      else aux (tg ())
-    | None -> None
-  in aux (tg ())
-
-let next_set_and_indexes_of_opt_array cards =
+(* TODO: Move these to new module to avoid dependency cycle *)
+let board_cards_compact (board_cards: Messages.board_card_data list) =
+    let open Messages in
     let rec aux acc = function
-      | [] -> acc
-      | hd :: tl ->
-        match hd with
-        | Some c -> aux (c :: acc) tl
+    | [] -> acc
+    | (hd: board_card_data) :: tl -> match hd.card with
+        | Some x ->
+            let c = { idx = hd.idx; card = x } in
+            aux (c :: acc) tl
         | None -> aux acc tl
     in
-    let l = aux [] (List.rev (Array.to_list cards)) in
-    next_set_and_indexes l
+    aux [] (List.rev board_cards)
+
+let board_cards_exists_set (board_cards: Messages.board_card_data list) =
+    let cards = board_cards_compact board_cards in
+    let open Messages in
+    let c = List.map (fun (cd: card_data) -> cd.card) cards in
+    exists_set c
+
+let c_to_bc (c: Messages.card_data): Messages.board_card_data =
+    let open Messages in
+    {
+        idx = c.idx;
+        card = Some c.card;
+    }
+
+let board_cards_next_set (board_cards: Messages.board_card_data list) =
+    let cards = board_cards_compact board_cards in
+    let open Messages in
+    let compare_cards = (fun (cd0: card_data) (cd1: card_data) ->
+        compare cd0.card cd1.card) in
+    let tg = Combinatorics.triple_generator ~comp:compare_cards cards in
+    let rec aux = function
+    | Some (cd0, cd1, cd2) ->
+        if Card.is_set cd0.card cd1.card cd2.card then
+            Some(c_to_bc cd0, c_to_bc cd1, c_to_bc cd2)
+        else
+            aux (tg ())
+    | None -> None
+    in aux (tg ())

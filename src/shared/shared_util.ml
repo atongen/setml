@@ -66,14 +66,3 @@ let card_list_to_string m l =
         Printf.sprintf "(idx: %d, card_id: %d)" idx card_id
     ) l in
     Printf.sprintf "%s: %s" m (String.concat ", " s)
-
-let board_cards_exists_set (board_cards: Messages.board_card_data list) =
-    let open Messages in
-    let rec aux acc = function
-    | [] -> acc
-    | (hd: board_card_data) :: tl -> match hd.card with
-        | Some x -> aux (x :: acc) tl
-        | None -> aux acc tl
-    in
-    let cards = aux [] (List.rev board_cards) in
-    Card.exists_set cards

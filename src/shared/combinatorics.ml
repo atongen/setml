@@ -71,3 +71,30 @@ let rec comb1 l k =
       let with_h = List.map (fun l -> hd :: l) (comb1 tl (k-1)) in
       let without_h = comb1 tl k in
       with_h @ without_h
+
+let triples ?(comp=compare) items =
+  let s = List.sort_uniq comp items in
+  let arrays = List.map Array.of_list (comb0 s 3) in
+  let rec aux acc = function
+    | [] -> acc
+    | hd :: tl -> if Array.length hd = 3 then
+        aux ((hd.(0), hd.(1), hd.(2)) :: acc) tl
+      else
+        raise (Invalid_argument("Triple combination with length other than 3"))
+  in aux [] arrays
+
+
+let triple_generator ?(comp=compare) items =
+  let s = List.sort_uniq comp items in
+  let gen = comb_generator s 3 in
+  let tg () =
+    match gen () with
+    | Some(l) ->
+      if List.length l = 3 then
+        let a = Array.of_list l in
+        Some(a.(0), a.(1), a.(2))
+      else
+        raise (Invalid_argument("Triple combination with length other than 3"))
+    | None -> None
+  in
+  tg

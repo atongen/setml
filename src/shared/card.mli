@@ -63,6 +63,6 @@ val exists_set : t list -> bool
 
 val exists_non_set : t list -> bool
 
-val next_set_and_indexes : t list -> ((int * t) * (int * t) * (int * t)) option
+val board_card_exists_set : Messages.board_card_data list -> bool
 
-val next_set_and_indexes_of_opt_array : (t option) array -> ((int * t) * (int * t) * (int * t)) option
+val board_card_next_set : Messages.board_card_data list -> (Messages.board_card_data * Messages.board_card_data * Messages.board_card_data) option
