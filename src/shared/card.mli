@@ -62,7 +62,3 @@ val count_non_sets : t list -> int
 val exists_set : t list -> bool
 
 val exists_non_set : t list -> bool
-
-val board_card_exists_set : Messages.board_card_data list -> bool
-
-val board_card_next_set : Messages.board_card_data list -> (Messages.board_card_data * Messages.board_card_data * Messages.board_card_data) option

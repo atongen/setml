@@ -49,11 +49,11 @@ let create_move_test db =
         Db.create_player db () >>=? fun player_id ->
         Db.set_game_player_presence db (game_id, player_id, true) >>=? fun () ->
         Db.find_board_cards db game_id >>=? fun board_cards ->
-        if Card.exists_set cc then (
-            let sets_and_indexes_opt = Card.next_set_and_indexes_of_opt_array (Array.of_list cards) in
-            match sets_and_indexes_opt with
-            | Some ((idx0, c0), (idx1, c1), (idx2, c2)) ->
-                assert_bool "cards are set" (Card.is_set c0 c1 c2);
+        if Messages_util.board_card_exists_set board_cards then (
+            let next_set = Messages_util.board_cards_next_set board_cards in
+            match next_set with
+            | Some (bc0, bc1, bc2) ->
+                assert_bool "cards are set" (Card.is_set bc0.card bc1.card bc2);
                 Db.create_move db (game_id, player_id, ((idx0, c0), (idx1, c1), (idx2, c2))) >>=? fun made_move ->
                 assert_equal 15 made_move;
                 Db.find_player_data db game_id >>=? fun players_data ->
@@ -115,12 +115,11 @@ let complete_game_test db =
                     make_move i (j+1) true
                 )
             ) else (
-                let cards = Array.of_list board_cards in
-                let sets_and_indexes_opt = Card.next_set_and_indexes_of_opt_array cards in
-                match sets_and_indexes_opt with
-                | Some ((idx0, c0), (idx1, c1), (idx2, c2)) ->
-                    assert_bool "cards are set" (Card.is_set c0 c1 c2);
-                    Db.create_move db (game_id, player_id, ((idx0, c0), (idx1, c1), (idx2, c2))) >>=? fun made_move ->
+                let next_set = Messages_util.board_cards_next_set board_cards in
+                match next_set with
+                | Some (bc0, bc1, bc2) ->
+                    assert_bool "cards are set" (Messages_util.board_cards_are_set bc0 bc1 bc2);
+                    Db.create_move db (game_id, player_id, ((bc0.idx, bc0.card), (idx1, c1), (idx2, c2))) >>=? fun made_move ->
                     assert (made_move > 12);
 
                     Db.find_player_data db game_id >>=? fun players_data ->
