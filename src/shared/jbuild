@@ -6,5 +6,5 @@
     card
     combinatorics
     messages
-    shared_util
-    messages_util))))
+    messages_util
+    shared_util))))

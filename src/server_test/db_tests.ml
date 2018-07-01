@@ -41,7 +41,6 @@ let game_player_presence_test db =
 
     Lwt.return_unit
 
-(* HERE *)
 let create_move_test db =
   fun () ->
     let rec aux i =
@@ -49,12 +48,10 @@ let create_move_test db =
         Db.create_player db () >>=? fun player_id ->
         Db.set_game_player_presence db (game_id, player_id, true) >>=? fun () ->
         Db.find_board_cards db game_id >>=? fun board_cards ->
-        if Messages_util.board_card_exists_set board_cards then (
-            let next_set = Messages_util.board_cards_next_set board_cards in
-            match next_set with
+        if Messages_util.board_cards_exists_set board_cards then (
+            match Messages_util.board_cards_next_set board_cards with
             | Some (bc0, bc1, bc2) ->
-                assert_bool "cards are set" (Card.is_set bc0.card bc1.card bc2);
-                Db.create_move db (game_id, player_id, ((idx0, c0), (idx1, c1), (idx2, c2))) >>=? fun made_move ->
+                Db.create_move db (game_id, player_id, (bc0, bc1, bc2)) >>=? fun made_move ->
                 assert_equal 15 made_move;
                 Db.find_player_data db game_id >>=? fun players_data ->
                 assert_equal ~printer:string_of_int 1 (List.length players_data);
@@ -63,13 +60,10 @@ let create_move_test db =
                 | None -> assert_failure "Player score");
                 Db.find_game_card_idx db game_id >>=? fun card_idx ->
                 assert_equal (12+3) card_idx;
-                Db.find_board_cards db game_id >>=? fun board_cards ->
-                let board = board_cards |> Array.of_list in
-                List.iter (fun (idx, c_orig) ->
-                    match board.(idx) with
-                    | Some c -> refute_card_equal c_orig c
-                    | None -> assert_failure "board card not found"
-                ) [(idx0, c0); (idx1, c1); (idx2, c2)];
+                Db.find_board_cards db game_id >>=? fun new_board_cards ->
+                List.iter2 (fun bc_orig bc_new ->
+                    assert_bool "board cards have changed" (bc_orig != bc_new)
+                ) board_cards new_board_cards;
                 Lwt.return_unit
             | None -> assert_failure "No sets/indexes found"
         ) else (
@@ -102,7 +96,7 @@ let complete_game_test db =
                     Db.find_game_cards db (game_id, 0) >>=? fun cards_after ->
                     Db.find_board_cards db game_id >>=? fun board_after ->
                     assert_bool "cards are different after shuffle" (cards_before != cards_after);
-                    let card_ids = List.map (fun (_, card_id) -> card_id) cards_after in
+                    let card_ids = List.map (fun (cd: Messages.card_data) -> Card.to_int cd.card) cards_after in
                     let scids = List.sort_uniq compare card_ids in
                     assert_equal ~msg:"sorted unique cards should have length 81 after shuffle" ~printer:string_of_int 81 (List.length scids);
 
@@ -115,11 +109,9 @@ let complete_game_test db =
                     make_move i (j+1) true
                 )
             ) else (
-                let next_set = Messages_util.board_cards_next_set board_cards in
-                match next_set with
+                match Messages_util.board_cards_next_set board_cards with
                 | Some (bc0, bc1, bc2) ->
-                    assert_bool "cards are set" (Messages_util.board_cards_are_set bc0 bc1 bc2);
-                    Db.create_move db (game_id, player_id, ((bc0.idx, bc0.card), (idx1, c1), (idx2, c2))) >>=? fun made_move ->
+                    Db.create_move db (game_id, player_id, (bc0, bc1, bc2)) >>=? fun made_move ->
                     assert (made_move > 12);
 
                     Db.find_player_data db game_id >>=? fun players_data ->
@@ -148,8 +140,8 @@ let create_failed_move_test db =
         Db.create_player db () >>=? fun player_id ->
         Db.set_game_player_presence db (game_id, player_id, true) >>=? fun () ->
         Db.find_board_cards db game_id >>=? fun old_board_idxs ->
-        let c0, c1, c2 = (Card.of_int 1, Card.of_int 2, Card.of_int 3) in
-        Db.create_move db (game_id, player_id, ((0, c0), (1, c1), (2, c2))) >>= function
+        let bc0, bc1, bc2 = (Messages.make_board_card_data 1 2, Messages.make_board_card_data 3 4, Messages.make_board_card_data 5 6) in
+        Db.create_move db (game_id, player_id, (bc0, bc1, bc2)) >>= function
         | Ok _ -> assert_failure "should not have made move"
         | Error e ->
             Db.find_player_data db game_id >>=? fun players_data ->

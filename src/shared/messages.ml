@@ -135,6 +135,13 @@ let make_card_data idx card_id = {
 let card_data_to_string d =
     Printf.sprintf "(%d, %d)" d.idx (Card.to_int d.card)
 
+let card_data_to_board_card_data (c: card_data): board_card_data =
+    {
+        idx = c.idx;
+        card = Some c.card;
+    }
+
+
 type move_data = {
     card0: card_data;
     card1: card_data;

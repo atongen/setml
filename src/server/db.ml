@@ -309,22 +309,25 @@ module I = struct
         C.find Q.increment_game_card_idx_query (offset, game_id) >>=? fun card_idx ->
         Lwt.return_ok card_idx
 
-    let create_move (module C : Caqti_lwt.CONNECTION) (game_id, player_id, ((idx0, card0), (idx1, card1), (idx2, card2))) =
-        let card0_id, card1_id, card2_id = (Card.to_int card0, Card.to_int card1, Card.to_int card2) in
-        C.exec (Q.set_transaction_mode_query "serializable") () >>=? fun () ->
-        C.exec Q.create_move_query (game_id, player_id, ((idx0, card0_id), (idx1, card1_id), (idx2, card2_id))) >>=? fun () ->
-        C.find Q.find_game_card_idx_query game_id >>=? fun deck_card_idx ->
-        C.collect_list Q.find_game_cards_query (game_id, deck_card_idx, 3) >>=? fun cards_list ->
-        let card_ids = List.map (fun (_, card_id) -> card_id) cards_list |> Array.of_list in
-        let new_card_0_id = Server_util.get_or card_ids 0 81 in
-        let new_card_1_id = Server_util.get_or card_ids 1 81 in
-        let new_card_2_id = Server_util.get_or card_ids 2 81 in
-        C.find Q.update_board_cards_query ((idx0, card0_id, new_card_0_id), (idx1, card1_id, new_card_1_id), (idx2, card2_id, new_card_2_id), game_id) >>=? fun num_updated ->
-        if num_updated != 3 then
-            Lwt.return_error (Client_error "3 board cards were not updated")
-        else
-            C.find Q.increment_game_card_idx_query (3, game_id) >>=? fun card_idx ->
-            Lwt.return_ok card_idx
+    let create_move (module C : Caqti_lwt.CONNECTION) (game_id, player_id, (bc0, bc1, bc2)) =
+        match Messages_util.board_cards_is_set (bc0, bc1, bc2) with
+        | Some (c0, c1, c2) ->
+            let (idx0, card0_id, idx1, card1_id, idx2, card2_id) = (c0.idx, Card.to_int c0.card, c1.idx, Card.to_int c1.card, c2.idx, Card.to_int c2.card) in
+            C.exec (Q.set_transaction_mode_query "serializable") () >>=? fun () ->
+            C.exec Q.create_move_query (game_id, player_id, ((idx0, card0_id), (idx1, card1_id), (idx2, card2_id))) >>=? fun () ->
+            C.find Q.find_game_card_idx_query game_id >>=? fun deck_card_idx ->
+            C.collect_list Q.find_game_cards_query (game_id, deck_card_idx, 3) >>=? fun cards_list ->
+            let card_ids = List.map (fun (_, card_id) -> card_id) cards_list |> Array.of_list in
+            let new_card_0_id = Server_util.get_or card_ids 0 81 in
+            let new_card_1_id = Server_util.get_or card_ids 1 81 in
+            let new_card_2_id = Server_util.get_or card_ids 2 81 in
+            C.find Q.update_board_cards_query ((idx0, card0_id, new_card_0_id), (idx1, card1_id, new_card_1_id), (idx2, card2_id, new_card_2_id), game_id) >>=? fun num_updated ->
+            if num_updated != 3 then
+                Lwt.return_error (Client_error "3 board cards were not updated")
+            else
+                C.find Q.increment_game_card_idx_query (3, game_id) >>=? fun card_idx ->
+                Lwt.return_ok card_idx
+        | None -> Lwt.return_error (Client_error "board cards are not a set")
 
     let shuffle_board (module C : Caqti_lwt.CONNECTION) (game_id, player_id) =
         C.exec (Q.set_transaction_mode_query "serializable") () >>=? fun () ->
