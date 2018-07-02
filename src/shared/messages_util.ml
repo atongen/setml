@@ -25,6 +25,13 @@ let board_cards_is_set ((bc0: board_card_data), (bc1: board_card_data), (bc2: bo
         else None
     | (_, _, _) -> None
 
+let board_cards_list_is_set l =
+    if List.length l == 3 then
+        let a = Array.of_list l in
+        let c = (a.(0), a.(1), a.(2)) in
+        board_cards_is_set c
+    else None
+
 let board_cards_next_set (board_cards: board_card_data list) =
     let cards = board_cards_compact board_cards in
     let cc = (fun (cd0: card_data) (cd1: card_data) -> Card.compare cd0.card cd1.card) in

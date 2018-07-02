@@ -4,9 +4,8 @@ open Messages;
 
 open ClientMessages;
 
-/*[@bs.val] external requestAnimationFrame : (unit => unit) => unit = "";*/
 type action =
-  | SendMessage(string)
+  | SendMessage(Messages.t)
   | ReceiveMessage(string);
 
 type state = {
@@ -15,7 +14,7 @@ type state = {
   players: list(player_data),
 };
 
-let handleMessage = (evt, self) => {
+let receiveMessage = (evt, self) => {
   let str = WebSockets.MessageEvent.stringData(evt);
   self.ReasonReact.send(ReceiveMessage(str));
 };
@@ -38,42 +37,41 @@ let handleReceiveMessage = (state, msg) =>
     ReasonReact.NoUpdate;
   };
 
-let updateFrame = self => ();
+let wsSendMessage = (msg, self) => self.ReasonReact.send(SendMessage(msg));
 
-/* Nothing to do here yet... */
 let component = ReasonReact.reducerComponent("Game");
 
 let make = _children => {
   ...component,
   reducer: (action, state) =>
     switch (action) {
-    | ReceiveMessage(message) =>
-      let msg = ClientMessageConverter.of_json(message);
+    | ReceiveMessage(str) =>
+      Js.log(str);
+      let msg = ClientMessageConverter.of_json(str);
       Js.log(Messages.to_string(msg));
       handleReceiveMessage(state, msg);
-    | SendMessage(message) =>
+    | SendMessage(msg) =>
+      let str = ClientMessageConverter.to_json(msg);
       switch (state.ws) {
-      | {contents: Some(ws)} => WebSockets.WebSocket.sendString(message, ws)
+      | {contents: Some(ws)} => WebSockets.WebSocket.sendString(str, ws)
       | _ => Js.log("Unable to send: No websocket connection!")
       };
       ReasonReact.NoUpdate;
     },
-  initialState: () => {ws: ref(None), board: [||], players: []},
+  initialState: () => {ws: ref(None), board: [], players: []},
   didMount: self => {
     switch (ClientUtil.ws_url()) {
     | Some(ws_url) =>
       let ws = WebSockets.WebSocket.make(ws_url);
       self.state.ws := Some(ws);
-      WebSockets.WebSocket.(ws |> on(Message(self.handle(handleMessage))) |> ignore);
+      WebSockets.WebSocket.(ws |> on(Message(self.handle(receiveMessage))) |> ignore);
     | None => Js.log("Unable to get websocket url!")
     };
-    /*let rec onAnimationFrame = () => {
-        updateFrame(self);
-        requestAnimationFrame(onAnimationFrame);
-      };
-      requestAnimationFrame(onAnimationFrame);*/
     ReasonReact.NoUpdate;
   },
-  render: ({state, send}) =>
-    <section className="main"> <GameLayout dim0=3 dim1=4 boardCards=state.board /> </section>,
+  render: self => {
+    /*let sendMessage = msg => wsSendMessage(msg, self); */
+    let sendMessage = msg => wsSendMessage(msg, self);
+    <section className="main"> <GameLayout dim0=3 dim1=4 boardCards=self.state.board sendMessage /> </section>
+  },
 };

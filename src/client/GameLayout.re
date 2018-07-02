@@ -40,7 +40,7 @@ let handleResize = (evt, self) => self.ReasonReact.send(Resize);
 
 let component = ReasonReact.reducerComponent("GameLayout");
 
-let make = (_children, ~dim0, ~dim1, ~boardCards) => {
+let make = (_children, ~dim0, ~dim1, ~boardCards, ~sendMessage) => {
   ...component,
   reducer: (action, state) =>
     switch (action) {
@@ -81,6 +81,9 @@ let make = (_children, ~dim0, ~dim1, ~boardCards) => {
         let board = screen.height - sidebar;
         (Rect.makei(0, 0, screen.width, board), Rect.makei(0, board, screen.width, screen.height - board));
       };
-    <div> <Board rect=boardRect ratio=screen.ratio columns rows boardCards /> <Sidebar rect=sidebarRect /> </div>;
+    <div>
+      <Board rect=boardRect ratio=screen.ratio columns rows boardCards sendMessage />
+      <Sidebar rect=sidebarRect />
+    </div>;
   },
 };
