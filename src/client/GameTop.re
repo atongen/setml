@@ -37,8 +37,6 @@ let handleReceiveMessage = (state, msg) =>
     ReasonReact.NoUpdate;
   };
 
-let wsSendMessage = (msg, self) => self.ReasonReact.send(SendMessage(msg));
-
 let component = ReasonReact.reducerComponent("Game");
 
 let make = _children => {
@@ -70,8 +68,7 @@ let make = _children => {
     ReasonReact.NoUpdate;
   },
   render: self => {
-    /*let sendMessage = msg => wsSendMessage(msg, self); */
-    let sendMessage = msg => wsSendMessage(msg, self);
-    <section className="main"> <GameLayout dim0=3 dim1=4 boardCards=self.state.board sendMessage /> </section>
+    let sendMessage = msg => self.ReasonReact.send(SendMessage(msg));
+    <section className="main"> <GameLayout dim0=3 dim1=4 boardCards=self.state.board sendMessage /> </section>;
   },
 };

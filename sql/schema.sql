@@ -34,6 +34,9 @@ create table games (
     id_counter bigint not null,
     status character varying(10) not null default 'new',
     card_idx int not null default 0,
+    theme character varying(25) not null default 'classic',
+    dim0 smallint not null default 3,
+    dim1 smallint not null default 4,
     created_at timestamp without time zone default now(),
     check (id <= 2176782335)
 );
@@ -224,7 +227,10 @@ begin
     perform pg_notify(concat('game_', NEW.id), json_build_object(
         'type', 'server_game_update',
         'card_idx', NEW.card_idx,
-        'status', NEW.status
+        'status', NEW.status,
+        'theme', NEW.theme,
+        'dim0', NEW.dim0,
+        'dim1', NEW.dim1
     )::text);
     return NEW;
 end;
@@ -290,7 +296,10 @@ begin
                 select json_build_object(
                     'type', 'server_game_update',
                     'card_idx', card_idx,
-                    'status', status
+                    'status', status,
+                    'theme', theme,
+                    'dim0', dim0,
+                    'dim1', dim1
                 )
                 from games
                 where id = NEW.game_id
@@ -393,14 +402,17 @@ begin
             select json_build_object(
                 'type', 'server_move',
                 'card0', json_build_object(
+                    'type', 'server_card',
                     'idx', NEW.idx0,
                     'card_id', NEW.card0_id
                 ),
                 'card1', json_build_object(
+                    'type', 'server_card',
                     'idx', NEW.idx1,
                     'card_id', NEW.card1_id
                 ),
                 'card2', json_build_object(
+                    'type', 'server_card',
                     'idx', NEW.idx2,
                     'card_id', NEW.card2_id
                 )

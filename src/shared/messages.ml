@@ -35,6 +35,7 @@ type message_type =
     | Server_move_info_type
     | Server_shuffles_type
     | Client_move_type
+    | Client_shuffle_type
 
 let message_type_to_string = function
     | Server_game_type -> "server_game"
@@ -49,6 +50,7 @@ let message_type_to_string = function
     | Server_move_info_type -> "server_move_info"
     | Server_shuffles_type -> "server_shuffles"
     | Client_move_type -> "client_move"
+    | Client_shuffle_type -> "client_shuffle"
 
 let message_type_of_string = function
     | "server_game" -> Server_game_type
@@ -63,6 +65,7 @@ let message_type_of_string = function
     | "server_move_info" -> Server_move_info_type
     | "server_shuffles" -> Server_shuffles_type
     | "client_move" -> Client_move_type
+    | "client_shuffle" -> Client_shuffle_type
     | ts -> raise (Invalid_argument ("Unknown message type string: " ^ ts))
 
 type game_status_data =
@@ -80,6 +83,16 @@ let game_status_data_of_string = function
     | "started" -> Started
     | "complete" -> Complete
     | ts -> raise (Invalid_argument ("Unknown game status: " ^ ts))
+
+type game_theme_data =
+    | Classic
+
+let game_theme_data_to_string = function
+    | Classic -> "classic"
+
+let game_theme_data_of_string = function
+    | "classic" -> Classic
+    | ts -> raise (Invalid_argument ("Unknown game theme: " ^ ts))
 
 type player_data = {
     player_id: int;
@@ -150,11 +163,17 @@ let make_move_data (idx0, card0_id) (idx1, card1_id) (idx2, card2_id) = {
 type game_update_data = {
     card_idx: int;
     status: game_status_data;
+    theme: game_theme_data;
+    dim0: int;
+    dim1: int;
 }
 
-let make_game_update_data card_idx status = {
+let make_game_update_data card_idx status theme dim0 dim1 = {
     card_idx;
     status = game_status_data_of_string status;
+    theme = game_theme_data_of_string theme;
+    dim0;
+    dim1;
 }
 
 type game_data = {
@@ -227,6 +246,7 @@ type t =
     | Server_move_info of move_info_data
     | Server_shuffles of shuffle_data
     | Client_move of (token * move_data)
+    | Client_shuffle of token
 
 let make_server_game player_data card_data game_update_data =
     Server_game (make_game_data player_data card_data game_update_data)
@@ -243,8 +263,8 @@ let make_server_card idx card_id =
 let make_server_board_card idx card_id =
     Server_board_card (make_board_card_data idx card_id)
 
-let make_server_game_update status card_idx =
-    Server_game_update (make_game_update_data status card_idx)
+let make_server_game_update status card_idx theme dim0 dim1 =
+    Server_game_update (make_game_update_data status card_idx theme dim0 dim1)
 
 let make_server_score player_id score =
     Server_score (make_score_data player_id score)
@@ -290,8 +310,8 @@ let rec to_string = function
         Printf.sprintf "<message (%s) idx=%d board_card=%s>"
             (message_type_to_string Server_board_card_type) d.idx (card_opt_to_string d.card)
     | Server_game_update d ->
-        Printf.sprintf "<message (%s) card_idx=%d status=%s>"
-            (message_type_to_string Server_game_update_type) d.card_idx (game_status_data_to_string d.status)
+        Printf.sprintf "<message (%s) card_idx=%d status=%s theme=%s dim0=%d dim1=%d>"
+            (message_type_to_string Server_game_update_type) d.card_idx (game_status_data_to_string d.status) (game_theme_data_to_string d.theme) d.dim0 d.dim1
     | Server_score d ->
         Printf.sprintf "<message (%s) player_id=%d score=%d>"
             (message_type_to_string Server_score_type) d.player_id d.score
@@ -315,6 +335,7 @@ let rec to_string = function
             (card_data_to_string d.card0)
             (card_data_to_string d.card1)
             (card_data_to_string d.card2)
+    | Client_shuffle _ -> Printf.sprintf "<message (%s)>" (message_type_to_string Client_shuffle_type)
 
 module type CONVERT = sig
     val to_json : t -> string
