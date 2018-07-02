@@ -35,12 +35,11 @@ let board_cards_list_is_set l =
 let board_cards_next_set (board_cards: board_card_data list) =
     let cards = board_cards_compact board_cards in
     let cc = (fun (cd0: card_data) (cd1: card_data) -> Card.compare cd0.card cd1.card) in
-    let c = card_data_to_board_card_data in
     let tg = Combinatorics.triple_generator ~comp:cc cards in
     let rec aux = function
     | Some (cd0, cd1, cd2) ->
         if Card.is_set cd0.card cd1.card cd2.card then
-            Some(c cd0, c cd1, c cd2)
+            Some(cd0, cd1, cd2)
         else
             aux (tg ())
     | None -> None

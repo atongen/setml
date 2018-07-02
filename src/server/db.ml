@@ -309,10 +309,9 @@ module I = struct
         C.find Q.increment_game_card_idx_query (offset, game_id) >>=? fun card_idx ->
         Lwt.return_ok card_idx
 
-    let create_move (module C : Caqti_lwt.CONNECTION) (game_id, player_id, (bc0, bc1, bc2)) =
-        match Messages_util.board_cards_is_set (bc0, bc1, bc2) with
-        | Some (c0, c1, c2) ->
-            let (idx0, card0_id, idx1, card1_id, idx2, card2_id) = (c0.idx, Card.to_int c0.card, c1.idx, Card.to_int c1.card, c2.idx, Card.to_int c2.card) in
+    let create_move (module C : Caqti_lwt.CONNECTION) (game_id, player_id, ((cd0: Messages.card_data), (cd1: Messages.card_data), (cd2: Messages.card_data))) =
+        if Card.is_set cd0.card cd1.card cd2.card then (
+            let (idx0, card0_id, idx1, card1_id, idx2, card2_id) = (cd0.idx, Card.to_int cd0.card, cd1.idx, Card.to_int cd1.card, cd2.idx, Card.to_int cd2.card) in
             C.exec (Q.set_transaction_mode_query "serializable") () >>=? fun () ->
             C.exec Q.create_move_query (game_id, player_id, ((idx0, card0_id), (idx1, card1_id), (idx2, card2_id))) >>=? fun () ->
             C.find Q.find_game_card_idx_query game_id >>=? fun deck_card_idx ->
@@ -327,7 +326,7 @@ module I = struct
             else
                 C.find Q.increment_game_card_idx_query (3, game_id) >>=? fun card_idx ->
                 Lwt.return_ok card_idx
-        | None -> Lwt.return_error (Client_error "board cards are not a set")
+        ) else Lwt.return_error (Client_error "board cards are not a set")
 
     let shuffle_board (module C : Caqti_lwt.CONNECTION) (game_id, player_id) =
         C.exec (Q.set_transaction_mode_query "serializable") () >>=? fun () ->

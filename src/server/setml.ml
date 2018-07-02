@@ -55,6 +55,17 @@ let (>>=*) m f =
   | Error err -> (*Caqti_error.show err |> log*)
     log "shit"
 
+let handle_message pool game_id player_id player_token json =
+    let msg = Server_messages.Server_message_converter.of_json json in
+    match msg with
+    | Server_game _ | Server_player _ | Server_name _ | Server_card _ | Server_board_card _ | Server_game_update _
+    | Server_score _ | Server_move _ | Server_presence _ | Server_move_info _ | Server_shuffles _ ->
+        log "Server message recieved from client!"
+    | Client_move (in_token, d) ->
+        (* TODO: check token *)
+        Db.create_move pool (game_id, player_id, (d.card0, d.card1, d.card2)) >>=* fun _ ->
+        Lwt.return_unit
+
 let make_handler pool pubsub =
   fun (conn : Conduit_lwt_unix.flow * Cohttp.Connection.t)
     (req  : Cohttp_lwt_unix.Request.t)
@@ -116,7 +127,11 @@ let make_handler pool pubsub =
                       )
                     | _ ->
                       (* websocket onmessage *)
-                      Clients.game_send clients game_id ("From player " ^ (string_of_int player_id) ^ ": " ^ f.content))
+                      ignore (
+                        handle_message pool game_id player_id "fake_token" f.content >>= fun _ ->
+                        log("wow");
+                      )
+                )
                 >>= fun (resp, body, frames_out_fn) ->
                 (* websocket onopen *)
                 Pubsub.subscribe pubsub game_id;

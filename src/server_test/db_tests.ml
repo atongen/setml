@@ -50,8 +50,8 @@ let create_move_test db =
         Db.find_board_cards db game_id >>=? fun board_cards ->
         if Messages_util.board_cards_exists_set board_cards then (
             match Messages_util.board_cards_next_set board_cards with
-            | Some (bc0, bc1, bc2) ->
-                Db.create_move db (game_id, player_id, (bc0, bc1, bc2)) >>=? fun made_move ->
+            | Some (cd0, cd1, cd2) ->
+                Db.create_move db (game_id, player_id, (cd0, cd1, cd2)) >>=? fun made_move ->
                 assert_equal 15 made_move;
                 Db.find_player_data db game_id >>=? fun players_data ->
                 assert_equal ~printer:string_of_int 1 (List.length players_data);
@@ -140,8 +140,8 @@ let create_failed_move_test db =
         Db.create_player db () >>=? fun player_id ->
         Db.set_game_player_presence db (game_id, player_id, true) >>=? fun () ->
         Db.find_board_cards db game_id >>=? fun old_board_idxs ->
-        let bc0, bc1, bc2 = (Messages.make_board_card_data 1 2, Messages.make_board_card_data 3 4, Messages.make_board_card_data 5 6) in
-        Db.create_move db (game_id, player_id, (bc0, bc1, bc2)) >>= function
+        let cd0, cd1, cd2 = (Messages.make_card_data 1 2, Messages.make_card_data 3 4, Messages.make_card_data 5 6) in
+        Db.create_move db (game_id, player_id, (cd0, cd1, cd2)) >>= function
         | Ok _ -> assert_failure "should not have made move"
         | Error e ->
             Db.find_player_data db game_id >>=? fun players_data ->

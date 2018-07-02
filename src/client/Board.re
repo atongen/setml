@@ -140,7 +140,7 @@ let makeDims = (rect, ratio, columns, rows) => {
 let printSets = (boardCards: list(Messages.board_card_data)) =>
   switch (Messages_util.board_cards_next_set(boardCards)) {
   | Some((c0, c1, c2)) =>
-    let s = c => Messages.board_card_data_to_string(c);
+    let s = c => Messages.card_data_to_string(c);
     Js.log(Printf.sprintf("Set: (%s, %s, %s)", s(c0), s(c1), s(c2)));
   | None => Js.log("No sets on board!")
   };
@@ -155,45 +155,41 @@ let make = (_children, ~rect, ~ratio, ~columns, ~rows, ~boardCards, ~sendMessage
     | Click((x, y)) =>
       switch (Rect.findRect(state.dims.blocks, (x, y))) {
       | Some(idx) =>
-        switch(getBoardCard(state.boardCards, idx)) {
+        switch (getBoardCard(state.boardCards, idx)) {
         | Some(bcd) =>
-            if (Set.has(state.selected, bcd)) {
-                let newSelected = Set.remove(state.selected, bcd);
-                Js.log(
-                    "Current selections: ("
-                    ++ String.concat(",", List.map(Set.toList(newSelected), Messages.board_card_data_to_string))
-                    ++ ")",
-                );
-                ReasonReact.Update({...state, selected: newSelected});
+          if (Set.has(state.selected, bcd)) {
+            let newSelected = Set.remove(state.selected, bcd);
+            Js.log(
+              "Current selections: ("
+              ++ String.concat(",", List.map(Set.toList(newSelected), Messages.board_card_data_to_string))
+              ++ ")",
+            );
+            ReasonReact.Update({...state, selected: newSelected});
+          } else {
+            let newSelected = Set.add(state.selected, bcd);
+            let l = Set.size(newSelected);
+            if (l < 3) {
+              Js.log(
+                "Current selections: ("
+                ++ String.concat(",", List.map(Set.toList(newSelected), Messages.board_card_data_to_string))
+                ++ ")",
+              );
+              ReasonReact.Update({...state, selected: newSelected});
             } else {
-                let newSelected = Set.add(state.selected, bcd);
-                let l = Set.size(newSelected);
-                if (l < 3) {
-                    Js.log(
-                    "Current selections: ("
-                    ++ String.concat(",", List.map(Set.toList(newSelected), Messages.board_card_data_to_string))
-                    ++ ")",
-                    );
-                    ReasonReact.Update({...state, selected: newSelected});
-                } else {
-                    let l = Set.toList(newSelected);
-                    switch(Messages_util.board_cards_list_is_set(l)) {
-                    | Some((cd0, cd1, cd2)) =>
-                        let clientMove = Messages.Client_move(("my token", {
-                            card0: cd0,
-                            card1: cd1,
-                            card2: cd2
-                        }));
-                        sendMessage(clientMove);
-                        Js.log("You got a set!");
-                    | None => Js.log("That's not a set, dummy!");
-                    };
-                    Js.log("Current selections: ()");
-                    ReasonReact.Update({...state, selected: emptySelections});
-                };
-            }
+              let l = Set.toList(newSelected);
+              switch (Messages_util.board_cards_list_is_set(l)) {
+              | Some((cd0, cd1, cd2)) =>
+                let clientMove = Messages.Client_move(("my token", {card0: cd0, card1: cd1, card2: cd2}));
+                sendMessage(clientMove);
+                Js.log("You got a set!");
+              | None => Js.log("That's not a set, dummy!")
+              };
+              Js.log("Current selections: ()");
+              ReasonReact.Update({...state, selected: emptySelections});
+            };
+          }
         | None => ReasonReact.NoUpdate
-        };
+        }
       | None => ReasonReact.NoUpdate
       }
     | Hover((x, y)) =>
