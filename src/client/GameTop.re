@@ -19,20 +19,39 @@ let receiveMessage = (evt, self) => {
   self.ReasonReact.send(ReceiveMessage(str));
 };
 
+let replaceBoardCard =
+    (board_card_data: Messages.board_card_data, board_cards: list(Messages.board_card_data))
+    : list(Messages.board_card_data) => {
+  let rec aux =
+          (bcd: Messages.board_card_data, acc, l: list(Messages.board_card_data))
+          : list(Messages.board_card_data) =>
+    switch (l) {
+    | [] => acc
+    | [hd, ...tl] =>
+      if (hd.idx == bcd.idx) {
+        aux(bcd, [bcd, ...acc], tl);
+      } else {
+        aux(bcd, [hd, ...acc], tl);
+      }
+    };
+  aux(board_card_data, [], List.reverse(board_cards));
+};
+
 let handleReceiveMessage = (state, msg) =>
   switch (msg) {
   | Server_game(d) => ReasonReact.Update({...state, board: d.board_card_data, players: d.player_data})
   | Server_player(d) => ReasonReact.NoUpdate
   | Server_name(d) => ReasonReact.NoUpdate
   | Server_card(d) => ReasonReact.NoUpdate
-  | Server_board_card(d) => ReasonReact.NoUpdate
+  | Server_board_card(d) => ReasonReact.Update({...state, board: replaceBoardCard(d, state.board)})
   | Server_game_update(d) => ReasonReact.NoUpdate
   | Server_score(d) => ReasonReact.NoUpdate
   | Server_move(d) => ReasonReact.NoUpdate
   | Server_presence(d) => ReasonReact.NoUpdate
   | Server_move_info(d) => ReasonReact.NoUpdate
   | Server_shuffles(d) => ReasonReact.NoUpdate
-  | Client_move(d) =>
+  | Client_move(_)
+  | Client_shuffle(_) =>
     Js.log("Client received a client message");
     ReasonReact.NoUpdate;
   };
@@ -44,7 +63,6 @@ let make = _children => {
   reducer: (action, state) =>
     switch (action) {
     | ReceiveMessage(str) =>
-      Js.log(str);
       let msg = ClientMessageConverter.of_json(str);
       Js.log(Messages.to_string(msg));
       handleReceiveMessage(state, msg);

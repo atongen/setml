@@ -16,15 +16,17 @@ let render_index ~headers token =
     ~body:(Templates.page "index" "SetML" token)
     ()
 
-let render_game game_id token =
+let render_game ~headers game_id token =
   let game_id_str = Route.string_of_game_id game_id in
   Cohttp_lwt_unix.Server.respond_string
+    ~headers
     ~status:`OK
     ~body:(Templates.page "game" ("SetML: " ^ game_id_str) token)
     ()
 
-let render_error msg =
+let render_error ?headers msg =
   Cohttp_lwt_unix.Server.respond_error
+    ?headers
     ~status:`Internal_server_error
     ~body:(Templates.error msg)
     ()
@@ -62,10 +64,11 @@ let handle_message pool game_id player_id player_token json =
     | Server_score _ | Server_move _ | Server_presence _ | Server_move_info _ | Server_shuffles _ ->
         log "Server message recieved from client!"
     | Client_move (in_token, d) ->
-        (* TODO: check token *)
+        if in_token <> player_token then Lwt.return_unit else
         Db.create_move pool (game_id, player_id, (d.card0, d.card1, d.card2)) >>=* fun _ ->
         Lwt.return_unit
     | Client_shuffle in_token ->
+        if in_token <> player_token then Lwt.return_unit else
         Db.create_shuffle pool (game_id, player_id) >>=* fun _ ->
         Lwt.return_unit
 
@@ -78,6 +81,7 @@ let make_handler pool pubsub =
     let meth = Cohttp.Request.meth req in
     let req_headers = Cohttp.Request.headers req in
     let session = Session.of_header_or_new crypto req_headers in
+    let headers = Session.to_headers session crypto in
 
     Lwt_io.eprintf "[CONN] %s\n%!" (Cohttp.Connection.to_string @@ snd conn)
     >>= fun _ ->
@@ -85,23 +89,21 @@ let make_handler pool pubsub =
     >>= fun _ ->
 
     match Route.of_req req with
-    | Route.Index ->
-      let headers = Session.to_headers session crypto in
-      render_index ~headers session.token
+    | Route.Index -> render_index ~headers session.token
     | Route.Game_create -> (
         Cohttp_lwt.Body.to_string body >>= fun myBody ->
         match Server_util.form_value myBody "token" with
         | Some (token) ->
           if session.token = token then (
             Db.create_game pool () >>=? fun game_id ->
-            redirect (Route.game_show_uri game_id)
+            redirect ~headers (Route.game_show_uri game_id)
           ) else render_forbidden
         | None -> render_forbidden)
     | Route.Game_show (game_id) -> (
         match session.player_id with
         | Some (_) ->
           Db.game_exists pool game_id >>=? (fun exists ->
-              if exists then (render_game game_id session.token)
+              if exists then (render_game ~headers game_id session.token)
               else render_not_found
             )
         | None ->
@@ -131,8 +133,8 @@ let make_handler pool pubsub =
                     | _ ->
                       (* websocket onmessage *)
                       ignore (
-                        handle_message pool game_id player_id "fake_token" f.content >>= fun _ ->
-                        log("wow");
+                        handle_message pool game_id player_id session.token f.content >>= fun _ ->
+                        Lwt.return_unit
                       )
                 )
                 >>= fun (resp, body, frames_out_fn) ->
@@ -146,7 +148,7 @@ let make_handler pool pubsub =
           | None -> render_error "Unable to get player id from session!"
         ) else render_not_found)
     | Route.Static ->
-      File_server.serve ~info:"Served by Cohttp/Lwt" ~docroot:"./public" ~index:"index.html" uri path
+      File_server.serve ~info:"Served by Cohttp/Lwt" ~docroot:"./public" ~index:"index.html" ~headers uri path
     | Route.Route_not_found -> render_not_found
 
 let start_server host port () =

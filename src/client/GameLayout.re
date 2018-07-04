@@ -83,7 +83,7 @@ let make = (_children, ~dim0, ~dim1, ~boardCards, ~sendMessage) => {
       };
     <div>
       <Board rect=boardRect ratio=screen.ratio columns rows boardCards sendMessage />
-      <Sidebar rect=sidebarRect />
+      <Sidebar rect=sidebarRect sendMessage />
     </div>;
   },
 };

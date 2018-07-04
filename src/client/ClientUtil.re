@@ -43,6 +43,16 @@ let meta_content = name => {
   |> aux;
 };
 
+let make_move_msg = (cd0, cd1, cd2) => {
+  let token = meta_content("token");
+  Messages.Client_move((token, {card0: cd0, card1: cd1, card2: cd2}));
+};
+
+let make_shuffle_msg = () => {
+  let token = meta_content("token");
+  Messages.Client_shuffle(token);
+};
+
 [@bs.get] external location : Dom.window => Dom.location = "";
 
 [@bs.get] external pathname : Dom.location => string = "";

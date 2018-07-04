@@ -1,7 +1,5 @@
 open Belt;
 
-open Messages;
-
 type canvas;
 
 [@bs.send] external getContext : (canvas, string) => Canvas2dRe.t = "";
@@ -179,8 +177,7 @@ let make = (_children, ~rect, ~ratio, ~columns, ~rows, ~boardCards, ~sendMessage
               let l = Set.toList(newSelected);
               switch (Messages_util.board_cards_list_is_set(l)) {
               | Some((cd0, cd1, cd2)) =>
-                let clientMove = Messages.Client_move(("my token", {card0: cd0, card1: cd1, card2: cd2}));
-                sendMessage(clientMove);
+                sendMessage(ClientUtil.make_move_msg(cd0, cd1, cd2));
                 Js.log("You got a set!");
               | None => Js.log("That's not a set, dummy!")
               };
