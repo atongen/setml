@@ -50,6 +50,9 @@ module Server_message_converter : Messages.CONVERT = struct
                     (type_key, `String (message_type_to_string Server_game_update_type));
                     (card_idx_key, `Int d.card_idx);
                     (status_key, `String (game_status_data_to_string d.status));
+                    (theme_key, `String (game_theme_data_to_string d.theme));
+                    (dim0_key, `Int d.dim0);
+                    (dim1_key, `Int d.dim1);
                 ]
             | Server_score d ->
                 `Assoc [
@@ -90,7 +93,11 @@ module Server_message_converter : Messages.CONVERT = struct
                     (card1_key, card_data_to_json d.card1);
                     (card2_key, card_data_to_json d.card2);
                 ]
-
+            | Client_shuffle token ->
+                `Assoc [
+                    (type_key, `String (message_type_to_string Client_shuffle_type));
+                    (token_key, `String (token_to_string token));
+                ]
         in
         aux x |> to_string
 
@@ -127,6 +134,9 @@ module Server_message_converter : Messages.CONVERT = struct
         make_game_update_data
         (json |> Util.member card_idx_key |> Util.to_int)
         (json |> Util.member status_key |> Util.to_string)
+        (json |> Util.member theme_key |> Util.to_string)
+        (json |> Util.member dim0_key |> Util.to_int)
+        (json |> Util.member dim1_key |> Util.to_int)
 
     let name_data_of_json json =
         make_name_data
@@ -171,6 +181,9 @@ module Server_message_converter : Messages.CONVERT = struct
                     let token = json |> Util.member token_key |> Util.to_string |> token_of_string in
                     let move_data = move_data_of_json json in
                     Client_move (token, move_data)
+                | Client_shuffle_type ->
+                    let token = json |> Util.member token_key |> Util.to_string |> token_of_string in
+                    Client_shuffle token
         in
         let json = from_string str in
         aux json

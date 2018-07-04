@@ -51,6 +51,9 @@ module ClientMessageConverter: CONVERT = {
           (type_key, string(message_type_to_string(Server_game_update_type))),
           (card_idx_key, int(d.card_idx)),
           (status_key, string(game_status_data_to_string(d.status))),
+          (theme_key, string(game_theme_data_to_string(d.theme))),
+          (dim0_key, int(d.dim0)),
+          (dim1_key, int(d.dim1)),
         ])
       | Server_score(d) =>
         object_([
@@ -90,6 +93,11 @@ module ClientMessageConverter: CONVERT = {
           (card0_key, card_data_to_json(d.card0)),
           (card1_key, card_data_to_json(d.card1)),
           (card2_key, card_data_to_json(d.card2)),
+        ])
+      | Client_shuffle(token) =>
+        object_([
+          (type_key, string(message_type_to_string(Client_shuffle_type))),
+          (token_key, string(token_to_string(token))),
         ]);
     aux(x) |> Json.stringify;
   };
@@ -125,7 +133,13 @@ module ClientMessageConverter: CONVERT = {
   };
   let game_update_data_decoder = json => {
     open! Json.Decode;
-    make_game_update_data(json |> field(card_idx_key, int), json |> field(status_key, string));
+    make_game_update_data(
+      json |> field(card_idx_key, int),
+      json |> field(status_key, string),
+      json |> field(theme_key, string),
+      json |> field(dim0_key, int),
+      json |> field(dim1_key, int),
+    );
   };
   let name_data_decoder = json => {
     open! Json.Decode;
@@ -165,7 +179,10 @@ module ClientMessageConverter: CONVERT = {
       | Client_move_type =>
         let token = json |> field(token_key, string) |> token_of_string;
         let move_data = move_data_decoder(json);
-        Client_move((token, move_data))
+        Client_move((token, move_data));
+      | Client_shuffle_type =>
+        let token = json |> field(token_key, string) |> token_of_string;
+        Client_shuffle(token);
       };
     };
     let json = Json.parseOrRaise(str);

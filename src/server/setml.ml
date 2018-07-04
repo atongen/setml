@@ -65,6 +65,9 @@ let handle_message pool game_id player_id player_token json =
         (* TODO: check token *)
         Db.create_move pool (game_id, player_id, (d.card0, d.card1, d.card2)) >>=* fun _ ->
         Lwt.return_unit
+    | Client_shuffle in_token ->
+        Db.create_shuffle pool (game_id, player_id) >>=* fun _ ->
+        Lwt.return_unit
 
 let make_handler pool pubsub =
   fun (conn : Conduit_lwt_unix.flow * Cohttp.Connection.t)

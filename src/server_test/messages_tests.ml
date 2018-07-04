@@ -24,13 +24,13 @@ let convert_tests =
          0;  2;  4;  6;
          8; 10; 33; 52;
         78; 79; 80; 81;
-    ]) (make_game_update_data 15 "started");
+    ]) (make_game_update_data 15 "started" "classic" 3 4);
     make_server_name 2 "andrew2";
     make_server_card 5 7;
     make_server_board_card 5 7;
-    make_server_game_update 13 "new";
-    make_server_game_update 17 "started";
-    make_server_game_update 19 "complete";
+    make_server_game_update 13 "new" "classic" 3 4;
+    make_server_game_update 17 "started" "classic" 4 3;
+    make_server_game_update 19 "complete" "classic" 3 4;
     make_server_score 6 4;
     make_server_move (1, 10) (2, 20) (3, 30);
     make_server_move (4, 11) (5, 21) (6, 31);

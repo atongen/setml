@@ -328,7 +328,7 @@ module I = struct
                 Lwt.return_ok card_idx
         ) else Lwt.return_error (Client_error "board cards are not a set")
 
-    let shuffle_board (module C : Caqti_lwt.CONNECTION) (game_id, player_id) =
+    let create_shuffle (module C : Caqti_lwt.CONNECTION) (game_id, player_id) =
         C.exec (Q.set_transaction_mode_query "serializable") () >>=? fun () ->
         C.find Q.find_game_card_idx_query game_id >>=? fun deck_card_idx ->
         (* include board in deck *)
@@ -509,7 +509,7 @@ let increment_game_card_idx p arg = with_pool p I.increment_game_card_idx arg
 
 let create_move p arg = with_pool ~priority:2.0 ~mode:Serializable p I.create_move arg
 
-let shuffle_board p arg = with_pool ~priority:1.0 ~mode:Serializable p I.shuffle_board arg
+let create_shuffle p arg = with_pool ~priority:1.0 ~mode:Serializable p I.create_shuffle arg
 
 let is_game_over p arg = with_pool p I.is_game_over arg
 

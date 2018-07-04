@@ -21,6 +21,9 @@ let card_data_key = "card_data"
 let board_card_data_key = "board_card_data"
 let game_update_key = "game_update"
 let shuffles_key = "shuffles"
+let theme_key = "theme"
+let dim0_key = "dim0"
+let dim1_key = "dim1"
 
 type message_type =
     | Server_game_type
@@ -283,6 +286,8 @@ let make_server_shuffles player_id shuffles =
 
 let make_client_move token move_data =
     Client_move (token, move_data)
+
+let make_client_shuffle token = Client_shuffle token
 
 let card_opt_to_string = function
     | Some c -> Card.to_string c

@@ -85,7 +85,7 @@ let complete_game_test db =
             Db.find_board_cards db game_id >>=? fun board_cards ->
 
             if not shuffled then (
-                Db.shuffle_board db (game_id, player_id) >>=? fun did_shuffle ->
+                Db.create_shuffle db (game_id, player_id) >>=? fun did_shuffle ->
                 if not did_shuffle then (
                     Db.is_game_over db game_id >>=? fun game_over ->
                     if game_over then

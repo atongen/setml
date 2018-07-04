@@ -24,7 +24,7 @@ let _ =
                  8; 10; 33; 52;
                 78; 79; 80; 81;
             ])
-            (make_game_update_data 15 "started"))
+            (make_game_update_data 15 "started" "classic" 3 4))
         );
 
         test "Server_name" (fun () ->
@@ -40,15 +40,15 @@ let _ =
         );
 
         test "Server_game_update new" (fun () ->
-            test_convert (make_server_game_update 5 "new")
+            test_convert (make_server_game_update 5 "new" "classic" 4 3)
         );
 
         test "Server_game_update started" (fun () ->
-            test_convert (make_server_game_update 6 "started")
+            test_convert (make_server_game_update 6 "started" "classic" 3 4)
         );
 
         test "Server_game_update complete" (fun () ->
-            test_convert (make_server_game_update 7 "complete")
+            test_convert (make_server_game_update 7 "complete" "classic" 3 4)
         );
 
         test "Server_score" (fun () ->
@@ -91,5 +91,9 @@ let _ =
 
         test "Client_move" (fun () ->
             test_convert (make_client_move "token1" (make_move_data (1,11) (2,22) (3,33)))
+        );
+
+        test "Client_shuffle" (fun () ->
+            test_convert (make_client_shuffle "token2")
         );
     )
