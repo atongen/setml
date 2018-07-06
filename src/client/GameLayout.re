@@ -40,13 +40,13 @@ let handleResize = (evt, self) => self.ReasonReact.send(Resize);
 
 let component = ReasonReact.reducerComponent("GameLayout");
 
-let make = (_children, ~dim0, ~dim1, ~boardCards, ~sendMessage) => {
+let make = (_children, ~boardCards, ~players, ~game: Messages.game_update_data, ~previousMove, ~sendMessage) => {
   ...component,
   reducer: (action, state) =>
     switch (action) {
-    | Resize => ReasonReact.Update(getState(dim0, dim1))
+    | Resize => ReasonReact.Update(getState(game.dim0, game.dim1))
     },
-  initialState: () => getState(dim0, dim1),
+  initialState: () => getState(game.dim0, game.dim1),
   subscriptions: self => {
     let debouncedHandleResize = ClientUtil.debounceOne(100, self.handle(handleResize));
     [
@@ -82,8 +82,8 @@ let make = (_children, ~dim0, ~dim1, ~boardCards, ~sendMessage) => {
         (Rect.makei(0, 0, screen.width, board), Rect.makei(0, board, screen.width, screen.height - board));
       };
     <div>
-      <Board rect=boardRect ratio=screen.ratio columns rows boardCards sendMessage />
-      <Sidebar rect=sidebarRect sendMessage />
+      <Board rect=boardRect ratio=screen.ratio columns rows boardCards players game sendMessage />
+      <Sidebar rect=sidebarRect boardCards players game previousMove sendMessage />
     </div>;
   },
 };

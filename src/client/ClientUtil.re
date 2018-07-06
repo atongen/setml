@@ -17,21 +17,17 @@ let debounceOne = (delay, f) => {
   };
 };
 
-let meta_content = name => {
+let meta_content_opt = name => {
   let rec aux = c =>
     switch (c) {
-    | [] => ""
+    | [] => None
     | [hd, ...tl] =>
       let el_name = Webapi.Dom.Element.getAttribute("name", hd);
       switch (el_name) {
       | None => aux(tl)
       | Some(n) =>
         if (n == name) {
-          let el_content = Webapi.Dom.Element.getAttribute("content", hd);
-          switch (el_content) {
-          | None => ""
-          | Some(c) => c
-          };
+          Webapi.Dom.Element.getAttribute("content", hd);
         } else {
           aux(tl);
         }
@@ -42,6 +38,12 @@ let meta_content = name => {
   |> List.fromArray
   |> aux;
 };
+
+let meta_content = name =>
+  switch (meta_content_opt(name)) {
+  | Some(c) => c
+  | None => ""
+  };
 
 let make_move_msg = (cd0, cd1, cd2) => {
   let token = meta_content("token");

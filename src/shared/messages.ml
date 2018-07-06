@@ -87,16 +87,6 @@ let game_status_data_of_string = function
     | "complete" -> Complete
     | ts -> raise (Invalid_argument ("Unknown game status: " ^ ts))
 
-type game_theme_data =
-    | Classic
-
-let game_theme_data_to_string = function
-    | Classic -> "classic"
-
-let game_theme_data_of_string = function
-    | "classic" -> Classic
-    | ts -> raise (Invalid_argument ("Unknown game theme: " ^ ts))
-
 type player_data = {
     player_id: int;
     name: string;
@@ -166,7 +156,7 @@ let make_move_data (idx0, card0_id) (idx1, card1_id) (idx2, card2_id) = {
 type game_update_data = {
     card_idx: int;
     status: game_status_data;
-    theme: game_theme_data;
+    theme: Theme.t;
     dim0: int;
     dim1: int;
 }
@@ -174,7 +164,7 @@ type game_update_data = {
 let make_game_update_data card_idx status theme dim0 dim1 = {
     card_idx;
     status = game_status_data_of_string status;
-    theme = game_theme_data_of_string theme;
+    theme = Theme.of_string theme;
     dim0;
     dim1;
 }
@@ -316,7 +306,7 @@ let rec to_string = function
             (message_type_to_string Server_board_card_type) d.idx (card_opt_to_string d.card)
     | Server_game_update d ->
         Printf.sprintf "<message (%s) card_idx=%d status=%s theme=%s dim0=%d dim1=%d>"
-            (message_type_to_string Server_game_update_type) d.card_idx (game_status_data_to_string d.status) (game_theme_data_to_string d.theme) d.dim0 d.dim1
+            (message_type_to_string Server_game_update_type) d.card_idx (game_status_data_to_string d.status) (Theme.to_string d.theme) d.dim0 d.dim1
     | Server_score d ->
         Printf.sprintf "<message (%s) player_id=%d score=%d>"
             (message_type_to_string Server_score_type) d.player_id d.score

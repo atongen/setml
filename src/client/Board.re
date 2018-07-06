@@ -146,7 +146,7 @@ let printSets = (boardCards: list(Messages.board_card_data)) =>
 let shouldRedraw = (oldState: state, newState: state) =>
   oldState.dims.size != newState.dims.size || oldState.boardCards != newState.boardCards;
 
-let make = (_children, ~rect, ~ratio, ~columns, ~rows, ~boardCards, ~sendMessage) => {
+let make = (_children, ~rect, ~ratio, ~columns, ~rows, ~boardCards, ~players, ~game, ~sendMessage) => {
   ...component,
   reducer: (action, state) =>
     switch (action) {
