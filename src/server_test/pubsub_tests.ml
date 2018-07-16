@@ -134,6 +134,7 @@ let board_card_check pubsub =
         assert_equal ~ctxt:test_ctx expMsg gotMsg ~printer:Messages.to_string;
         teardown_game pubsub game_id
 
+(* HERE! *)
 let game_update_check pubsub =
     fun test_ctx ->
         let game_id = setup_game pubsub in

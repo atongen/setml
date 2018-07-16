@@ -28,9 +28,15 @@ let convert_tests =
     make_server_name 2 "andrew2";
     make_server_card 5 7;
     make_server_board_card 5 7;
-    make_server_game_update 13 "new" "classic" 3 4;
-    make_server_game_update 17 "started" "classic" 4 3;
-    make_server_game_update 19 "complete" "classic" 3 4;
+    make_server_game_update 13 "new" "classic" 2 2;
+    make_server_game_update 17 "started" "classic" 2 3;
+    make_server_game_update 19 "complete" "classic" 2 4;
+    make_server_game_update 21 "new" "open_source" 3 2;
+    make_server_game_update 23 "started" "open_source" 3 3;
+    make_server_game_update 25 "complete" "open_source" 3 4;
+    make_server_game_update 21 "new" "open_source" 4 2;
+    make_server_game_update 23 "started" "open_source" 4 3;
+    make_server_game_update 25 "complete" "open_source" 4 4;
     make_server_score 6 4;
     make_server_move (1, 10) (2, 20) (3, 30);
     make_server_move (4, 11) (5, 21) (6, 31);

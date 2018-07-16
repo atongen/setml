@@ -27,18 +27,35 @@ create sequence games_id_counter_seq
     no maxvalue
     cache 1;
 
+drop type if exists game_status_enum cascade;
+
+create type game_status_enum as enum (
+    'new',
+    'started',
+    'complete'
+);
+
+drop type if exists game_theme_enum cascade;
+
+create type game_theme_enum as enum (
+    'classic',
+    'open_source'
+);
+
 drop table if exists games cascade;
 
 create table games (
     id bigint not null primary key,
     id_counter bigint not null,
-    status character varying(10) not null default 'new',
+    status game_status_enum not null default 'new',
     card_idx int not null default 0,
-    theme character varying(25) not null default 'classic',
+    theme game_theme_enum not null default 'classic',
     dim0 smallint not null default 3,
     dim1 smallint not null default 4,
     created_at timestamp without time zone default now(),
-    check (id <= 2176782335)
+    check (id <= 2176782335),
+    check (dim0 >= 2 and dim0 <= 4),
+    check (dim1 >= 2 and dim1 <= 4)
 );
 
 create unique index idx_0000 on games using btree (id_counter);
