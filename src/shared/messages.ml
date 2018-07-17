@@ -256,8 +256,8 @@ let make_server_card idx card_id =
 let make_server_board_card idx card_id =
     Server_board_card (make_board_card_data idx card_id)
 
-let make_server_game_update status card_idx theme dim0 dim1 =
-    Server_game_update (make_game_update_data status card_idx theme dim0 dim1)
+let make_server_game_update card_idx status theme dim0 dim1 =
+    Server_game_update (make_game_update_data card_idx status theme dim0 dim1)
 
 let make_server_score player_id score =
     Server_score (make_score_data player_id score)
