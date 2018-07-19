@@ -7,6 +7,8 @@ let page_tpl id page_title token =
             title (string page_title);
             meta ~charset:"UTF-8" [];
             meta ~name:"token" ~content:token [];
+            link ~rel:"stylesheet" (Uri.of_string "https://fonts.googleapis.com/css?family=Roboto:300,400,500");
+            link ~rel:"stylesheet" (Uri.of_string "https://fonts.googleapis.com/icon?family=Material+Icons");
             link ~rel:"stylesheet" (Uri.of_string "/css/style.css");
           ]);
 
@@ -27,6 +29,9 @@ let error_tpl msg =
         head (list [
             title (string "Error!");
             meta ~charset:"UTF-8" [];
+            link ~rel:"stylesheet" (Uri.of_string "https://fonts.googleapis.com/css?family=Roboto:300,400,500");
+            link ~rel:"stylesheet" (Uri.of_string "https://fonts.googleapis.com/icon?family=Material+Icons");
+            link ~rel:"stylesheet" (Uri.of_string "/css/style.css");
           ]);
 
         body (list [

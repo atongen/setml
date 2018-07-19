@@ -27,6 +27,8 @@
   "devDependencies": {
     "@babel/core": "^7.0.0-beta.51",
     "@glennsl/bs-jest": "^0.4.2",
+    "@material-ui/core": "^1.4.0",
+    "@material-ui/icons": "^1.1.0",
     "babel-core": "^7.0.0-bridge.0",
     "babel-jest": "^23.0.1",
     "babel-preset-env": "^1.7.0",
