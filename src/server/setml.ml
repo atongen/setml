@@ -63,10 +63,19 @@ let handle_message pool game_id player_id player_token json =
     | Server_game _ | Server_player _ | Server_name _ | Server_card _ | Server_board_card _ | Server_game_update _
     | Server_score _ | Server_move _ | Server_presence _ | Server_move_info _ | Server_shuffles _ ->
         log "Server message recieved from client!"
+    | Client_start_game in_token ->
+        if in_token <> player_token then Lwt.return_unit else
+        Db.start_game pool game_id >>=* fun () ->
+        Lwt.return_unit
     | Client_move (in_token, d) ->
         if in_token <> player_token then Lwt.return_unit else
         Db.create_move pool (game_id, player_id, (d.card0, d.card1, d.card2)) >>=* fun _ ->
-        Lwt.return_unit
+        Db.is_game_over pool game_id >>=* fun is_over ->
+        if is_over then
+            Db.end_game pool game_id >>=* fun () ->
+            Lwt.return_unit
+        else
+            Lwt.return_unit
     | Client_shuffle in_token ->
         if in_token <> player_token then Lwt.return_unit else
         Db.create_shuffle pool (game_id, player_id) >>=* fun _ ->

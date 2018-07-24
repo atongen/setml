@@ -178,6 +178,20 @@ module Q = struct
             limit ?
         |eos}
 
+    let update_game_status_query =
+        (* new_status game_id old_status *)
+        Caqti_request.find Caqti_type.(tup3 string int string) Caqti_type.int
+        {eos|
+            with rows as (
+                update games g
+                set status = ?
+                where g.id = ?
+                and g.status = ?
+                returning 1
+            )
+            select count(*) from rows;
+        |eos}
+
     let update_player_name_query =
         Caqti_request.exec Caqti_type.(tup2 string int)
         {eos|
@@ -429,6 +443,24 @@ module I = struct
                 |> Shared_util.compact
                 |> Card.exists_set))
 
+    let start_game (module C : Caqti_lwt.CONNECTION) game_id =
+        let old_status = Game_status.to_string Game_status.New in
+        let new_status = Game_status.to_string Game_status.Started in
+        C.find Q.update_game_status_query (new_status, game_id, old_status) >>=? fun num_updated ->
+        if num_updated < 1 then
+            Lwt.return_error (Client_error "unable to transition game status to 'started'")
+        else
+            Lwt.return_ok ()
+
+    let end_game (module C : Caqti_lwt.CONNECTION) game_id =
+        let old_status = Game_status.to_string Game_status.Started in
+        let new_status = Game_status.to_string Game_status.Complete in
+        C.find Q.update_game_status_query (new_status, game_id, old_status) >>=? fun num_updated ->
+        if num_updated < 1 then
+            Lwt.return_error (Client_error "unable to transition game status to 'complete'")
+        else
+            Lwt.return_ok ()
+
     let update_player_name (module C : Caqti_lwt.CONNECTION) (player_id, name) =
         C.exec Q.update_player_name_query (name, player_id) >>=? fun () ->
         Lwt.return_ok ()
@@ -505,6 +537,10 @@ let create_move p arg = with_pool ~priority:2.0 ~mode:Serializable p I.create_mo
 let create_shuffle p arg = with_pool ~priority:1.0 ~mode:Serializable p I.create_shuffle arg
 
 let is_game_over p arg = with_pool p I.is_game_over arg
+
+let start_game p arg = with_pool p I.start_game arg
+
+let end_game p arg = with_pool p I.end_game arg
 
 let update_player_name p arg = with_pool p I.update_player_name arg
 

@@ -50,7 +50,7 @@ module ClientMessageConverter: CONVERT = {
         object_([
           (type_key, string(message_type_to_string(Server_game_update_type))),
           (card_idx_key, int(d.card_idx)),
-          (status_key, string(game_status_data_to_string(d.status))),
+          (status_key, string(Game_status.to_string(d.status))),
           (theme_key, string(Theme.to_string(d.theme))),
           (dim0_key, int(d.dim0)),
           (dim1_key, int(d.dim1)),
@@ -97,6 +97,11 @@ module ClientMessageConverter: CONVERT = {
       | Client_shuffle(token) =>
         object_([
           (type_key, string(message_type_to_string(Client_shuffle_type))),
+          (token_key, string(token_to_string(token))),
+        ])
+      | Client_start_game(token) =>
+        object_([
+          (type_key, string(message_type_to_string(Client_start_game_type))),
           (token_key, string(token_to_string(token))),
         ]);
     aux(x) |> Json.stringify;
@@ -183,6 +188,9 @@ module ClientMessageConverter: CONVERT = {
       | Client_shuffle_type =>
         let token = json |> field(token_key, string) |> token_of_string;
         Client_shuffle(token);
+      | Client_start_game_type =>
+        let token = json |> field(token_key, string) |> token_of_string;
+        Client_start_game(token);
       };
     };
     let json = Json.parseOrRaise(str);

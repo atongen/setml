@@ -11,6 +11,8 @@ val increment_game_card_idx : t -> (int * int) -> (int, Caqti_error.t) result Lw
 val create_move : t -> (int * int * (Shared.Messages.card_data * Shared.Messages.card_data * Shared.Messages.card_data)) -> (int, Caqti_error.t) result Lwt.t
 val create_shuffle : t -> (int * int) -> (bool, Caqti_error.t) result Lwt.t
 val is_game_over : t -> int -> (bool, Caqti_error.t) result Lwt.t
+val start_game : t -> int -> (unit, Caqti_error.t) result Lwt.t
+val end_game : t -> int -> (unit, Caqti_error.t) result Lwt.t
 val update_player_name : t -> (int * string) -> (unit, Caqti_error.t) result Lwt.t
 val find_board_cards : t -> int -> (Shared.Messages.board_card_data list, Caqti_error.t) result Lwt.t
 val find_game_cards : t -> (int * int) -> (Shared.Messages.card_data list, Caqti_error.t) result Lwt.t

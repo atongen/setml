@@ -154,3 +154,10 @@ let create_failed_move_test db =
             Db.find_board_cards db game_id >>=? fun new_board_idxs ->
             assert_bool "board hasn't changed" (old_board_idxs = new_board_idxs);
             Lwt.return_unit
+
+let game_status_test db =
+    fun () ->
+        Db.create_game db () >>=? fun game_id ->
+        Db.start_game db game_id >>=? fun () ->
+        Db.end_game db game_id >>=? fun () ->
+        Lwt.return_unit

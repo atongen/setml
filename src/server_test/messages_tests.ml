@@ -47,6 +47,8 @@ let convert_tests =
     make_server_shuffles 4 6;
     make_server_player 6 "willie" true 9 8;
     make_client_move "wow" (make_move_data (1,1) (2,2) (3, 3));
+    make_client_shuffle "my-token";
+    make_client_start_game "my-other-token";
   ]
   in
   cases_of check messages

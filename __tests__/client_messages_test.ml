@@ -96,4 +96,8 @@ let _ =
         test "Client_shuffle" (fun () ->
             test_convert (make_client_shuffle "token2")
         );
+
+        test "Client_start_game" (fun () ->
+            test_convert (make_client_start_game "other-token")
+        );
     )

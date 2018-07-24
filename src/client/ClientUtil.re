@@ -55,6 +55,11 @@ let make_shuffle_msg = () => {
   Messages.Client_shuffle(token);
 };
 
+let make_start_game_msg = () => {
+  let token = meta_content("token");
+  Messages.Client_start_game(token);
+};
+
 [@bs.get] external location : Dom.window => Dom.location = "";
 
 [@bs.get] external pathname : Dom.location => string = "";

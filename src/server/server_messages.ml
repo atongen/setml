@@ -49,7 +49,7 @@ module Server_message_converter : Messages.CONVERT = struct
                 `Assoc [
                     (type_key, `String (message_type_to_string Server_game_update_type));
                     (card_idx_key, `Int d.card_idx);
-                    (status_key, `String (game_status_data_to_string d.status));
+                    (status_key, `String (Game_status.to_string d.status));
                     (theme_key, `String (Theme.to_string d.theme));
                     (dim0_key, `Int d.dim0);
                     (dim1_key, `Int d.dim1);
@@ -96,6 +96,11 @@ module Server_message_converter : Messages.CONVERT = struct
             | Client_shuffle token ->
                 `Assoc [
                     (type_key, `String (message_type_to_string Client_shuffle_type));
+                    (token_key, `String (token_to_string token));
+                ]
+            | Client_start_game token ->
+                `Assoc [
+                    (type_key, `String (message_type_to_string Client_start_game_type));
                     (token_key, `String (token_to_string token));
                 ]
         in
@@ -184,6 +189,9 @@ module Server_message_converter : Messages.CONVERT = struct
                 | Client_shuffle_type ->
                     let token = json |> Util.member token_key |> Util.to_string |> token_of_string in
                     Client_shuffle token
+                | Client_start_game_type ->
+                    let token = json |> Util.member token_key |> Util.to_string |> token_of_string in
+                    Client_start_game token
         in
         let json = from_string str in
         aux json
