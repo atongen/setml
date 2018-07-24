@@ -117,7 +117,8 @@ let handleReceiveMessage = (state, msg) =>
     })
   | Server_shuffles(d) => ReasonReact.Update({...state, players: updatePlayerShuffles(d, state.players)})
   | Client_move(_)
-  | Client_shuffle(_) =>
+  | Client_shuffle(_)
+  | Client_start_game(_) =>
     Js.log("Client received a client message");
     ReasonReact.NoUpdate;
   };
