@@ -10,10 +10,10 @@
     "bs-dependencies": [
         "reason-react",
         "bs-fetch",
-        "@glennsl/bs-json",
         "bs-websockets",
         "bs-webapi",
-        "@glennsl/bs-json"
+        "@glennsl/bs-json",
+        "@jsiebern/bs-material-ui"
     ],
     "bs-dev-dependencies": ["@glennsl/bs-jest"],
     "sources": [

@@ -33,8 +33,6 @@ module Q = struct
     let set_transaction_mode_query mode =
         Caqti_request.exec ~oneshot:true Caqti_type.unit (Printf.sprintf "set transaction isolation level %s;" mode)
 
-    let test_query = Caqti_request.exec Caqti_type.unit "select 1;"
-
     let make_insert_cards_query_str table_name game_id card_list =
         let rows = List.map (fun (idx, card_id) ->
             Printf.sprintf "(%d,%d,%d)" game_id idx card_id
@@ -146,7 +144,6 @@ module Q = struct
         |eos}
 
     let update_board_cards_query =
-        (*let args10 = Caqti_type.(let (&) = tup2 in int & int & int & int & int & int & int & int & int & int) in*)
         let args = Caqti_type.(tup4 (tup3 int int int) (tup3 int int int) (tup3 int int int) int) in
         Caqti_request.find args Caqti_type.int
         {eos|
@@ -270,10 +267,6 @@ end
 
 
 module I = struct
-    let test (module C : Caqti_lwt.CONNECTION) () =
-        C.exec Q.test_query () >>=? fun () ->
-        Lwt.return_ok ()
-
     let create_game (module C : Caqti_lwt.CONNECTION) () =
         C.find Q.create_game_query () >>=? fun game_id ->
         C.find (Q.create_game_cards_query game_id) () >>=? fun _ ->

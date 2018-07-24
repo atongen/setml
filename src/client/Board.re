@@ -225,7 +225,7 @@ let make = (_children, ~rect, ~ratio, ~columns, ~rows, ~boardCards, ~players, ~g
     self.state.context := Some(context);
     reset(context, "white", self.state.dims.size.w, self.state.dims.size.h);
     drawBoard(context, self.state.dims, self.state.boardCards);
-    ReasonReact.NoUpdate;
+    ();
   },
   didUpdate: ({oldSelf, newSelf}) =>
     if (shouldRedraw(oldSelf.state, newSelf.state)) {

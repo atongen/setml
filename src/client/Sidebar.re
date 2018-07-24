@@ -24,7 +24,7 @@ let playerDataToLi = (player_data: Messages.player_data) =>
   </li>;
 
 let make = (_children, ~rect, ~boardCards, ~players, ~game: Messages.game_update_data, ~previousMove, ~sendMessage) => {
-  let shuffleClick = evt => sendMessage(ClientUtil.make_shuffle_msg());
+  let shuffleClick = _ => sendMessage(ClientUtil.make_shuffle_msg());
   let gameUrl = get_game_url();
   let setsOnBoard = Messages_util.board_cards_count_sets(boardCards);
   let cardsRemaining = 81 - game.card_idx;
@@ -62,7 +62,7 @@ let make = (_children, ~rect, ~boardCards, ~players, ~game: Messages.game_update
             <li> (ReasonReact.stringToElement("Sets on board: " ++ string_of_int(setsOnBoard))) </li>
             <li> (ReasonReact.stringToElement("Cards remaining: " ++ string_of_int(cardsRemaining))) </li>
           </ul>
-          <button onClick=shuffleClick> (ReasonReact.stringToElement("Shuffle!")) </button>
+          <MaterialUi.Button onClick=shuffleClick> (ReasonReact.stringToElement("Shuffle!")) </MaterialUi.Button>
         </div>
         <div id="scores">
           <h2> (ReasonReact.stringToElement("Score")) </h2>

@@ -155,7 +155,7 @@ let make = _children => {
       WebSockets.WebSocket.(ws |> on(Message(self.handle(receiveMessage))) |> ignore);
     | None => Js.log("Unable to get websocket url!")
     };
-    ReasonReact.NoUpdate;
+    ();
   },
   render: self => {
     let sendMessage = msg => self.ReasonReact.send(SendMessage(msg));
