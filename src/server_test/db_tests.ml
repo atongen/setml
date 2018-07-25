@@ -91,7 +91,8 @@ let complete_game_test db =
                     if game_over then
                         Lwt.return_unit
                     else
-                        assert_failure "game not over"
+                        (* we couldn't shuffle, but game is not over, there must be sets left on the board *)
+                        make_move i j true
                 ) else (
                     Db.find_game_cards db (game_id, 0) >>=? fun cards_after ->
                     Db.find_board_cards db game_id >>=? fun board_after ->
@@ -120,8 +121,10 @@ let complete_game_test db =
                     | Some (player_data) -> assert_equal ~msg:"this player should have made all the moves" ~printer:string_of_int (i+1) player_data.score
                     | None -> assert_failure "player score");
 
-                    Db.find_game_card_idx db  game_id >>=? fun card_idx ->
-                    assert_equal ~msg:"game card_idx should reflect number of moves" ~printer:string_of_int (12+(3*(i+1))) card_idx;
+                    Db.find_game_card_idx db game_id >>=? fun card_idx ->
+                    (* card_idx cannot exceed 81 *)
+                    let exp_card_idx = min 81 (12+(3*(i+1))) in
+                    assert_equal ~msg:"game card_idx should reflect number of moves" ~printer:string_of_int exp_card_idx card_idx;
                     make_move (i+1) j false
                 | None ->
                     Db.is_game_over db game_id >>=? fun game_over ->

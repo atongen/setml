@@ -8,27 +8,34 @@ let get_game_url = () =>
   | None => ""
   };
 
-let playerDataToLi = (player_data: Messages.player_data) =>
-  <li key=(string_of_int(player_data.player_id))>
+let playerDataToLi = (player_data: Messages.player_data) => {
+  let pid = string_of_int(player_data.player_id);
+  let name = if (player_data.name == "") {
+    "Player " ++ pid
+  } else {
+    player_data.name
+  };
+  <li key=pid>
     (
       ReasonReact.string(
         Printf.sprintf(
           "%s - Present: %B, Score: %d, Shuffles: %d",
-          player_data.name,
+          name,
           player_data.presence,
           player_data.score,
           player_data.shuffles,
         ),
       )
     )
-  </li>;
+  </li>
+};
 
 let make = (_children, ~rect, ~boardCards, ~players, ~game: Messages.game_update_data, ~previousMove, ~sendMessage) => {
   let shuffleClick = _ => sendMessage(ClientUtil.make_shuffle_msg());
   let startClick = _ => sendMessage(ClientUtil.make_start_game_msg());
   let gameUrl = get_game_url();
   let setsOnBoard = Messages_util.board_cards_count_sets(boardCards);
-  let cardsRemaining = 81 - game.card_idx;
+  let cardsRemaining = 81 - game.card_idx + Messages_util.board_cards_count(boardCards);
   let pmove =
     switch (previousMove) {
     | Some(move) =>

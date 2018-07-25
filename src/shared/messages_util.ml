@@ -11,6 +11,15 @@ let board_cards_compact (board_cards: board_card_data list) =
     in
     aux [] (List.rev board_cards)
 
+let board_cards_count (board_cards: board_card_data list) =
+    let rec aux acc = function
+    | [] -> acc
+    | (hd: board_card_data) :: tl -> match hd.card with
+        | Some x -> aux (acc + 1) tl
+        | None -> aux acc tl
+    in
+    aux 0 board_cards
+
 let board_cards_exists_set (board_cards: board_card_data list) =
     let cards = board_cards_compact board_cards in
     let c = List.map (fun (cd: card_data) -> cd.card) cards in

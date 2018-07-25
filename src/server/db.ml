@@ -330,9 +330,11 @@ module I = struct
             C.find Q.update_board_cards_query ((idx0, card0_id, new_card_0_id), (idx1, card1_id, new_card_1_id), (idx2, card2_id, new_card_2_id), game_id) >>=? fun num_updated ->
             if num_updated != 3 then
                 Lwt.return_error (Client_error "3 board cards were not updated")
-            else
+            else if deck_card_idx <= 78 then
                 C.find Q.increment_game_card_idx_query (3, game_id) >>=? fun card_idx ->
                 Lwt.return_ok card_idx
+            else
+                Lwt.return_ok deck_card_idx
         ) else Lwt.return_error (Client_error "board cards are not a set")
 
     let create_shuffle (module C : Caqti_lwt.CONNECTION) (game_id, player_id) =
@@ -433,15 +435,17 @@ module I = struct
         Lwt.return_ok true
 
     let is_game_over (module C : Caqti_lwt.CONNECTION) game_id =
-        C.find Q.find_game_card_idx_query game_id >>=? fun card_idx ->
-        if card_idx >= 81 then
-            Lwt.return_ok true
-        else
-            C.collect_list Q.find_game_cards_query (game_id, card_idx, 81 - card_idx) >>=? fun cards_list ->
-            Lwt.return_ok (not (List.map (fun (_, card_id) -> card_id) cards_list
+        let set_exists_in_cards cards =
+            List.map (fun (_, card_id) -> card_id) cards
                 |> Card.of_int_list
                 |> Shared_util.compact
-                |> Card.exists_set))
+                |> Card.exists_set
+        in
+        C.find Q.find_game_card_idx_query game_id >>=? fun card_idx ->
+        C.collect_list Q.find_board_cards_query game_id >>=? fun board_cards ->
+        C.collect_list Q.find_game_cards_query (game_id, card_idx, 81 - card_idx) >>=? fun deck_cards ->
+        let cards = List.concat [board_cards; deck_cards] in
+        Lwt.return_ok (not (set_exists_in_cards cards))
 
     let start_game (module C : Caqti_lwt.CONNECTION) game_id =
         let old_status = Game_status.to_string Game_status.New in
