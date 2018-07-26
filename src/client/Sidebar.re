@@ -10,11 +10,12 @@ let get_game_url = () =>
 
 let playerDataToLi = (player_data: Messages.player_data) => {
   let pid = string_of_int(player_data.player_id);
-  let name = if (player_data.name == "") {
-    "Player " ++ pid
-  } else {
-    player_data.name
-  };
+  let name =
+    if (player_data.name == "") {
+      "Player " ++ pid;
+    } else {
+      player_data.name;
+    };
   <li key=pid>
     (
       ReasonReact.string(
@@ -27,12 +28,25 @@ let playerDataToLi = (player_data: Messages.player_data) => {
         ),
       )
     )
-  </li>
+  </li>;
 };
 
+let makeButton = (gameStatus, setsOnBoard, sendMessage) =>
+  switch (gameStatus) {
+  | Game_status.New =>
+    let startClick = _ => sendMessage(ClientUtil.make_start_game_msg());
+    <MaterialUi.Button onClick=startClick variant=`Raised> (ReasonReact.string("Start Game")) </MaterialUi.Button>;
+  | Game_status.Started =>
+    let shuffleClick = _ => sendMessage(ClientUtil.make_shuffle_msg());
+    if (setsOnBoard == 0) {
+      <MaterialUi.Button onClick=shuffleClick variant=`Raised> (ReasonReact.string("Shuffle")) </MaterialUi.Button>;
+    } else {
+      <MaterialUi.Button onClick=shuffleClick variant=`Outlined> (ReasonReact.string("Shuffle")) </MaterialUi.Button>;
+    };
+  | Game_status.Complete => ReasonReact.null
+  };
+
 let make = (_children, ~rect, ~boardCards, ~players, ~game: Messages.game_update_data, ~previousMove, ~sendMessage) => {
-  let shuffleClick = _ => sendMessage(ClientUtil.make_shuffle_msg());
-  let startClick = _ => sendMessage(ClientUtil.make_start_game_msg());
   let gameUrl = get_game_url();
   let setsOnBoard = Messages_util.board_cards_count_sets(boardCards);
   let cardsRemaining = 81 - game.card_idx + Messages_util.board_cards_count(boardCards);
@@ -56,6 +70,7 @@ let make = (_children, ~rect, ~boardCards, ~players, ~game: Messages.game_update
     | None => ReasonReact.null
     };
   let playerItems = List.map(players, playerDataToLi);
+  let button = makeButton(game.status, setsOnBoard, sendMessage);
   {
     ...component,
     render: _self =>
@@ -63,15 +78,11 @@ let make = (_children, ~rect, ~boardCards, ~players, ~game: Messages.game_update
         <div id="header">
           <h1> <a href="/"> (ReasonReact.string("SetML")) </a> </h1>
           <ul>
-            <li>
-              (ReasonReact.string("Game: "))
-              <a href=gameUrl> (ReasonReact.string(gameUrl)) </a>
-            </li>
+            <li> (ReasonReact.string("Game: ")) <a href=gameUrl> (ReasonReact.string(gameUrl)) </a> </li>
             <li> (ReasonReact.string("Sets on board: " ++ string_of_int(setsOnBoard))) </li>
             <li> (ReasonReact.string("Cards remaining: " ++ string_of_int(cardsRemaining))) </li>
           </ul>
-          <MaterialUi.Button onClick=shuffleClick> (ReasonReact.string("Shuffle!")) </MaterialUi.Button>
-          <MaterialUi.Button onClick=startClick> (ReasonReact.string("Start!")) </MaterialUi.Button>
+          button
         </div>
         <div id="scores">
           <h2> (ReasonReact.string("Score")) </h2>
