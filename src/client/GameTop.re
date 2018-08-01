@@ -14,7 +14,7 @@ type state = {
   players: list(player_data),
   game: game_update_data,
   previousMove: option(move_data),
-  msg: string,
+  msg: option(string),
 };
 
 let receiveMessage = (evt, self) => {
@@ -115,7 +115,7 @@ let handleReceiveMessage = (state, msg) =>
       ...state,
       previousMove: Some(d.move_data),
       players: updatePlayerScore(d.score_data, state.players),
-      msg: "Player " ++ string_of_int(d.score_data.player_id) ++ " scored!",
+      msg: Some("Player " ++ string_of_int(d.score_data.player_id) ++ " scored!"),
     })
   | Server_shuffles(d) => ReasonReact.Update({...state, players: updatePlayerShuffles(d, state.players)})
   | Client_move(_)
@@ -149,7 +149,7 @@ let make = _children => {
     players: [],
     game: make_game_update_data(0, "new", "classic", 3, 4),
     previousMove: None,
-    msg: "",
+    msg: None,
   },
   didMount: self => {
     switch (ClientUtil.ws_url()) {
