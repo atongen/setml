@@ -95,21 +95,39 @@ let updatePlayerShuffles = (shuffle_data: shuffle_data, players: list(player_dat
 let handleReceiveMessage = (state, msg) =>
   switch (msg) {
   | Server_game(d) =>
-    ReasonReact.Update({...state, boardCards: d.board_card_data, players: d.player_data, game: d.game_update_data})
-  | Server_player(d) => ReasonReact.Update({...state, players: replacePlayer(d, state.players)})
-  | Server_name(d) => ReasonReact.Update({...state, players: updatePlayerName(d, state.players)})
+    ReasonReact.Update({
+      ...state,
+      boardCards: d.board_card_data,
+      players: d.player_data,
+      game: d.game_update_data,
+      msg: None,
+    })
+  | Server_player(d) => ReasonReact.Update({...state, players: replacePlayer(d, state.players), msg: None})
+  | Server_name(d) => ReasonReact.Update({...state, players: updatePlayerName(d, state.players), msg: None})
   | Server_card(_) =>
     Js.log("Received unhandled Server_card message");
     ReasonReact.NoUpdate;
-  | Server_board_card(d) => ReasonReact.Update({...state, boardCards: replaceBoardCard(d, state.boardCards)})
-  | Server_game_update(d) => ReasonReact.Update({...state, game: d})
+  | Server_board_card(d) =>
+    ReasonReact.Update({...state, boardCards: replaceBoardCard(d, state.boardCards), msg: None})
+  | Server_game_update(d) => ReasonReact.Update({...state, game: d, msg: None})
   | Server_score(_) =>
     Js.log("Received unhandled Server_score message");
     ReasonReact.NoUpdate;
   | Server_move(_) =>
     Js.log("Received unhandled Server_move message");
     ReasonReact.NoUpdate;
-  | Server_presence(d) => ReasonReact.Update({...state, players: updatePlayerPresence(d, state.players)})
+  | Server_presence(d) =>
+    let action =
+      if (d.presence) {
+        "joined";
+      } else {
+        "left";
+      };
+    ReasonReact.Update({
+      ...state,
+      players: updatePlayerPresence(d, state.players),
+      msg: Some("Player " ++ string_of_int(d.player_id) ++ " " ++ action ++ "!"),
+    });
   | Server_move_info(d) =>
     ReasonReact.Update({
       ...state,
@@ -117,7 +135,12 @@ let handleReceiveMessage = (state, msg) =>
       players: updatePlayerScore(d.score_data, state.players),
       msg: Some("Player " ++ string_of_int(d.score_data.player_id) ++ " scored!"),
     })
-  | Server_shuffles(d) => ReasonReact.Update({...state, players: updatePlayerShuffles(d, state.players)})
+  | Server_shuffles(d) =>
+    ReasonReact.Update({
+      ...state,
+      players: updatePlayerShuffles(d, state.players),
+      msg: Some("Player " ++ string_of_int(d.player_id) ++ " shuffled!"),
+    })
   | Client_move(_)
   | Client_shuffle(_)
   | Client_start_game(_) =>
