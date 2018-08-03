@@ -132,3 +132,11 @@ let game_url = () =>
   | (Some(p), Some(h), Some(gid)) => Some(p ++ "//" ++ h ++ "/games/" ++ gid)
   | _ => None
   };
+
+let player_name = (players: list(Messages.player_data), player_id) => {
+  let maybePlayer = List.getBy(players, player => player.player_id == player_id);
+  switch (maybePlayer) {
+  | Some(player) => player.name
+  | None => "Player " ++ string_of_int(player_id)
+  };
+};

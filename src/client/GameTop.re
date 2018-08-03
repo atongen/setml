@@ -14,7 +14,7 @@ type state = {
   players: list(player_data),
   game: game_update_data,
   previousMove: option(move_data),
-  msg: option(string),
+  msgs: list(string),
 };
 
 let receiveMessage = (evt, self) => {
@@ -100,16 +100,19 @@ let handleReceiveMessage = (state, msg) =>
       boardCards: d.board_card_data,
       players: d.player_data,
       game: d.game_update_data,
-      msg: None,
+      msgs: [],
     })
-  | Server_player(d) => ReasonReact.Update({...state, players: replacePlayer(d, state.players), msg: None})
-  | Server_name(d) => ReasonReact.Update({...state, players: updatePlayerName(d, state.players), msg: None})
+  | Server_player(d) => ReasonReact.Update({...state, players: replacePlayer(d, state.players), msgs: []})
+  | Server_name(d) =>
+    let old_name = ClientUtil.player_name(state.players, d.player_id);
+    let msg = old_name ++ " is now called " ++ d.name;
+    ReasonReact.Update({...state, players: updatePlayerName(d, state.players), msgs: [msg]});
   | Server_card(_) =>
     Js.log("Received unhandled Server_card message");
     ReasonReact.NoUpdate;
   | Server_board_card(d) =>
-    ReasonReact.Update({...state, boardCards: replaceBoardCard(d, state.boardCards), msg: None})
-  | Server_game_update(d) => ReasonReact.Update({...state, game: d, msg: None})
+    ReasonReact.Update({...state, boardCards: replaceBoardCard(d, state.boardCards), msgs: []})
+  | Server_game_update(d) => ReasonReact.Update({...state, game: d, msgs: []})
   | Server_score(_) =>
     Js.log("Received unhandled Server_score message");
     ReasonReact.NoUpdate;
@@ -126,20 +129,20 @@ let handleReceiveMessage = (state, msg) =>
     ReasonReact.Update({
       ...state,
       players: updatePlayerPresence(d, state.players),
-      msg: Some("Player " ++ string_of_int(d.player_id) ++ " " ++ action ++ "!"),
+      msgs: ["Player " ++ ClientUtil.player_name(state.players, d.player_id) ++ " " ++ action ++ "!"],
     });
   | Server_move_info(d) =>
     ReasonReact.Update({
       ...state,
       previousMove: Some(d.move_data),
       players: updatePlayerScore(d.score_data, state.players),
-      msg: Some("Player " ++ string_of_int(d.score_data.player_id) ++ " scored!"),
+      msgs: ["Player " ++ ClientUtil.player_name(state.players, d.score_data.player_id) ++ " scored!"],
     })
   | Server_shuffles(d) =>
     ReasonReact.Update({
       ...state,
       players: updatePlayerShuffles(d, state.players),
-      msg: Some("Player " ++ string_of_int(d.player_id) ++ " shuffled!"),
+      msgs: ["Player " ++ ClientUtil.player_name(state.players, d.player_id) ++ " shuffled!"],
     })
   | Client_move(_)
   | Client_shuffle(_)
@@ -172,7 +175,7 @@ let make = _children => {
     players: [],
     game: make_game_update_data(0, "new", "classic", 3, 4),
     previousMove: None,
-    msg: None,
+    msgs: [],
   },
   didMount: self => {
     switch (ClientUtil.ws_url()) {
@@ -194,7 +197,7 @@ let make = _children => {
         previousMove=self.state.previousMove
         sendMessage
       />
-      <ConsecutiveSnackbars message=self.state.msg />
+      <ConsecutiveSnackbars messages=self.state.msgs />
     </section>;
   },
 };

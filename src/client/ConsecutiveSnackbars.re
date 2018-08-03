@@ -19,6 +19,8 @@ type state = {
 
 let pushMsg = (messages, msg) => messages @ [{message: msg, key: Js.Date.now()}];
 
+let pushMsgs = (messages, msgs) => messages @ List.map(msgs, msg => {message: msg, key: Js.Date.now()});
+
 let popMsg = messages =>
   switch (messages) {
   | [] => (None, [])
@@ -34,7 +36,7 @@ let handleExit = (evt, self) => self.ReasonReact.send(Process);
 
 let component = ReasonReact.reducerComponent("ConsecutiveSnackbars");
 
-let make = (_children, ~message) => {
+let make = (_children, ~messages) => {
   ...component,
   reducer: (action, state) =>
     switch (action) {
@@ -48,12 +50,14 @@ let make = (_children, ~message) => {
     },
   initialState: () => {open_: false, msgInfo: None, messages: []},
   willReceiveProps: self => {
-    let (open_, messages) =
-      switch (message) {
-      | Some(msg) => (false, pushMsg(self.state.messages, msg))
-      | None => (self.state.open_, self.state.messages)
+    let open_ =
+      if (List.length(messages) > 0) {
+        false;
+      } else {
+        self.state.open_;
       };
-    {...self.state, open_, messages};
+    let msgs = pushMsgs(self.state.messages, messages);
+    {...self.state, open_, messages: msgs};
   },
   didUpdate: ({oldSelf, newSelf}) => {
     newSelf.send(Process);

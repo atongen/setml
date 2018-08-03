@@ -322,15 +322,16 @@ begin
                 where id = NEW.game_id
             ) as game_update
         ) data;
-    else
-        msg := json_build_object(
-            'type', 'server_presence',
-            'player_id', NEW.player_id,
-            'presence', NEW.presence
-        )::text;
+
+        perform pg_notify(concat('game_', NEW.game_id), msg);
     end if;
 
-    perform pg_notify(concat('game_', NEW.game_id), msg);
+    perform pg_notify(concat('game_', NEW.game_id), json_build_object(
+        'type', 'server_presence',
+        'player_id', NEW.player_id,
+        'presence', NEW.presence
+    )::text);
+
     return NEW;
 end;
 $$ language plpgsql;
