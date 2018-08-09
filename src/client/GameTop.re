@@ -129,20 +129,20 @@ let handleReceiveMessage = (state, msg) =>
     ReasonReact.Update({
       ...state,
       players: updatePlayerPresence(d, state.players),
-      msgs: ["Player " ++ ClientUtil.player_name(state.players, d.player_id) ++ " " ++ action ++ "!"],
+      msgs: [ClientUtil.player_name(state.players, d.player_id) ++ " " ++ action ++ "!"],
     });
   | Server_move_info(d) =>
     ReasonReact.Update({
       ...state,
       previousMove: Some(d.move_data),
       players: updatePlayerScore(d.score_data, state.players),
-      msgs: ["Player " ++ ClientUtil.player_name(state.players, d.score_data.player_id) ++ " scored!"],
+      msgs: [ClientUtil.player_name(state.players, d.score_data.player_id) ++ " scored!"],
     })
   | Server_shuffles(d) =>
     ReasonReact.Update({
       ...state,
       players: updatePlayerShuffles(d, state.players),
-      msgs: ["Player " ++ ClientUtil.player_name(state.players, d.player_id) ++ " shuffled!"],
+      msgs: [ClientUtil.player_name(state.players, d.player_id) ++ " shuffled!"],
     })
   | Client_move(_)
   | Client_shuffle(_)

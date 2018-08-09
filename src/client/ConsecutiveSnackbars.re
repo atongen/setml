@@ -73,9 +73,6 @@ let make = (_children, ~messages) => {
       let msgEl = <span> (ReasonReact.string(msgInfo.message)) </span>;
       let actionEl =
         <span>
-          <MaterialUi.Button key="undo" color=`Secondary size=`Small onClick=click>
-            (ReasonReact.string("undo"))
-          </MaterialUi.Button>
           <MaterialUi.IconButton key="close" color=`Inherit onClick=click>
             <MaterialUi.Icon> (ReasonReact.string("close")) </MaterialUi.Icon>
           </MaterialUi.IconButton>

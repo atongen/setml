@@ -133,10 +133,19 @@ let game_url = () =>
   | _ => None
   };
 
+let get_player_name = (player_data: Messages.player_data) => {
+  let name = player_data.name;
+  if (String.trim(name) == "") {
+    "Player " ++ string_of_int(player_data.player_id);
+  } else {
+    name;
+  };
+};
+
 let player_name = (players: list(Messages.player_data), player_id) => {
   let maybePlayer = List.getBy(players, player => player.player_id == player_id);
   switch (maybePlayer) {
-  | Some(player) => player.name
+  | Some(player) => get_player_name(player)
   | None => "Player " ++ string_of_int(player_id)
   };
 };

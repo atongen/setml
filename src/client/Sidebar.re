@@ -8,27 +8,35 @@ let get_game_url = () =>
   | None => ""
   };
 
+let avatarLetter = name =>
+  if (String.length(name) > 0) {
+    let c = Char.uppercase(name.[0]);
+    String.make(1, c);
+  } else {
+    "P";
+  };
+
 let playerDataToLi = (player_data: Messages.player_data) => {
   let pid = string_of_int(player_data.player_id);
-  let name =
-    if (player_data.name == "") {
-      "Player " ++ pid;
-    } else {
-      player_data.name;
-    };
-  <li key=pid>
-    (
-      ReasonReact.string(
-        Printf.sprintf(
-          "%s - Present: %B, Score: %d, Shuffles: %d",
-          name,
-          player_data.presence,
-          player_data.score,
-          player_data.shuffles,
-        ),
+  let name = ClientUtil.get_player_name(player_data);
+  <MaterialUi.ListItem key=pid>
+    <MaterialUi.ListItemAvatar>
+      <MaterialUi.Avatar> (ReasonReact.string(avatarLetter(name))) </MaterialUi.Avatar>
+    </MaterialUi.ListItemAvatar>
+    <MaterialUi.ListItemText>
+      (
+        ReasonReact.string(
+          Printf.sprintf(
+            "%s - Present: %B, Score: %d, Shuffles: %d",
+            name,
+            player_data.presence,
+            player_data.score,
+            player_data.shuffles,
+          ),
+        )
       )
-    )
-  </li>;
+    </MaterialUi.ListItemText>
+  </MaterialUi.ListItem>;
 };
 
 let makeButton = (gameStatus, setsOnBoard, sendMessage) =>
@@ -78,7 +86,8 @@ let make = (_children, ~rect, ~boardCards, ~players, ~game: Messages.game_update
       </div>
     | None => ReasonReact.null
     };
-  let playerItems = List.map(players, playerDataToLi);
+  let sortedPlayers = List.sort(players, (p0: Messages.player_data, p1) => compare(p1.score, p0.score));
+  let playerItems = List.map(sortedPlayers, playerDataToLi);
   let button = makeButton(game.status, setsOnBoard, sendMessage);
   {
     ...component,
@@ -95,7 +104,7 @@ let make = (_children, ~rect, ~boardCards, ~players, ~game: Messages.game_update
         </div>
         <div id="scores">
           <h2> (ReasonReact.string("Score")) </h2>
-          <ul> (ReasonReact.array(List.toArray(playerItems))) </ul>
+          <MaterialUi.List> (ReasonReact.array(List.toArray(playerItems))) </MaterialUi.List>
         </div>
         pmove
       </section>,
