@@ -54,6 +54,11 @@ let board_cards_next_set (board_cards: board_card_data list) =
     | None -> None
     in aux (tg ())
 
+let board_cards_sets (board_cards: board_card_data list) =
+    let cards_data = board_cards_compact board_cards in
+    let cards = List.map (fun cd -> cd.card) cards_data in
+    Card.find_sets(cards)
+
 let board_cards_count_sets (board_cards: board_card_data list) =
     let cards_data = board_cards_compact board_cards in
     let cards = List.map (fun cd -> cd.card) cards_data in

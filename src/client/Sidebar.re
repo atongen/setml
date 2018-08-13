@@ -49,17 +49,11 @@ let makeButton = (gameStatus, setsOnBoard, sendMessage) =>
     </MaterialUi.Button>;
   | Game_status.Started =>
     let shuffleClick = _ => sendMessage(ClientUtil.make_shuffle_msg());
-    if (setsOnBoard == 0) {
-      <MaterialUi.Button onClick=shuffleClick variant=`Raised>
+    let variant = if (setsOnBoard == 0) { `Raised } else { `Outlined };
+    <MaterialUi.Button onClick=shuffleClick variant=variant>
         (ReasonReact.string("Shuffle"))
         <MaterialUi.Icon> (ReasonReact.string("shuffle")) </MaterialUi.Icon>
-      </MaterialUi.Button>;
-    } else {
-      <MaterialUi.Button onClick=shuffleClick variant=`Outlined>
-        (ReasonReact.string("Shuffle"))
-        <MaterialUi.Icon> (ReasonReact.string("shuffle")) </MaterialUi.Icon>
-      </MaterialUi.Button>;
-    };
+    </MaterialUi.Button>;
   | Game_status.Complete => ReasonReact.null
   };
 

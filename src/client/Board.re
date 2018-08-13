@@ -100,7 +100,7 @@ let drawBoard = (ctx, dims, cards: list(Messages.board_card_data)) => {
       switch (dims.blocks[idx], getBoardCard(cards, idx)) {
       | (Some(rect), Some(bcd)) => drawBlock(ctx, randomColor(), idx, rect, bcd.card)
       | (Some(rect), None) =>
-        Js.log("drawBoard error: No board card provided at idx" ++ string_of_int(idx) ++ "!");
+        /* Js.log("drawBoard error: No board card provided at idx" ++ string_of_int(idx) ++ "!"); */
         drawBlock(ctx, randomColor(), idx, rect, None);
       | (None, _) => Js.log("drawBoard error: No block found at idx " ++ string_of_int(idx) ++ "!")
       };
@@ -135,13 +135,11 @@ let makeDims = (rect, ratio, columns, rows) => {
   };
 };
 
-let printSets = (boardCards: list(Messages.board_card_data)) =>
-  switch (Messages_util.board_cards_next_set(boardCards)) {
-  | Some((c0, c1, c2)) =>
-    let s = c => Messages.card_data_to_string(c);
-    Js.log(Printf.sprintf("Set: (%s, %s, %s)", s(c0), s(c1), s(c2)));
-  | None => Js.log("No sets on board!")
-  };
+let printSets = (boardCards: list(Messages.board_card_data)) => {
+  let sets = Messages_util.board_cards_sets(boardCards);
+  let s = c => Card.to_string(c);
+  List.forEach(sets, ((c0, c1, c2)) => Js.log(Printf.sprintf("Set: (%s, %s, %s)", s(c0), s(c1), s(c2))));
+};
 
 let shouldRedraw = (oldState: state, newState: state) =>
   oldState.dims.size != newState.dims.size || oldState.boardCards != newState.boardCards;
