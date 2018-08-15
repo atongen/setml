@@ -7,15 +7,22 @@ open Lib
 open Shared
 
 let create_game_test db =
-  fun () ->
-    Db.create_game db (3, 4) >>=? fun game_id ->
-    Db.game_exists db game_id >>=? fun game_exists ->
-    assert_bool "game exists" game_exists;
-    Db.find_game_cards db (game_id, 0) >>=? fun game_cards ->
-    assert_equal 81 (List.length game_cards);
-    Db.find_board_cards db game_id >>=? fun board_cards ->
-    assert_equal 12 (List.length board_cards);
-    Lwt.return_unit
+    fun () ->
+        ignore(
+            List.iter (fun (dim0, dim1) ->
+                Db.create_game db (dim0, dim1) >>=? fun game_id ->
+                Db.game_exists db game_id >>=? fun game_exists ->
+                assert_bool "game exists" game_exists;
+                Db.find_game_cards db (game_id, 0) >>=? fun game_cards ->
+                assert_equal 81 (List.length game_cards);
+                Db.find_board_cards db game_id >>=? fun board_cards ->
+                assert_equal (dim0 * dim1) (List.length board_cards);
+                Db.find_game_data db game_id >>=? fun game_data ->
+                assert_equal dim0 game_data.dim0;
+                assert_equal dim1 game_data.dim1;
+            ) [(3, 3); (3, 4); (4, 3); (4, 4)]
+        );
+        Lwt.return_unit
 
 let create_player_test db =
   fun () ->
@@ -166,4 +173,3 @@ let game_status_test db =
         Lwt.return_unit
 
 (* TODO: Add tests with game board != 3x4 *)
-(* TODO: Add tests for find_game_data *)
