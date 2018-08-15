@@ -54,8 +54,8 @@ create table games (
     dim1 smallint not null default 4,
     created_at timestamp without time zone default now(),
     check (id <= 2176782335),
-    check (dim0 >= 2 and dim0 <= 4),
-    check (dim1 >= 2 and dim1 <= 4)
+    check (dim0 >= 3 and dim0 <= 4),
+    check (dim1 >= 3 and dim1 <= 4)
 );
 
 create unique index idx_0000 on games using btree (id_counter);

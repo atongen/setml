@@ -8,7 +8,7 @@ open Shared
 
 let create_game_test db =
   fun () ->
-    Db.create_game db () >>=? fun game_id ->
+    Db.create_game db (3, 4) >>=? fun game_id ->
     Db.game_exists db game_id >>=? fun game_exists ->
     assert_bool "game exists" game_exists;
     Db.find_game_cards db (game_id, 0) >>=? fun game_cards ->
@@ -25,7 +25,7 @@ let create_player_test db =
 
 let game_player_presence_test db =
   fun () ->
-    Db.create_game db () >>=? fun game_id ->
+    Db.create_game db (3, 4) >>=? fun game_id ->
     Db.create_player db () >>=? fun player_id ->
 
     Db.find_game_player_presence db (game_id, player_id) >>=? fun present_before ->
@@ -44,7 +44,7 @@ let game_player_presence_test db =
 let create_move_test db =
   fun () ->
     let rec aux i =
-        Db.create_game db () >>=? fun game_id ->
+        Db.create_game db (3, 4) >>=? fun game_id ->
         Db.create_player db () >>=? fun player_id ->
         Db.set_game_player_presence db (game_id, player_id, true) >>=? fun () ->
         Db.find_board_cards db game_id >>=? fun board_cards ->
@@ -77,7 +77,7 @@ let create_move_test db =
 
 let complete_game_test db =
     fun () ->
-        Db.create_game db () >>=? fun game_id ->
+        Db.create_game db (3, 4) >>=? fun game_id ->
         Db.create_player db () >>=? fun player_id ->
         Db.set_game_player_presence db (game_id, player_id, true) >>=? fun () ->
         let rec make_move i j shuffled =
@@ -139,7 +139,7 @@ let complete_game_test db =
 
 let create_failed_move_test db =
     fun () ->
-        Db.create_game db () >>=? fun game_id ->
+        Db.create_game db (3, 4) >>=? fun game_id ->
         Db.create_player db () >>=? fun player_id ->
         Db.set_game_player_presence db (game_id, player_id, true) >>=? fun () ->
         Db.find_board_cards db game_id >>=? fun old_board_idxs ->
@@ -160,7 +160,10 @@ let create_failed_move_test db =
 
 let game_status_test db =
     fun () ->
-        Db.create_game db () >>=? fun game_id ->
+        Db.create_game db (3, 4) >>=? fun game_id ->
         Db.start_game db game_id >>=? fun () ->
         Db.end_game db game_id >>=? fun () ->
         Lwt.return_unit
+
+(* TODO: Add tests with game board != 3x4 *)
+(* TODO: Add tests for find_game_data *)

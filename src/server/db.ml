@@ -60,8 +60,8 @@ module Q = struct
         Caqti_request.find ~oneshot:true Caqti_type.unit Caqti_type.int query
 
     let create_game_query =
-        Caqti_request.find Caqti_type.unit Caqti_type.int
-        "insert into games default values returning id"
+        Caqti_request.find Caqti_type.(tup2 int int) Caqti_type.int
+        "insert into games (dim0, dim1) values (?, ?) returning id"
 
     let create_board_cards_query =
         Caqti_request.exec Caqti_type.(tup2 int int)
@@ -277,12 +277,25 @@ module Q = struct
 
     let delete_games_query = Caqti_request.exec Caqti_type.unit "delete from games;"
     let delete_players_query = Caqti_request.exec Caqti_type.unit "delete from players;"
+
+    let find_game_data_query =
+        Caqti_request.find Caqti_type.int Caqti_type.(tup4 int string string (tup2 int int))
+        {eos|
+            select
+                card_idx,
+                status,
+                theme,
+                dim0,
+                dim1
+            from games
+            where id = ?
+        |eos}
 end
 
 
 module I = struct
-    let create_game (module C : Caqti_lwt.CONNECTION) () =
-        C.find Q.create_game_query () >>=? fun game_id ->
+    let create_game (module C : Caqti_lwt.CONNECTION) (dim0, dim1) =
+        C.find Q.create_game_query (dim0, dim1) >>=? fun game_id ->
         C.find (Q.create_game_cards_query game_id) () >>=? fun _ ->
         C.exec Q.create_board_cards_query (game_id, 12) >>=? fun () ->
         C.find Q.increment_game_card_idx_query (12, game_id) >>=? fun _ ->
@@ -339,11 +352,11 @@ module I = struct
 
     let create_shuffle (module C : Caqti_lwt.CONNECTION) (game_id, player_id) =
         C.exec (Q.set_transaction_mode_query "serializable") () >>=? fun () ->
-        C.find Q.find_game_card_idx_query game_id >>=? fun deck_card_idx ->
+        C.find Q.find_game_data_query game_id >>=? fun (deck_card_idx, _, _, (dim0, dim1)) ->
+        let num_board_cards = dim0 * dim1 in
         (* include board in deck *)
-        let card_idx = deck_card_idx - 12 in
+        let card_idx = deck_card_idx - num_board_cards in
 
-        (* ensure we have at least board size 12 + 3 cards left to swap *)
         if card_idx < 0 || deck_card_idx >= 81 then
             Lwt.return_ok false
         else
@@ -492,6 +505,11 @@ module I = struct
         C.exec Q.delete_games_query () >>=? fun () ->
         C.exec Q.delete_players_query () >>=? fun () ->
         Lwt.return_ok ()
+
+    let find_game_data (module C : Caqti_lwt.CONNECTION) game_id =
+        C.find Q.find_game_data_query game_id >>=? fun (card_idx, status, theme, (dim0, dim1)) ->
+        let open Messages in
+        Lwt.return_ok (make_game_update_data card_idx status theme dim0 dim1)
 end
 
 let with_transaction ?(mode=ReadCommitted) (module C : Caqti_lwt.CONNECTION) f arg =
@@ -555,3 +573,5 @@ let find_game_cards p arg = with_pool p I.find_game_cards arg
 let find_player_data p arg = with_pool p I.find_player_data arg
 
 let delete_all p arg = with_pool p I.delete_all arg
+
+let find_game_data p arg = with_pool p I.find_game_data arg
