@@ -17,4 +17,4 @@ WORKDIR /setml
 COPY --from=dependencies /setml/_build/default/src/server/setml.exe setml
 COPY --from=dependencies /setml/depexts depexts
 RUN cat depexts | xargs apk --update add && rm -rf /var/cache/apk/*
-ENTRYPOINT ["/setml/setml"]
+ENTRYPOINT ["/bin/bash"]
