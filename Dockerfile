@@ -12,7 +12,7 @@ RUN opam install --deps-only setml
 RUN /bin/sh -c 'eval $(opam env) make'
 
 FROM scratch
-COPY --from-dependencies /etc/passwd /etc/passwd
+COPY --from=dependencies /etc/passwd /etc/passwd
 COPY --from=dependencies /setml/bin/setml /setml
 USER opam
 ENTRYPOINT ["/setml"]
