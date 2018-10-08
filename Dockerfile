@@ -10,6 +10,8 @@ RUN opam pin add -yn setml .
 RUN opam depext setml
 RUN opam install --deps-only setml
 RUN /bin/sh -c 'eval $(opam env) make'
+RUN chown root:root /setml/_build/default/src/server/setml.exe
+RUN chmod 755 /setml/_build/default/src/server/setml.exe
 
 FROM scratch
 COPY --from=dependencies /etc/passwd /etc/passwd
