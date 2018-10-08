@@ -19,7 +19,6 @@ FROM alpine:3.8
 WORKDIR /setml
 COPY --from=dependencies /setml/_build/default/src/server/setml.exe setml
 COPY --from=dependencies /setml/depexts depexts
-RUN cat depexts && \
-    cat depexts | xargs apk --update add && \
+RUN cat depexts | xargs apk --update add && \
     rm -rf /var/cache/apk/*
 ENTRYPOINT ["/setml/setml"]
