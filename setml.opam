@@ -20,7 +20,7 @@ depends: [
   "cohttp" {build & >= "1.1.0"}
   "cohttp-lwt" {build & >= "1.0.2"}
   "cohttp-lwt-unix" {build & >= "1.0.2"}
-  "containers" {build & >= "2.3.0"}
+  "containers" {build & >= "2.3"}
   "cow" {build & >= "2.3.0"}
   "nocrypto" {build & >= "0.5.4"}
   "postgresql" {build & >= "4.4.0"}
