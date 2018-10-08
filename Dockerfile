@@ -2,7 +2,7 @@ FROM ocaml/opam2:alpine as dependencies
 
 RUN sudo apk update
 RUN opam switch 4.06 && opam update && opam upgrade
-RUN echo 1
+RUN echo 2
 
 COPY . /setml/
 RUN sudo chown -R opam:nogroup /setml
