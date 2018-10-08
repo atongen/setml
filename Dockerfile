@@ -13,6 +13,6 @@ RUN /bin/sh -c 'eval $(opam env) make'
 
 FROM scratch
 COPY --from=dependencies /etc/passwd /etc/passwd
-COPY --from=dependencies /setml/bin/setml /setml
+COPY --from=dependencies /setml/_build/default/src/server/setml.exe /setml
 USER opam
 ENTRYPOINT ["/setml"]
