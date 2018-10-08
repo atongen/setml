@@ -22,7 +22,7 @@ depends: [
   "cohttp-lwt-unix" {build & >= "1.0.2"}
   "containers" {build & >= "2.3"}
   "cow" {build & >= "2.3.0"}
-  "lwt" {build & >= "3.3.0"}
+  "lwt" {build & >= "3.3.0" & < "4.0.0"}
   "nocrypto" {build & >= "0.5.4"}
   "postgresql" {build & >= "4.4.0"}
   "re" {build & >= "1.8.0"}
