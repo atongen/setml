@@ -2,7 +2,6 @@ FROM ocaml/opam2:alpine as dependencies
 
 RUN sudo apk update
 RUN opam switch 4.06 && opam update && opam upgrade
-RUN echo 3
 
 COPY . /setml/
 RUN sudo chown -R opam:nogroup /setml
@@ -13,5 +12,7 @@ RUN opam install --deps-only setml
 RUN /bin/sh -c 'eval $(opam env) make'
 
 FROM scratch
-COPY --from=dependencies /setml/bin/setml /usr/local/bin/setml
-ENTRYPOINT ["/usr/local/bin/setml"]
+COPY --from-dependencies /etc/passwd /etc/passwd
+COPY --from=dependencies /setml/bin/setml /setml
+USER opam
+ENTRYPOINT ["/setml"]
