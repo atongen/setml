@@ -12,11 +12,6 @@ let derive_key secret salt =
     ~key:(Cstruct.of_string secret)
     (Cstruct.of_string salt)
 
-let print_cstruct s name =
-  let h = Nocrypto.Base64.encode s |> Cstruct.to_string in
-  let l = string_of_int (Cstruct.len s) in
-  ignore (print_endline (name ^ ": " ^ h ^ " (" ^ l ^ ")"))
-
 let hmac secret salt value =
   value
   |> Cstruct.of_string

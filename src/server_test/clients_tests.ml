@@ -1,6 +1,5 @@
 open OUnit2
 open Lib
-open Shared
 
 open Test_lib.Test_util
 
@@ -25,7 +24,7 @@ module Counter = CCHashtbl.Make(ConnKey)
 
 let make_conn counter game_id player_id =
   let key = ConnKey.make game_id player_id in
-  fun w -> Counter.incr counter key
+  fun _ -> Counter.incr counter key
 
 let random_id () = Crypto.random_int 1 999_999
 

@@ -23,7 +23,7 @@ let rec shuffle_list = function
     | [] -> []
     | [x] -> [x]
     | l ->
-        let (before, after) = List.partition (fun elt -> Random.bool ()) l in
+        let (before, after) = List.partition (fun _ -> Random.bool ()) l in
         List.rev_append (shuffle_list before) (shuffle_list after)
 
 let rec firstk k = function

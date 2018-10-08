@@ -30,7 +30,7 @@ let int_of_base s b =
     | [] -> ac
     | hd :: tl ->
       match CCArray.find_idx (fun x -> x = hd) my_chars with
-      | Some ((idx, x)) -> aux tl (pos+1) (ac + (idx * (CCInt.pow b pos)))
+      | Some ((idx, _)) -> aux tl (pos+1) (ac + (idx * (CCInt.pow b pos)))
       | None -> raise (Invalid_argument ("Invalid base " ^ string_of_int b ^ " char: " ^ String.make 1 hd))
   in
   let len = String.length s in

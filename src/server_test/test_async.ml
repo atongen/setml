@@ -1,10 +1,7 @@
-open OUnit2
-open Lwt
 open Lwt.Infix
 
 open Test_lib.Test_util
 open Lib
-open Shared
 
 (*
  * OUnit2 test suite of tests for asynchronous libraries using Lwt

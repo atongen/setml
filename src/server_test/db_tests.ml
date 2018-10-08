@@ -1,5 +1,4 @@
 open OUnit2
-open Lwt
 open Lwt.Infix
 
 open Test_lib.Test_util
@@ -36,7 +35,7 @@ let create_game_test db =
         List.iter (fun (dim0, dim1) ->
             if dim0 < 3 || dim0 > 4 || dim1 < 3 || dim1 > 4 then (
                 ignore (
-                    Db.create_game db (dim0, dim1) >>= fun game_id ->
+                    Db.create_game db (dim0, dim1) >>= fun _ ->
                     ignore(assert_failure "invalid game board dimensions");
                     Lwt.return_unit
                 );
@@ -142,7 +141,7 @@ let complete_game_test db =
                             make_move i j true
                     ) else (
                         Db.find_game_cards db (game_id, 0) >>=? fun cards_after ->
-                        Db.find_board_cards db game_id >>=? fun board_after ->
+                        Db.find_board_cards db game_id >>=? fun _ ->
                         assert_bool "cards are different after shuffle" (cards_before != cards_after);
                         let card_ids = List.map (fun (cd: Messages.card_data) -> Card.to_int cd.card) cards_after in
                         let scids = List.sort_uniq compare card_ids in
@@ -197,7 +196,7 @@ let create_failed_move_test db =
         let cd0, cd1, cd2 = (Messages.make_card_data 1 2, Messages.make_card_data 3 4, Messages.make_card_data 5 6) in
         Db.create_move db (game_id, player_id, (cd0, cd1, cd2)) >>= function
         | Ok _ -> assert_failure "should not have made move"
-        | Error e ->
+        | Error _ ->
             Db.find_player_data db game_id >>=? fun players_data ->
             assert_equal ~printer:string_of_int 1 (List.length players_data);
             (match find_player_data players_data player_id with

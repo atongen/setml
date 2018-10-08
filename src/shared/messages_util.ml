@@ -15,7 +15,7 @@ let board_cards_count (board_cards: board_card_data list) =
     let rec aux acc = function
     | [] -> acc
     | (hd: board_card_data) :: tl -> match hd.card with
-        | Some x -> aux (acc + 1) tl
+        | Some _ -> aux (acc + 1) tl
         | None -> aux acc tl
     in
     aux 0 board_cards

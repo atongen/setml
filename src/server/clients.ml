@@ -17,9 +17,6 @@ module ConnKey = struct
     let equal (a: t) (b: t) =
         GameKey.equal (fst a) (fst b) &&
         PlayerKey.equal (snd a) (snd b)
-
-    let to_string (x: t) =
-        "game_id: " ^ string_of_int (fst x) ^ ", player_id: " ^ string_of_int (snd x)
 end
 module ConnTable = CCHashtbl.Make(ConnKey)
 
@@ -67,7 +64,7 @@ let game_has_players clients (game_id: GameKey.t) =
 let add clients game_id player_id send =
     let key = ConnKey.make game_id player_id in
     ConnTable.add clients.conns key send;
-    PlayersOfGameTable.update clients.players_of_game ~f:(fun k v ->
+    PlayersOfGameTable.update clients.players_of_game ~f:(fun _ v ->
         match v with
         | Some (player_ids) -> Some(PlayerSet.add player_id player_ids)
         | None -> Some(PlayerSet.of_list [player_id])
@@ -76,7 +73,7 @@ let add clients game_id player_id send =
 let remove clients game_id player_id =
     let key = ConnKey.make game_id player_id in
     ConnTable.remove clients.conns key;
-    PlayersOfGameTable.update clients.players_of_game ~f:(fun k v ->
+    PlayersOfGameTable.update clients.players_of_game ~f:(fun _ v ->
         match v with
         | Some (player_ids) -> Some(PlayerSet.remove player_id player_ids)
         | None -> Some(PlayerSet.of_list [])

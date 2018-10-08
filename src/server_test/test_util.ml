@@ -2,7 +2,6 @@ open OUnit2
 open Lwt
 open Lwt.Infix
 
-open Lib
 open Shared
 
 let (>>=?) m f =
@@ -23,7 +22,7 @@ let do_async_tests ?(name="lwt test") tests =
       let ounit_tests =
         results
         |> List.map (fun (name, res) ->
-            name >:: fun ctx ->
+            name >:: fun _ ->
               match res with
               | `Ok -> ()
               | `Exn x -> raise x) in

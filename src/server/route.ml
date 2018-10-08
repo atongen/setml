@@ -52,5 +52,5 @@ let to_uri route = snd (to_meth_and_path route) |> Uri.of_string
 
 let index_uri = to_uri Index
 let ws_show_uri game_id = to_uri (Ws_show game_id)
-let game_create_uri game_id = to_uri Game_create
+let game_create_uri () = to_uri Game_create
 let game_show_uri game_id = to_uri (Game_show game_id)

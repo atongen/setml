@@ -1,6 +1,4 @@
-open Lwt
 open Lwt.Infix
-open Websocket
 open Websocket_cohttp_lwt
 
 open Lib
@@ -48,13 +46,13 @@ let log msg = Lwt_io.printlf "%s" msg
 let (>>=?) m f =
   m >>= function
   | Ok x -> f x
-  | Error e ->
+  | Error _ ->
     render_error "Oh no!"
 
 let (>>=*) m f =
   m >>= function
   | Ok x -> f x
-  | Error err -> (*Caqti_error.show err |> log*)
+  | Error _ -> (*Caqti_error.show err |> log*)
     log "shit"
 
 let handle_message pool game_id player_id player_token json =
@@ -160,7 +158,7 @@ let make_handler pool pubsub =
       File_server.serve ~info:"Served by Cohttp/Lwt" ~docroot:"./public" ~index:"index.html" ~headers uri path
     | Route.Route_not_found -> render_not_found
 
-let start_server host port () =
+let start_server _ port () =
   let conn_closed (ch,_) =
     Printf.eprintf "[SERV] connection %s closed\n%!"
       (Sexplib.Sexp.to_string_hum (Conduit_lwt_unix.sexp_of_flow ch))
@@ -173,7 +171,7 @@ let start_server host port () =
     Cohttp_lwt_unix.Server.create
         ~mode:(`TCP (`Port port))
         (Cohttp_lwt_unix.Server.make ~callback:(make_handler pool pubsub) ~conn_closed ())
-  | Error e ->
+  | Error _ ->
     Lwt.return (print_endline ("Failed to connect to db!"))
 
 let () =

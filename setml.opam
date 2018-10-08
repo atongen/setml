@@ -1,4 +1,4 @@
-opam-version: "1.2"
+opam-version: "2.0"
 name: "setml"
 version: "0.1.0"
 maintainer: "Andrew Tongen <atongen@gmail.com>"
@@ -6,27 +6,27 @@ authors: "Andrew Tongen <atongen@gmail.com>"
 homepage: "https://github.com/atongen/setml"
 bug-reports: "https://github.com/atongen/setml"
 license: "MIT"
-dev-repo: "https://github.com/atongen/setml"
+dev-repo: "git://github.com/atongen/setml"
 
 build: [
-  ["jbuilder" "build" "-p" name "-j" jobs]
+  ["dune" "build" "-p" name "-j" jobs]
 ]
 
 depends: [
-  "jbuilder" {build & >= "1.0+beta14"}
-  "caqti" {build & = "0.10.1"}
-  "caqti-driver-postgresql" {build & = "0.10.1"}
-  "caqti-lwt" {build & = "0.10.1"}
-  "cohttp" {build & = "1.1.0"}
-  "cohttp-lwt" {build & = "1.0.2"}
-  "cohttp-lwt-unix" {build & = "1.0.2"}
-  "containers" {build & = "2.1"}
-  "cow" {build & = "2.2.0"}
-  "nocrypto" {build & = "0.5.4"}
-  "postgresql" {build & = "4.3.0"}
-  "re" {build & = "1.7.3"}
-  "websocket" {build & = "2.10"}
-  "websocket-lwt" {build & = "2.11"}
-  "yojson" {build & = "1.4.1"}
-  "ounit" {test & = "2.0.7"}
+  "dune" {build & >= "1.2.1"}
+  "caqti" {build & >= "0.11.0"}
+  "caqti-driver-postgresql" {build & >= "0.11.0"}
+  "caqti-lwt" {build & >= "0.11.0"}
+  "cohttp" {build & >= "1.1.0"}
+  "cohttp-lwt" {build & >= "1.0.2"}
+  "cohttp-lwt-unix" {build & >= "1.0.2"}
+  "containers" {build & >= "2.3.0"}
+  "cow" {build & >= "2.3.0"}
+  "nocrypto" {build & >= "0.5.4"}
+  "postgresql" {build & >= "4.4.0"}
+  "re" {build & >= "1.8.0"}
+  "websocket" {build & >= "2.10"}
+  "websocket-lwt" {build & >= "2.11"}
+  "yojson" {build & >= "1.4.1"}
+  "ounit" {build & >= "2.0.8"}
 ]

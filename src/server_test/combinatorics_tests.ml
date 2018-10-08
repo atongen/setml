@@ -1,5 +1,4 @@
 open OUnit2
-open Lib
 open Shared
 
 open Test_lib.Test_util

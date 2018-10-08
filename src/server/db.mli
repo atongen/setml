@@ -1,3 +1,9 @@
+type mode =
+    | ReadUncommitted
+    | ReadCommitted
+    | RepeatableRead
+    | Serializable
+
 type t
 val create : ?max_size:int -> string -> (t, Caqti_error.t) result Lwt.t
 val create_game : t -> (int * int) -> (int, Caqti_error.t) result Lwt.t

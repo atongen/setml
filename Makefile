@@ -8,7 +8,7 @@ default: all
 # multiple subcommands and uses the library.
 # The library can be loaded in utop for interactive testing.
 all:
-	jbuilder build @install
+	dune build @install
 	@test -L bin || ln -s _build/install/default/bin .
 
 # Launch utop such that it finds our library.
@@ -35,7 +35,7 @@ test: test_processes test_sequential test_async test_client
 
 # Clean up
 clean:
-	# Remove files produced by jbuilder.
-	jbuilder clean
+	# Remove files produced by dune.
+	dune clean
 	# Remove files produced by npm
 	npm run-script clean

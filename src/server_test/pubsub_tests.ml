@@ -118,7 +118,7 @@ let player_name_check pubsub =
         let game1_id = setup_game pubsub in
         Pubsub.empty_query pubsub (make_board_cards_query game1_id);
 
-        let player_id, player_name = setup_player pubsub in
+        let player_id, _ = setup_player pubsub in
         let new_name = "john" in
         Pubsub.empty_query pubsub (make_presence_query game0_id player_id true);
         Pubsub.empty_query pubsub (make_presence_query game1_id player_id true);
@@ -179,7 +179,7 @@ let game_update_check pubsub =
 let moves_insert_check pubsub =
     fun test_ctx ->
         let game_id = setup_game pubsub in
-        let player_id, player_name = setup_player pubsub in
+        let player_id, _ = setup_player pubsub in
         Pubsub.empty_query pubsub @@ Printf.sprintf
             {eos|
                 insert into moves (
@@ -207,7 +207,7 @@ let moves_insert_check pubsub =
 let shuffles_insert_check pubsub =
     fun test_ctx ->
         let game_id = setup_game pubsub in
-        let player_id, player_name = setup_player pubsub in
+        let player_id, _ = setup_player pubsub in
         Pubsub.empty_query pubsub @@ Printf.sprintf
             {eos|
                 insert into shuffles (

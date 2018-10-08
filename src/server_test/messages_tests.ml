@@ -2,7 +2,6 @@ open OUnit2
 open Shared
 open Shared.Messages
 
-open Lib
 open Lib.Server_messages
 
 open Test_lib.Test_util

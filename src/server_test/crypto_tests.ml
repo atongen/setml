@@ -1,6 +1,5 @@
 open OUnit2
 open Lib
-open Shared
 
 open Test_lib.Test_util
 
@@ -15,7 +14,7 @@ let crypto_encode_decode_tests =
   in
   let open CCList.Infix in
   let open Crypto in
-  let cases = (0 --^ 128) >|= fun i ->
+  let cases = (0 --^ 128) >|= fun _ ->
     let rand_value () =
         match random_int 0 3 with
         | 0 -> "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
