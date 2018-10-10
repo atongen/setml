@@ -1,0 +1,10 @@
+(library
+ (name shared)
+ (modules
+  card
+  combinatorics
+  game_status
+  messages
+  messages_util
+  shared_util
+  theme))
