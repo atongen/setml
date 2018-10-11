@@ -174,13 +174,13 @@ let start_server _ port () =
   | Error _ ->
     Lwt.return (print_endline ("Failed to connect to db!"))
 
-let () =
+let run (config: Config.t) =
   let random_generator = Nocrypto.Rng.create (module Nocrypto.Rng.Generators.Fortuna) in
   Nocrypto_entropy_unix.initialize ();
   Nocrypto_entropy_unix.reseed random_generator;
+  Lwt_main.run (start_server "localhost" config.port ())
 
-  let port = if Array.length Sys.argv = 2 then
-      int_of_string Sys.argv.(1)
-    else 7777
-  in
-  Lwt_main.run (start_server "localhost" port ())
+let () =
+    match Config.parse () with
+    | `Ok c -> run c
+    | r -> Cmdliner.Term.exit r

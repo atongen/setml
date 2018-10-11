@@ -3,6 +3,7 @@
  (modules
   db
   clients
+  config
   crypto
   pubsub
   route

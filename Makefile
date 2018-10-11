@@ -1,6 +1,4 @@
-# Invoke `make` to build, `make clean` to clean up, etc.
-
-.PHONY: default all utop test clean
+.PHONY: default all utop setup_tests test test_processes test_sequential test_async test_client clean
 
 default: all
 
@@ -15,13 +13,16 @@ all:
 utop: all
 	OCAMLPATH=_build/install/default/lib:$(OCAMLPATH) utop
 
-test_processes: all
+setup_tests: all
+	export SETML_ENV=test
+
+test_processes: setup_tests
 	./bin/test_processes -runner processes
 
-test_sequential: all
+test_sequential: setup_tests
 	./bin/test_sequential -runner sequential
 
-test_async: all
+test_async: setup_tests
 	./bin/test_async -runner processes
 
 build_client:
@@ -30,12 +31,8 @@ build_client:
 test_client: build_client
 	npm run-script test
 
-# Build and run tests
 test: test_processes test_sequential test_async test_client
 
-# Clean up
 clean:
-	# Remove files produced by dune.
 	dune clean
-	# Remove files produced by npm
 	npm run-script clean
