@@ -20,6 +20,7 @@
   cohttp-lwt-unix
   containers
   containers.thread
+  containers.unix
   cow
   nocrypto
   nocrypto.unix
