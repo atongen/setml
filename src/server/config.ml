@@ -21,6 +21,12 @@ let setml_env () =
     | Some e -> e
     | None -> "development"
 
+let setml_env_a =
+    let doc = "setml environment" in
+    let n = "SETML_ENV" in
+    let env = Arg.env_var n ~doc in
+    Arg.(value & pos 0 string (setml_env ()) & info [] ~env)
+
 let listen_address =
     let doc = "Listen address" in
     let n = "LISTEN_ADDRESS" in
@@ -92,15 +98,17 @@ let crypto_secret =
 
 let info =
     let doc = "setml" in
+    let i = Info.get () in
+    let build_info = Info.to_string i in
     let man = [
         `S Manpage.s_bugs;
-        `P "Email bug reports to <hehey at example.org>." ]
-    in
-    Term.info "setml" ~version:"%%VERSION%%" ~doc ~exits:Term.default_exits ~man
+        `P i.bug_reports
+    ] in
+    Term.info "setml" ~version:build_info ~doc ~exits:Term.default_exits ~man
 
-let make listen_address listen_port db_name db_host db_port db_user db_pass db_pool crypto_secret =
+let make setml_env listen_address listen_port db_name db_host db_port db_user db_pass db_pool crypto_secret =
     {
-        setml_env = setml_env ();
+        setml_env;
         listen_address;
         listen_port;
         db_name;
@@ -115,6 +123,7 @@ let make listen_address listen_port db_name db_host db_port db_user db_pass db_p
 let config_t =
     let open Term in
     const make $
+    setml_env_a $
     listen_address $ listen_port $
     db_name $ db_host $ db_port $ db_user $ db_pass $ db_pool $
     crypto_secret

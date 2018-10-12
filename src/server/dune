@@ -5,6 +5,7 @@
   clients
   config
   crypto
+  info
   pubsub
   route
   server_messages
