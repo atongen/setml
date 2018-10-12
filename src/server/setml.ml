@@ -178,7 +178,7 @@ let run (config: Config.t) =
   let random_generator = Nocrypto.Rng.create (module Nocrypto.Rng.Generators.Fortuna) in
   Nocrypto_entropy_unix.initialize ();
   Nocrypto_entropy_unix.reseed random_generator;
-  Lwt_main.run (start_server "localhost" config.port ())
+  Lwt_main.run (start_server config.listen_address config.listen_port ())
 
 let () =
     match Config.parse () with
