@@ -11,13 +11,26 @@ type t = {
     mutable listening: Listen_set.t;
 }
 
-let make ?(n=32) conninfo clients =
-    {
-        conn = new Postgresql.connection ~conninfo ();
-        clients;
-        actions = CCBlockingQueue.create n;
-        listening = Listen_set.empty;
-    }
+let make ?(n=32) ?(retries=0) conninfo clients =
+    let rec aux attempt max =
+        try
+            let conn = new Postgresql.connection ~conninfo () in
+            Ok {
+                conn;
+                clients;
+                actions = CCBlockingQueue.create n;
+                listening = Listen_set.empty;
+            }
+        with Postgresql.Error e ->
+            let msg = Postgresql.string_of_error e in
+            if attempt < max then (
+                ignore(print_endline "Error connecting to pubsub db, retrying...");
+                Unix.sleep 1;
+                aux (attempt + 1) max
+            ) else (
+                Error msg
+            )
+    in aux 0 retries
 
 let channel_game_id_re = Re.Pcre.regexp "^game_([0-9]+)$"
 

@@ -229,7 +229,14 @@ let shuffles_insert_check pubsub =
         teardown_game pubsub game_id
 
 
-let pubsub_tests pubsub =
+(*
+ * See bin/test -help
+ * bin/test -runner sequential
+ * libpq / postgresql library cannot process multiple requests
+ * concurrently against a single db connection
+ *)
+let suite pubsub =
+    Crypto.init ();
     let check f = f pubsub in
     cases_of check [
         presence_check;
@@ -239,15 +246,3 @@ let pubsub_tests pubsub =
         game_update_check;
         moves_insert_check;
     ]
-
-(*
- * See bin/test -help
- * bin/test -runner sequential
- * libpq / postgresql library cannot process multiple requests
- * concurrently against a single db connection
- *)
-let suite (config: Config.t) =
-    Crypto.init ();
-    let clients = Clients.make () in
-    let pubsub = Pubsub.make (Config.db_conninfo config) clients in
-    pubsub_tests pubsub

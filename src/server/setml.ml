@@ -155,30 +155,31 @@ let make_handler pool pubsub clients crypto =
     | Route.Route_not_found -> render_not_found
 
 let start_server (config: Config.t) =
-  let conn_closed (ch,_) =
-    Printf.eprintf "[SERV] connection %s closed\n%!"
-      (Sexplib.Sexp.to_string_hum (Conduit_lwt_unix.sexp_of_flow ch))
-  in
-  let info = Info.to_string (Info.get ()) in
-  Lwt_io.eprintf "%s\n" info >>= fun () ->
-  Lwt_io.eprintf "Listening on port %d\n%!" config.listen_port >>= fun () ->
-  let clients = Clients.make () in
-  let crypto = Crypto.make config.crypto_secret in
-  Db.make ~max_size:config.db_pool (Config.db_uri_str config) >>= function
-  | Ok pool ->
-    let pubsub = Pubsub.make (Config.db_conninfo config) clients in
-    ignore (Lwt_preemptive.detach Pubsub.start pubsub);
-    Cohttp_lwt_unix.Server.create
-        ~mode:(`TCP (`Port config.listen_port))
-        (Cohttp_lwt_unix.Server.make ~callback:(make_handler pool pubsub clients crypto) ~conn_closed ())
-  | Error _ ->
-    Lwt.return (print_endline ("Failed to connect to db!"))
+    let conn_closed (ch,_) =
+        Printf.eprintf "Connection %s closed\n%!"
+        (Sexplib.Sexp.to_string_hum (Conduit_lwt_unix.sexp_of_flow ch))
+    in
+    let crypto = Crypto.make config.crypto_secret in
+    let clients = Clients.make () in
+    match Pubsub.make ~retries:10 (Config.db_conninfo config) clients with
+    | Ok pubsub -> (
+        ignore (Lwt_preemptive.detach Pubsub.start pubsub);
+        Db.make ~max_size:config.db_pool (Config.db_uri_str config) >>= function
+        | Ok pool ->
+            Lwt_io.eprintf "Listening on port %d\n%!" config.listen_port >>= fun () ->
+            Cohttp_lwt_unix.Server.create
+                ~mode:(`TCP (`Port config.listen_port))
+                (Cohttp_lwt_unix.Server.make ~callback:(make_handler pool pubsub clients crypto) ~conn_closed ())
+        | Error _ -> Lwt.return (print_endline ("Db read/write connection failed!"))
+    )
+    | Error msg -> Lwt.return (print_endline ("Db pubsub connection failed: " ^ msg))
 
 let run (config: Config.t) =
-  let random_generator = Nocrypto.Rng.create (module Nocrypto.Rng.Generators.Fortuna) in
-  Nocrypto_entropy_unix.initialize ();
-  Nocrypto_entropy_unix.reseed random_generator;
-  Lwt_main.run (start_server config)
+    ignore(print_endline(Info.to_string (Info.get ())));
+    let random_generator = Nocrypto.Rng.create (module Nocrypto.Rng.Generators.Fortuna) in
+    Nocrypto_entropy_unix.initialize ();
+    Nocrypto_entropy_unix.reseed random_generator;
+    Lwt_main.run (start_server config)
 
 let () =
     match Config.parse () with

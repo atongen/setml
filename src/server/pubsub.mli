@@ -1,6 +1,6 @@
 type t
 
-val make : ?n:int -> string -> Clients.t -> t
+val make : ?n:int -> ?retries:int -> string -> Clients.t -> (t, string) result
 val subscribe : t -> int -> unit
 val unsubscribe : t -> int -> unit
 val get_notifications : t -> Postgresql.Notification.t list

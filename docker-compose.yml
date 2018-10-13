@@ -1,22 +1,20 @@
 version: '3'
 services:
-  web0:
+  web:
     image: setml
     ports:
-      - "7000:7777"
+      - "7000-7100:7777"
     depends_on:
       - db
-  web1:
-    image: setml
-    ports:
-      - "7001:7777"
-    depends_on:
-      - db
+    environment:
+      - DB_PASS=abcd1234
+      - DB_USER=setml
+      - DB_HOST=db
   db:
     image: "postgres:10-alpine"
     environment:
-      - POSTGRES_PASSWORD=at1234
-      - POSTGRES_USER=atongen
+      - POSTGRES_PASSWORD=abcd1234
+      - POSTGRES_USER=setml
       - POSTGRES_DB=setml_development
     volumes:
       - ./sql/schema.sql:/docker-entrypoint-initdb.d/init.sql
