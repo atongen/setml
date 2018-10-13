@@ -534,9 +534,8 @@ let with_pool ?(priority=0.0) ?(mode=ReadCommitted) (pool: t) f arg =
     Caqti_lwt.Pool.use ~priority (fun (module C : Caqti_lwt.CONNECTION) ->
         with_transaction ~mode (module C : Caqti_lwt.CONNECTION) f arg
     ) pool
-
-let create ?(max_size=8) uri: (t, Caqti_error.t) result Lwt.t =
-    Lwt.return (Caqti_lwt.connect_pool ~max_size (Uri.of_string uri))
+let make ?(max_size=8) uri_str: (t, Caqti_error.t) result Lwt.t =
+    Lwt.return (Caqti_lwt.connect_pool ~max_size (Uri.of_string uri_str))
 
 let create_game p arg = with_pool p I.create_game arg
 

@@ -1,6 +1,5 @@
 type t = {
     setml_env: string;
-    listen_address: string;
     listen_port: int;
     db_name: string;
     db_host: string;
@@ -12,3 +11,5 @@ type t = {
 }
 
 val parse : unit ->  t Cmdliner.Term.result
+val db_conninfo : t -> string
+val db_uri_str : t -> string

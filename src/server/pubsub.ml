@@ -11,12 +11,13 @@ type t = {
     mutable listening: Listen_set.t;
 }
 
-let make ?(n=32) conninfo clients = {
-    conn = new Postgresql.connection ~conninfo ();
-    clients;
-    actions = CCBlockingQueue.create n;
-    listening = Listen_set.empty;
-}
+let make ?(n=32) conninfo clients =
+    {
+        conn = new Postgresql.connection ~conninfo ();
+        clients;
+        actions = CCBlockingQueue.create n;
+        listening = Listen_set.empty;
+    }
 
 let channel_game_id_re = Re.Pcre.regexp "^game_([0-9]+)$"
 

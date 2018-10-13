@@ -5,7 +5,7 @@ type mode =
     | Serializable
 
 type t
-val create : ?max_size:int -> string -> (t, Caqti_error.t) result Lwt.t
+val make : ?max_size:int -> string -> (t, Caqti_error.t) result Lwt.t
 val create_game : t -> (int * int) -> (int, Caqti_error.t) result Lwt.t
 val game_exists : t -> int -> (bool, Caqti_error.t) result Lwt.t
 val find_game_card_idx : t -> int -> (int, Caqti_error.t) result Lwt.t

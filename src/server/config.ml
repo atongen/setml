@@ -5,7 +5,6 @@ let default_crypto_secret = "t8sK8LqFLn6Ixt9H6TMiS9HRs6BfcLyw6aXHi02omeOIp7mLYqS
 
 type t = {
     setml_env: string;
-    listen_address: string;
     listen_port: int;
     db_name: string;
     db_host: string;
@@ -26,12 +25,6 @@ let setml_env_a =
     let n = "SETML_ENV" in
     let env = Arg.env_var n ~doc in
     Arg.(value & pos 0 string (setml_env ()) & info [] ~env)
-
-let listen_address =
-    let doc = "Listen address" in
-    let n = "LISTEN_ADDRESS" in
-    let env = Arg.env_var n ~doc in
-    Arg.(value & opt string "0.0.0.0" & info ["a"; "listen-address"] ~env ~docv:n ~doc)
 
 let listen_port =
     let doc = "Listen port" in
@@ -106,10 +99,9 @@ let info =
     ] in
     Term.info "setml" ~version:build_info ~doc ~exits:Term.default_exits ~man
 
-let make setml_env listen_address listen_port db_name db_host db_port db_user db_pass db_pool crypto_secret =
+let make setml_env listen_port db_name db_host db_port db_user db_pass db_pool crypto_secret =
     {
         setml_env;
-        listen_address;
         listen_port;
         db_name;
         db_host;
@@ -124,8 +116,16 @@ let config_t =
     let open Term in
     const make $
     setml_env_a $
-    listen_address $ listen_port $
+    listen_port $
     db_name $ db_host $ db_port $ db_user $ db_pass $ db_pool $
     crypto_secret
 
 let parse () = Term.eval (config_t, info)
+
+let db_conninfo c =
+    Printf.sprintf "user=%s password=%s port=%d host=%s dbname=%s"
+    c.db_user c.db_pass c.db_port c.db_host c.db_name
+
+let db_uri_str c =
+    Printf.sprintf "postgresql://%s:%s@%s:%d/%s"
+    c.db_user c.db_pass c.db_host c.db_port c.db_name

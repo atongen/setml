@@ -246,8 +246,8 @@ let pubsub_tests pubsub =
  * libpq / postgresql library cannot process multiple requests
  * concurrently against a single db connection
  *)
-let suite =
+let suite (config: Config.t) =
     Crypto.init ();
     let clients = Clients.make () in
-    let pubsub = Pubsub.make "user=atongen password=at1234 port=5435 host=localhost dbname=setml_test" clients in
+    let pubsub = Pubsub.make (Config.db_conninfo config) clients in
     pubsub_tests pubsub

@@ -3,10 +3,6 @@ open Websocket_cohttp_lwt
 
 open Lib
 
-let clients = Clients.make ()
-let crypto = Crypto.make "t8sK8LqFLn6Ixt9H6TMiS9HRs6BfcLyw6aXHi02omeOIp7mLYqSIlxtPgxXiETvpentbHMPkGYpiqW8nR9rJmeVU4aEEyzMbzDqIRznNSiqPnDb0Dp9PNerGuODpaeza"
-
-
 let render_index ~headers token =
   Cohttp_lwt_unix.Server.respond_string
     ~headers
@@ -79,7 +75,7 @@ let handle_message pool game_id player_id player_token json =
         Db.create_shuffle pool (game_id, player_id) >>=* fun _ ->
         Lwt.return_unit
 
-let make_handler pool pubsub =
+let make_handler pool pubsub clients crypto =
   fun (conn : Conduit_lwt_unix.flow * Cohttp.Connection.t)
     (req  : Cohttp_lwt_unix.Request.t)
     (body : Cohttp_lwt.Body.t) ->
@@ -155,22 +151,26 @@ let make_handler pool pubsub =
           | None -> render_error "Unable to get player id from session!"
         ) else render_not_found)
     | Route.Static ->
-      File_server.serve ~info:"Served by Cohttp/Lwt" ~docroot:"./public" ~index:"index.html" ~headers uri path
+      File_server.serve ~info:"SetML File Server" ~docroot:"./public" ~index:"index.html" ~headers uri path
     | Route.Route_not_found -> render_not_found
 
-let start_server _ port () =
+let start_server (config: Config.t) =
   let conn_closed (ch,_) =
     Printf.eprintf "[SERV] connection %s closed\n%!"
       (Sexplib.Sexp.to_string_hum (Conduit_lwt_unix.sexp_of_flow ch))
   in
-  Lwt_io.eprintf "[SERV] Listening for HTTP on port %d\n%!" port >>= fun () ->
-  Db.create ~max_size:8 "postgresql://atongen:at1234@localhost:5435/setml_development" >>= function
+  let info = Info.to_string (Info.get ()) in
+  Lwt_io.eprintf "%s\n" info >>= fun () ->
+  Lwt_io.eprintf "Listening on port %d\n%!" config.listen_port >>= fun () ->
+  let clients = Clients.make () in
+  let crypto = Crypto.make config.crypto_secret in
+  Db.make ~max_size:config.db_pool (Config.db_uri_str config) >>= function
   | Ok pool ->
-    let pubsub = Pubsub.make "user=atongen password=at1234 port=5435 host=localhost dbname=setml_development" clients in
+    let pubsub = Pubsub.make (Config.db_conninfo config) clients in
     ignore (Lwt_preemptive.detach Pubsub.start pubsub);
     Cohttp_lwt_unix.Server.create
-        ~mode:(`TCP (`Port port))
-        (Cohttp_lwt_unix.Server.make ~callback:(make_handler pool pubsub) ~conn_closed ())
+        ~mode:(`TCP (`Port config.listen_port))
+        (Cohttp_lwt_unix.Server.make ~callback:(make_handler pool pubsub clients crypto) ~conn_closed ())
   | Error _ ->
     Lwt.return (print_endline ("Failed to connect to db!"))
 
@@ -178,7 +178,7 @@ let run (config: Config.t) =
   let random_generator = Nocrypto.Rng.create (module Nocrypto.Rng.Generators.Fortuna) in
   Nocrypto_entropy_unix.initialize ();
   Nocrypto_entropy_unix.reseed random_generator;
-  Lwt_main.run (start_server config.listen_address config.listen_port ())
+  Lwt_main.run (start_server config)
 
 let () =
     match Config.parse () with
