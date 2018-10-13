@@ -161,7 +161,7 @@ let start_server (config: Config.t) =
     in
     let crypto = Crypto.make config.crypto_secret in
     let clients = Clients.make () in
-    match Pubsub.make ~retries:10 (Config.db_conninfo config) clients with
+    match Pubsub.make ~retries:60 (Config.db_conninfo config) clients with
     | Ok pubsub -> (
         ignore (Lwt_preemptive.detach Pubsub.start pubsub);
         Db.make ~max_size:config.db_pool (Config.db_uri_str config) >>= function
