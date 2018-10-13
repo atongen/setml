@@ -10,13 +10,9 @@ let suite pubsub =
     "pubsub" >::: Pubsub_tests.suite pubsub;
   ]
 
-let run (config: Config.t) =
+let () =
+    let config = Config.make_of_env () in
     let clients = Clients.make () in
     match Pubsub.make (Config.db_conninfo config) clients with
     | Ok pubsub -> OUnit2.run_test_tt_main (suite pubsub)
     | Error msg -> failwith msg
-
-let () =
-    match Config.parse () with
-    | `Ok c -> run c
-    | r -> Cmdliner.Term.exit r

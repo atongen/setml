@@ -20,15 +20,11 @@ let suite db =
         "game_status_test", Db_tests.game_status_test db;
     ]
 
-let run (config: Config.t) =
+let () =
     Crypto.init ();
+    let config = Config.make_of_env () in
     Lwt_main.run (begin
         Db.make ~max_size:config.db_pool (Config.db_uri_str config) >>=? fun db ->
         Db.delete_all db () >>=? fun () ->
         suite db >|= OUnit2.run_test_tt_main
     end)
-
-let () =
-    match Config.parse () with
-    | `Ok c -> run c
-    | r -> Cmdliner.Term.exit r

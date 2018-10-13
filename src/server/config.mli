@@ -11,5 +11,6 @@ type t = {
 }
 
 val parse : unit ->  t Cmdliner.Term.result
+val make_of_env : unit -> t
 val db_conninfo : t -> string
 val db_uri_str : t -> string
