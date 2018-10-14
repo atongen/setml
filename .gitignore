@@ -9,3 +9,4 @@ setml.install
 /bin
 /lib
 /public/js
+/envfile

@@ -10,6 +10,9 @@ INFO_FILE=src/server/info.ml
 
 default: all
 
+include envfile
+export $(shell sed 's/=.*//' envfile)
+
 # Build one library and one standalone executable that implements
 # multiple subcommands and uses the library.
 # The library can be loaded in utop for interactive testing.
@@ -29,7 +32,7 @@ utop: all
 	OCAMLPATH=_build/install/default/lib:$(OCAMLPATH) utop
 
 setup_tests: all
-	export SETML_ENV=test
+	@export SETML_ENV=test
 
 test_processes: setup_tests
 	./bin/test_processes -runner processes
