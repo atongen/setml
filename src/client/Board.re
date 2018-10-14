@@ -33,6 +33,7 @@ type state = {
   selected: Set.t(Messages.board_card_data, BoardCardDataComparator.identity),
   context: ref(option(Canvas2dRe.t)),
   boardCards: list(Messages.board_card_data),
+  game: Messages.game_update_data,
 };
 
 let component = ReasonReact.reducerComponent("Board");
@@ -101,7 +102,7 @@ let drawBoard = (ctx, dims, cards: list(Messages.board_card_data)) => {
       | (Some(rect), Some(bcd)) => drawBlock(ctx, randomColor(), idx, rect, bcd.card)
       | (Some(rect), None) =>
         /* Js.log("drawBoard error: No board card provided at idx" ++ string_of_int(idx) ++ "!"); */
-        drawBlock(ctx, randomColor(), idx, rect, None);
+        drawBlock(ctx, randomColor(), idx, rect, None)
       | (None, _) => Js.log("drawBoard error: No block found at idx " ++ string_of_int(idx) ++ "!")
       };
     };
@@ -135,10 +136,14 @@ let makeDims = (rect, ratio, columns, rows) => {
   };
 };
 
-let printSets = (boardCards: list(Messages.board_card_data)) => {
+let printSets = (boardCards: list(Messages.board_card_data), theme) => {
   let sets = Messages_util.board_cards_sets(boardCards);
-  let s = c => Card.to_string(c);
-  List.forEach(sets, ((c0, c1, c2)) => Js.log(Printf.sprintf("Set: (%s, %s, %s)", s(c0), s(c1), s(c2))));
+  let s = c => Theme.card_to_string(theme, c);
+  List.forEach(sets, ((c0, c1, c2)) =>
+    Js.log(
+      Printf.sprintf("Set: (%d: %s, %d: %s, %d: %s)", c0.idx, s(c0.card), c1.idx, s(c1.card), c2.idx, s(c2.card)),
+    )
+  );
 };
 
 let shouldRedraw = (oldState: state, newState: state) =>
@@ -215,8 +220,9 @@ let make = (_children, ~rect, ~ratio, ~columns, ~rows, ~boardCards, ~players, ~g
     selected: emptySelections,
     context: ref(None),
     boardCards,
+    game,
   },
-  willReceiveProps: self => {...self.state, dims: makeDims(rect, ratio, columns, rows), boardCards},
+  willReceiveProps: self => {...self.state, dims: makeDims(rect, ratio, columns, rows), boardCards, game},
   didMount: self => {
     let myCanvas: canvas = [%bs.raw {| document.getElementById("board") |}];
     let context = getContext(myCanvas, "2d");
@@ -227,7 +233,7 @@ let make = (_children, ~rect, ~ratio, ~columns, ~rows, ~boardCards, ~players, ~g
   },
   didUpdate: ({oldSelf, newSelf}) =>
     if (shouldRedraw(oldSelf.state, newSelf.state)) {
-      printSets(newSelf.state.boardCards);
+      printSets(newSelf.state.boardCards, newSelf.state.game.theme);
       switch (newSelf.state.context) {
       | {contents: Some(ctx)} =>
         reset(ctx, "white", newSelf.state.dims.size.w, newSelf.state.dims.size.h);

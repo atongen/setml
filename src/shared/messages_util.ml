@@ -54,10 +54,20 @@ let board_cards_next_set (board_cards: board_card_data list) =
     | None -> None
     in aux (tg ())
 
+let board_card_compare bc0 bc1 = Card.compare bc0.card bc1.card
+
 let board_cards_sets (board_cards: board_card_data list) =
-    let cards_data = board_cards_compact board_cards in
-    let cards = List.map (fun cd -> cd.card) cards_data in
-    Card.find_sets(cards)
+    let cards = board_cards_compact board_cards in
+    let tg = Combinatorics.triple_generator ~comp:board_card_compare cards in
+    let rec aux acc = function
+        | Some ((cd0, cd1, cd2)) ->
+            if Card.is_set cd0.card cd1.card cd2.card then
+            aux ((cd0, cd1, cd2) :: acc) (tg ())
+        else
+            aux acc (tg ())
+        | None -> acc
+    in
+    aux [] (tg ())
 
 let board_cards_count_sets (board_cards: board_card_data list) =
     let cards_data = board_cards_compact board_cards in
