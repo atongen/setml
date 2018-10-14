@@ -14,6 +14,13 @@ type t = {
 
 exception RequiredMissing of string
 
+let to_string c =
+    Printf.sprintf
+    "{setml_env: '%s', listen_port: %d, db_name: '%s', db_host: '%s', db_port: %d, db_user: '%s', db_pass: '%s', db_pool: %d, crypto_secret: '%s'}"
+    c.setml_env c.listen_port
+    c.db_name c.db_host c.db_port c.db_user c.db_pass c.db_pool
+    c.crypto_secret
+
 let env_or key default =
     match Sys.getenv_opt key with
     | Some e -> e
@@ -90,7 +97,7 @@ let db_host =
 
 let db_port =
     let doc = "Database port" in
-    let env = Arg.env_var db_pool_key ~doc in
+    let env = Arg.env_var db_port_key ~doc in
     Arg.(value & opt int db_port_default & info ["db-port"] ~env ~docv:db_port_key ~doc)
 
 let db_user =

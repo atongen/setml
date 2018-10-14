@@ -47,14 +47,10 @@ let make = (_children, ~boardCards, ~players, ~game: Messages.game_update_data, 
     | Resize => ReasonReact.Update(getState(game.dim0, game.dim1))
     },
   initialState: () => getState(game.dim0, game.dim1),
-  subscriptions: self => {
+  didMount: self => {
     let debouncedHandleResize = ClientUtil.debounceOne(100, self.handle(handleResize));
-    [
-      Sub(
-        () => WindowRe.addEventListener("resize", debouncedHandleResize, window),
-        () => WindowRe.removeEventListener("resize", debouncedHandleResize, window),
-      ),
-    ];
+    WindowRe.addEventListener("resize", debouncedHandleResize, window);
+    self.onUnmount(() => WindowRe.removeEventListener("resize", debouncedHandleResize, window));
   },
   render: self => {
     let screen = self.state.screen;
