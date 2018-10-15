@@ -6,7 +6,8 @@ open ClientMessages;
 
 type action =
   | SendMessage(Messages.t)
-  | ReceiveMessage(string);
+  | ReceiveMessage(string)
+  | ToggleDrawer;
 
 type state = {
   ws: ref(option(WebSockets.WebSocket.t)),
@@ -15,6 +16,7 @@ type state = {
   game: game_update_data,
   previousMove: option(move_data),
   msgs: list(string),
+  drawerOpen: bool,
 };
 
 let receiveMessage = (evt, self) => {
@@ -153,6 +155,12 @@ let handleReceiveMessage = (state, msg) =>
 
 let component = ReasonReact.reducerComponent("Game");
 
+[%mui.withStyles "StyledAppBar"({
+    root: ReactDOMRe.Style.make(~flexGrow="1", ()),
+    grow: ReactDOMRe.Style.make(~flexGrow="1", ()),
+    menuButton: ReactDOMRe.Style.make(~marginLeft="-12", ~marginRight="20", ()),
+})];
+
 let make = _children => {
   ...component,
   reducer: (action, state) =>
@@ -168,6 +176,7 @@ let make = _children => {
       | _ => Js.log("Unable to send: No websocket connection!")
       };
       ReasonReact.NoUpdate;
+    | ToggleDrawer => ReasonReact.Update({...state, drawerOpen: ! state.drawerOpen, msgs: []});
     },
   initialState: () => {
     ws: ref(None),
@@ -176,6 +185,7 @@ let make = _children => {
     game: make_game_update_data(0, "new", "classic", 3, 4),
     previousMove: None,
     msgs: [],
+    drawerOpen: false,
   },
   didMount: self => {
     switch (ClientUtil.ws_url()) {
@@ -189,7 +199,28 @@ let make = _children => {
   },
   render: self => {
     let sendMessage = msg => self.ReasonReact.send(SendMessage(msg));
+    let toggleDrawer = _evt => self.ReasonReact.send(ToggleDrawer);
     <section className="main">
+        MaterialUi.(
+          <StyledAppBar
+            render=(classes =>
+              <div className=classes.root>
+                <AppBar position=`Fixed>
+                  <Toolbar>
+                    <Button className=classes.menuButton onClick=(_event => self.send(ToggleDrawer)) color=`Inherit>
+                      <Icon> (ReasonReact.string("menu")) </Icon>
+                    </Button>
+                    <Typography variant=`H6 color=`Inherit className=classes.grow>
+                        (ReasonReact.string("News"))
+                    </Typography>
+                    <Button color=`Inherit> (ReasonReact.string("Login")) </Button>
+                  </Toolbar>
+                </AppBar>
+              </div>
+            )
+          />
+        )
+      <Drawer isOpen=self.state.drawerOpen onClose=toggleDrawer />
       <GameLayout
         boardCards=self.state.boardCards
         players=self.state.players

@@ -1,5 +1,3 @@
-open Belt;
-
 let window = Webapi.Dom.window;
 
 let devicePixelRatio = () : float => [%bs.raw {| window.devicePixelRatio || 1.0 |}];
@@ -19,6 +17,7 @@ type state = {
   screen,
 };
 
+
 let getScreen = () => {
   width: Webapi.Dom.Window.innerWidth(window),
   height: Webapi.Dom.Window.innerHeight(window),
@@ -36,13 +35,13 @@ let getState = (dim0, dim1) => {
   };
 };
 
-let handleResize = (evt, self) => self.ReasonReact.send(Resize);
+let handleResize = (_evt, self) => self.ReasonReact.send(Resize);
 
 let component = ReasonReact.reducerComponent("GameLayout");
 
 let make = (_children, ~boardCards, ~players, ~game: Messages.game_update_data, ~previousMove, ~sendMessage) => {
   ...component,
-  reducer: (action, state) =>
+  reducer: (action, _state) =>
     switch (action) {
     | Resize => ReasonReact.Update(getState(game.dim0, game.dim1))
     },
@@ -57,28 +56,32 @@ let make = (_children, ~boardCards, ~players, ~game: Messages.game_update_data, 
     let columns = self.state.columns;
     let rows = self.state.rows;
     let sidebarMinRatio = 0.2;
+    let appBarOffset = 64;
+    let usableHeight = screen.height - appBarOffset;
     let (boardRect, sidebarRect) =
-      if (screen.width >= screen.height) {
+      if (screen.width >= usableHeight) {
         /* landscape */
-        let idealBoard = float_of_int(screen.height);
+        let idealBoard = float_of_int(usableHeight);
         let idealBlock = idealBoard /. float_of_int(rows);
         let idealSidebar = float_of_int(screen.width) -. idealBlock *. float_of_int(columns);
         let minSidebar = float_of_int(screen.width) *. sidebarMinRatio;
         let sidebar = Shared_util.roundi(max(minSidebar, idealSidebar));
         let board = screen.width - sidebar;
-        (Rect.makei(0, 0, board, screen.height), Rect.makei(board, 0, screen.width - board, screen.height));
+        (Rect.makei(0, appBarOffset, board, usableHeight),
+         Rect.makei(board, appBarOffset, screen.width - board, usableHeight));
       } else {
         /* portrait */
         let idealBoard = float_of_int(screen.width);
         let idealBlock = idealBoard /. float_of_int(columns);
-        let idealSidebar = float_of_int(screen.height) -. idealBlock *. float_of_int(rows);
-        let minSidebar = float_of_int(screen.height) *. sidebarMinRatio;
+        let idealSidebar = float_of_int(usableHeight) -. idealBlock *. float_of_int(rows);
+        let minSidebar = float_of_int(usableHeight) *. sidebarMinRatio;
         let sidebar = Shared_util.roundi(max(minSidebar, idealSidebar));
-        let board = screen.height - sidebar;
-        (Rect.makei(0, 0, screen.width, board), Rect.makei(0, board, screen.width, screen.height - board));
+        let board = usableHeight - sidebar;
+        (Rect.makei(0, appBarOffset, screen.width, board),
+         Rect.makei(0, board + appBarOffset, screen.width, usableHeight - board));
       };
     <div>
-      <Board rect=boardRect ratio=screen.ratio columns rows boardCards players game sendMessage />
+      <Board rect=boardRect ratio=screen.ratio columns rows boardCards game sendMessage />
       <Sidebar rect=sidebarRect boardCards players game previousMove sendMessage />
     </div>;
   },

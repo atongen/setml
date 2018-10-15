@@ -42,17 +42,22 @@ let playerDataToLi = (player_data: Messages.player_data) => {
 let makeButton = (gameStatus, setsOnBoard, sendMessage) =>
   switch (gameStatus) {
   | Game_status.New =>
-    let startClick = _ => sendMessage(ClientUtil.make_start_game_msg());
-    <MaterialUi.Button onClick=startClick variant=`Raised>
+    let startClick = _evt => sendMessage(ClientUtil.make_start_game_msg());
+    <MaterialUi.Button onClick=startClick variant=`Contained>
       (ReasonReact.string("Start"))
       <MaterialUi.Icon> (ReasonReact.string("play_arrow")) </MaterialUi.Icon>
     </MaterialUi.Button>;
   | Game_status.Started =>
-    let shuffleClick = _ => sendMessage(ClientUtil.make_shuffle_msg());
-    let variant = if (setsOnBoard == 0) { `Raised } else { `Outlined };
-    <MaterialUi.Button onClick=shuffleClick variant=variant>
-        (ReasonReact.string("Shuffle"))
-        <MaterialUi.Icon> (ReasonReact.string("shuffle")) </MaterialUi.Icon>
+    let shuffleClick = _evt => sendMessage(ClientUtil.make_shuffle_msg());
+    let variant =
+      if (setsOnBoard == 0) {
+        `Contained;
+      } else {
+        `Outlined;
+      };
+    <MaterialUi.Button onClick=shuffleClick variant>
+      (ReasonReact.string("Shuffle"))
+      <MaterialUi.Icon> (ReasonReact.string("shuffle")) </MaterialUi.Icon>
     </MaterialUi.Button>;
   | Game_status.Complete => ReasonReact.null
   };

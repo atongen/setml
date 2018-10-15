@@ -14,8 +14,7 @@ end
 parts = ENV["PATH"].split(":")
 
 ocaml = select_parts(parts, %w( opam ocaml ))
-node_bin = File.expand_path("node_modules/.bin")
-js = select_parts((parts + [node_bin]), %w( nvm node ))
+js = select_parts(parts, %w( nvm node ))
 rest = parts - (ocaml + js)
 
 env = case ARGV[0]

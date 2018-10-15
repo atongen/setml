@@ -1,7 +1,6 @@
 open Belt;
 
 /* https://github.com/mui-org/material-ui/blob/master/docs/src/pages/demos/snackbars/ConsecutiveSnackbars.js */
-
 type action =
   | Process
   | Close;
@@ -27,12 +26,12 @@ let popMsg = messages =>
   | [hd, ...tl] => (Some(hd), tl)
   };
 
-let handleClose = (evt, reason, self) =>
+let handleClose = (_evt, reason, self) =>
   if (reason != "clickaway") {
     self.ReasonReact.send(Close);
   };
 
-let handleExit = (evt, self) => self.ReasonReact.send(Process);
+let handleExit = (_evt, self) => self.ReasonReact.send(Process);
 
 let component = ReasonReact.reducerComponent("ConsecutiveSnackbars");
 
@@ -59,7 +58,7 @@ let make = (_children, ~messages) => {
     let msgs = pushMsgs(self.state.messages, messages);
     {...self.state, open_, messages: msgs};
   },
-  didUpdate: ({oldSelf, newSelf}) => {
+  didUpdate: ({newSelf}) => {
     newSelf.send(Process);
     ();
   },
@@ -86,7 +85,6 @@ let make = (_children, ~messages) => {
         onExit=exit
         action=actionEl
       />;
-
     | None => ReasonReact.null
     },
 };

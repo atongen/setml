@@ -39,10 +39,10 @@ type state = {
 let component = ReasonReact.reducerComponent("Board");
 
 let getClick = evt =>
-  Click((float_of_int(ReactEventRe.Mouse.clientX(evt)), float_of_int(ReactEventRe.Mouse.clientY(evt))));
+  Click((float_of_int(ReactEvent.Mouse.clientX(evt)), float_of_int(ReactEvent.Mouse.clientY(evt))));
 
 let getHover = evt =>
-  Hover((float_of_int(ReactEventRe.Mouse.clientX(evt)), float_of_int(ReactEventRe.Mouse.clientY(evt))));
+  Hover((float_of_int(ReactEvent.Mouse.clientX(evt)), float_of_int(ReactEvent.Mouse.clientY(evt))));
 
 let randomColor = () => {
   let r = Random.int(256);
@@ -149,7 +149,7 @@ let printSets = (boardCards: list(Messages.board_card_data), theme) => {
 let shouldRedraw = (oldState: state, newState: state) =>
   oldState.dims.size != newState.dims.size || oldState.boardCards != newState.boardCards;
 
-let make = (_children, ~rect, ~ratio, ~columns, ~rows, ~boardCards, ~players, ~game, ~sendMessage) => {
+let make = (_children, ~rect, ~ratio, ~columns, ~rows, ~boardCards, ~game, ~sendMessage) => {
   ...component,
   reducer: (action, state) =>
     switch (action) {
@@ -199,18 +199,10 @@ let make = (_children, ~rect, ~ratio, ~columns, ~rows, ~boardCards, ~players, ~g
         if (oldIdx == newIdx) {
           ReasonReact.NoUpdate;
         } else {
-          /*Js.log("Started hovering " ++ string_of_int(newIdx) ++ ", stopped hovering " ++ string_of_int(oldIdx));*/
-          ReasonReact.Update({
-            ...state,
-            hovered: Some(newIdx),
-          });
+          ReasonReact.Update({...state, hovered: Some(newIdx)});
         }
-      | (Some(oldIdx), None) =>
-        /*Js.log("Stopped hovering " ++ string_of_int(oldIdx));*/
-        ReasonReact.Update({...state, hovered: None})
-      | (None, Some(newIdx)) =>
-        /*Js.log("Started hovering " ++ string_of_int(newIdx));*/
-        ReasonReact.Update({...state, hovered: Some(newIdx)})
+      | (Some(_oldIdx), None) => ReasonReact.Update({...state, hovered: None})
+      | (None, Some(newIdx)) => ReasonReact.Update({...state, hovered: Some(newIdx)})
       | (None, None) => ReasonReact.NoUpdate
       };
     },
