@@ -2,12 +2,6 @@ open Belt;
 
 let component = ReasonReact.statelessComponent("Sidebar");
 
-let get_game_url = () =>
-  switch (ClientUtil.game_url()) {
-  | Some(url) => url
-  | None => ""
-  };
-
 let avatarLetter = name =>
   if (String.length(name) > 0) {
     let c = Char.uppercase(name.[0]);
@@ -63,7 +57,6 @@ let makeButton = (gameStatus, setsOnBoard, sendMessage) =>
   };
 
 let make = (_children, ~rect, ~boardCards, ~players, ~game: Messages.game_update_data, ~previousMove, ~sendMessage) => {
-  let gameUrl = get_game_url();
   let setsOnBoard = Messages_util.board_cards_count_sets(boardCards);
   let cardsRemaining = 81 - game.card_idx + Messages_util.board_cards_count(boardCards);
   let pmove =
@@ -93,13 +86,11 @@ let make = (_children, ~rect, ~boardCards, ~players, ~game: Messages.game_update
     render: _self =>
       <section id="sidebar" style=(Rect.toStyle(rect))>
         <div id="header">
-          <h1> <a href="/"> (ReasonReact.string("SetML")) </a> </h1>
-          <ul>
-            <li> (ReasonReact.string("Game: ")) <a href=gameUrl> (ReasonReact.string(gameUrl)) </a> </li>
-            <li> (ReasonReact.string("Sets on board: " ++ string_of_int(setsOnBoard))) </li>
-            <li> (ReasonReact.string("Cards remaining: " ++ string_of_int(cardsRemaining))) </li>
-          </ul>
           button
+          <ul>
+            <li> (ReasonReact.string(string_of_int(setsOnBoard) ++ " sets on board")) </li>
+            <li> (ReasonReact.string(string_of_int(cardsRemaining) ++ " cards remaining")) </li>
+          </ul>
         </div>
         <div id="scores">
           <h2> (ReasonReact.string("Score")) </h2>

@@ -18,9 +18,9 @@ js = select_parts(parts, %w( nvm node ))
 rest = parts - (ocaml + js)
 
 env = case ARGV[0]
-when "ocaml"
+when "ocaml", "opam"
   (ocaml + js + rest).uniq
-when "js"
+when "js", "npm", "nvm", "node"
   (js + ocaml + rest).uniq
 else
   []

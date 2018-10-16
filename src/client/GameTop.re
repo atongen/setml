@@ -17,6 +17,7 @@ type state = {
   previousMove: option(move_data),
   msgs: list(string),
   drawerOpen: bool,
+  currentPlayerName: option(string),
 };
 
 let receiveMessage = (evt, self) => {
@@ -103,12 +104,15 @@ let handleReceiveMessage = (state, msg) =>
       players: d.player_data,
       game: d.game_update_data,
       msgs: [],
+      currentPlayerName: ClientUtil.current_player_name(d.player_data),
     })
   | Server_player(d) => ReasonReact.Update({...state, players: replacePlayer(d, state.players), msgs: []})
   | Server_name(d) =>
     let old_name = ClientUtil.player_name(state.players, d.player_id);
     let msg = old_name ++ " is now called " ++ d.name;
-    ReasonReact.Update({...state, players: updatePlayerName(d, state.players), msgs: [msg]});
+    let new_players = updatePlayerName(d, state.players);
+    let currentPlayerName = ClientUtil.current_player_name(new_players);
+    ReasonReact.Update({...state, players: new_players, currentPlayerName, msgs: [msg]});
   | Server_card(_) =>
     Js.log("Received unhandled Server_card message");
     ReasonReact.NoUpdate;
@@ -155,11 +159,13 @@ let handleReceiveMessage = (state, msg) =>
 
 let component = ReasonReact.reducerComponent("Game");
 
-[%mui.withStyles "StyledAppBar"({
+[%mui.withStyles
+  "StyledAppBar"({
     root: ReactDOMRe.Style.make(~flexGrow="1", ()),
     grow: ReactDOMRe.Style.make(~flexGrow="1", ()),
     menuButton: ReactDOMRe.Style.make(~marginLeft="-12", ~marginRight="20", ()),
-})];
+  })
+];
 
 let make = _children => {
   ...component,
@@ -176,7 +182,7 @@ let make = _children => {
       | _ => Js.log("Unable to send: No websocket connection!")
       };
       ReasonReact.NoUpdate;
-    | ToggleDrawer => ReasonReact.Update({...state, drawerOpen: ! state.drawerOpen, msgs: []});
+    | ToggleDrawer => ReasonReact.Update({...state, drawerOpen: ! state.drawerOpen, msgs: []})
     },
   initialState: () => {
     ws: ref(None),
@@ -186,6 +192,7 @@ let make = _children => {
     previousMove: None,
     msgs: [],
     drawerOpen: false,
+    currentPlayerName: None,
   },
   didMount: self => {
     switch (ClientUtil.ws_url()) {
@@ -200,10 +207,16 @@ let make = _children => {
   render: self => {
     let sendMessage = msg => self.ReasonReact.send(SendMessage(msg));
     let toggleDrawer = _evt => self.ReasonReact.send(ToggleDrawer);
+    let playerName =
+      switch (self.state.currentPlayerName) {
+      | Some(name) => name
+      | None => "Set Your Name"
+      };
     <section className="main">
-        MaterialUi.(
-          <StyledAppBar
-            render=(classes =>
+      MaterialUi.(
+        <StyledAppBar
+          render=(
+            classes =>
               <div className=classes.root>
                 <AppBar position=`Fixed>
                   <Toolbar>
@@ -211,15 +224,15 @@ let make = _children => {
                       <Icon> (ReasonReact.string("menu")) </Icon>
                     </Button>
                     <Typography variant=`H6 color=`Inherit className=classes.grow>
-                        (ReasonReact.string("News"))
+                      (ReasonReact.string("SetML"))
                     </Typography>
-                    <Button color=`Inherit> (ReasonReact.string("Login")) </Button>
+                    <Button color=`Inherit> (ReasonReact.string(playerName)) </Button>
                   </Toolbar>
                 </AppBar>
               </div>
-            )
-          />
-        )
+          )
+        />
+      )
       <Drawer isOpen=self.state.drawerOpen onClose=toggleDrawer />
       <GameLayout
         boardCards=self.state.boardCards

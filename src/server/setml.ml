@@ -10,12 +10,12 @@ let render_index ~headers token =
     ~body:(Templates.page "index" "SetML" token)
     ()
 
-let render_game ~headers game_id token =
+let render_game ~headers ~player_id game_id token =
   let game_id_str = Route.string_of_game_id game_id in
   Cohttp_lwt_unix.Server.respond_string
     ~headers
     ~status:`OK
-    ~body:(Templates.page "game" ("SetML: " ^ game_id_str) token)
+    ~body:(Templates.page ~player_id "game" ("SetML: " ^ game_id_str) token)
     ()
 
 let render_error ?headers msg =
@@ -104,9 +104,9 @@ let make_handler pool pubsub clients crypto =
         | None -> render_forbidden)
     | Route.Game_show (game_id) -> (
         match session.player_id with
-        | Some (_) ->
+        | Some (player_id) ->
           Db.game_exists pool game_id >>=? (fun exists ->
-              if exists then (render_game ~headers game_id session.token)
+              if exists then (render_game ~player_id ~headers game_id session.token)
               else render_not_found
             )
         | None ->

@@ -149,3 +149,15 @@ let player_name = (players: list(Messages.player_data), player_id) => {
   | None => "Player " ++ string_of_int(player_id)
   };
 };
+
+let current_player_id = () =>
+  switch (meta_content_opt("player_id")) {
+  | Some(pid) => Some(int_of_string(pid))
+  | None => None
+  };
+
+let current_player_name = (players: list(Messages.player_data)) =>
+  switch (current_player_id()) {
+  | Some(pid) => Some(player_name(players, pid))
+  | None => None
+  };
