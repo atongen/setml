@@ -234,13 +234,7 @@ let make = _children => {
         />
       )
       <Drawer isOpen=self.state.drawerOpen onClose=toggleDrawer />
-      <GameLayout
-        boardCards=self.state.boardCards
-        players=self.state.players
-        game=self.state.game
-        previousMove=self.state.previousMove
-        sendMessage
-      />
+      <GameLayout boardCards=self.state.boardCards players=self.state.players game=self.state.game sendMessage />
       <ConsecutiveSnackbars messages=self.state.msgs />
     </section>;
   },

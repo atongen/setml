@@ -17,7 +17,6 @@ type state = {
   screen,
 };
 
-
 let getScreen = () => {
   width: Webapi.Dom.Window.innerWidth(window),
   height: Webapi.Dom.Window.innerHeight(window),
@@ -39,7 +38,7 @@ let handleResize = (_evt, self) => self.ReasonReact.send(Resize);
 
 let component = ReasonReact.reducerComponent("GameLayout");
 
-let make = (_children, ~boardCards, ~players, ~game: Messages.game_update_data, ~previousMove, ~sendMessage) => {
+let make = (_children, ~boardCards, ~players, ~game: Messages.game_update_data, ~sendMessage) => {
   ...component,
   reducer: (action, _state) =>
     switch (action) {
@@ -67,8 +66,10 @@ let make = (_children, ~boardCards, ~players, ~game: Messages.game_update_data, 
         let minSidebar = float_of_int(screen.width) *. sidebarMinRatio;
         let sidebar = Shared_util.roundi(max(minSidebar, idealSidebar));
         let board = screen.width - sidebar;
-        (Rect.makei(0, appBarOffset, board, usableHeight),
-         Rect.makei(board, appBarOffset, screen.width - board, usableHeight));
+        (
+          Rect.makei(0, appBarOffset, board, usableHeight),
+          Rect.makei(board, appBarOffset, screen.width - board, usableHeight),
+        );
       } else {
         /* portrait */
         let idealBoard = float_of_int(screen.width);
@@ -77,12 +78,14 @@ let make = (_children, ~boardCards, ~players, ~game: Messages.game_update_data, 
         let minSidebar = float_of_int(usableHeight) *. sidebarMinRatio;
         let sidebar = Shared_util.roundi(max(minSidebar, idealSidebar));
         let board = usableHeight - sidebar;
-        (Rect.makei(0, appBarOffset, screen.width, board),
-         Rect.makei(0, board + appBarOffset, screen.width, usableHeight - board));
+        (
+          Rect.makei(0, appBarOffset, screen.width, board),
+          Rect.makei(0, board + appBarOffset, screen.width, usableHeight - board),
+        );
       };
     <div>
       <Board rect=boardRect ratio=screen.ratio columns rows boardCards game sendMessage />
-      <Sidebar rect=sidebarRect boardCards players game previousMove sendMessage />
+      <Sidebar rect=sidebarRect boardCards players game sendMessage />
     </div>;
   },
 };

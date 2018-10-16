@@ -56,28 +56,18 @@ let makeButton = (gameStatus, setsOnBoard, sendMessage) =>
   | Game_status.Complete => ReasonReact.null
   };
 
-let make = (_children, ~rect, ~boardCards, ~players, ~game: Messages.game_update_data, ~previousMove, ~sendMessage) => {
+let simplePlural = (word, num) =>
+  if (num == 1) {
+    word
+  } else {
+    word ++ "s"
+  };
+
+[%mui.withStyles "StyledGrid"({root: ReactDOMRe.Style.make(~flexGrow="1", ())})];
+
+let make = (_children, ~rect, ~boardCards, ~players, ~game: Messages.game_update_data, ~sendMessage) => {
   let setsOnBoard = Messages_util.board_cards_count_sets(boardCards);
   let cardsRemaining = 81 - game.card_idx + Messages_util.board_cards_count(boardCards);
-  let pmove =
-    switch (previousMove) {
-    | Some(move) =>
-      <div id="previous-move">
-        <h2> (ReasonReact.string("Previous Move")) </h2>
-        <ul>
-          <li key=(string_of_int(Card.to_int(move.Messages.card0.card)))>
-            (ReasonReact.string(Theme.card_to_string(game.theme, move.card0.card)))
-          </li>
-          <li key=(string_of_int(Card.to_int(move.Messages.card1.card)))>
-            (ReasonReact.string(Theme.card_to_string(game.theme, move.card1.card)))
-          </li>
-          <li key=(string_of_int(Card.to_int(move.Messages.card2.card)))>
-            (ReasonReact.string(Theme.card_to_string(game.theme, move.card2.card)))
-          </li>
-        </ul>
-      </div>
-    | None => ReasonReact.null
-    };
   let sortedPlayers = List.sort(players, (p0: Messages.player_data, p1) => compare(p1.score, p0.score));
   let playerItems = List.map(sortedPlayers, playerDataToLi);
   let button = makeButton(game.status, setsOnBoard, sendMessage);
@@ -85,18 +75,25 @@ let make = (_children, ~rect, ~boardCards, ~players, ~game: Messages.game_update
     ...component,
     render: _self =>
       <section id="sidebar" style=(Rect.toStyle(rect))>
-        <div id="header">
-          button
-          <ul>
-            <li> (ReasonReact.string(string_of_int(setsOnBoard) ++ " sets on board")) </li>
-            <li> (ReasonReact.string(string_of_int(cardsRemaining) ++ " cards remaining")) </li>
-          </ul>
-        </div>
-        <div id="scores">
-          <h2> (ReasonReact.string("Score")) </h2>
-          <MaterialUi.List> (ReasonReact.array(List.toArray(playerItems))) </MaterialUi.List>
-        </div>
-        pmove
+        <StyledGrid
+          render=(
+            classes =>
+              <div className=classes.root>
+                <MaterialUi.Grid container=true>
+                  <MaterialUi.Grid item=true>
+                    button
+                    <ul>
+                      <li> (ReasonReact.string(string_of_int(setsOnBoard) ++ " " ++ simplePlural("set", setsOnBoard) ++ " on board")) </li>
+                      <li> (ReasonReact.string(string_of_int(cardsRemaining) ++ " cards remaining")) </li>
+                    </ul>
+                  </MaterialUi.Grid>
+                  <MaterialUi.Grid item=true>
+                    <MaterialUi.List> (ReasonReact.array(List.toArray(playerItems))) </MaterialUi.List>
+                  </MaterialUi.Grid>
+                </MaterialUi.Grid>
+              </div>
+          )
+        />
       </section>,
   };
 };
