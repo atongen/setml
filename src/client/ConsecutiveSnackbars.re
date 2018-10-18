@@ -16,9 +16,11 @@ type state = {
   messages: list(messageInfo),
 };
 
-let pushMsg = (messages, msg) => messages @ [{message: msg, key: Js.Date.now()}];
+let mkMsg = msg => {message: msg, key: Js.Date.now()};
 
-let pushMsgs = (messages, msgs) => messages @ List.map(msgs, msg => {message: msg, key: Js.Date.now()});
+let pushMsg = (messages, msg) => messages @ [mkMsg(msg)];
+
+let pushMsgs = (messages, msgs) => messages @ List.map(msgs, mkMsg);
 
 let popMsg = messages =>
   switch (messages) {
@@ -49,13 +51,13 @@ let make = (_children, ~messages) => {
     },
   initialState: () => {open_: false, msgInfo: None, messages: []},
   willReceiveProps: self => {
+    let msgs = pushMsgs(self.state.messages, messages);
     let open_ =
-      if (List.length(messages) > 0) {
+      if (List.length(msgs) > 0) {
         false;
       } else {
         self.state.open_;
       };
-    let msgs = pushMsgs(self.state.messages, messages);
     {...self.state, open_, messages: msgs};
   },
   didUpdate: ({newSelf}) => {

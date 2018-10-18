@@ -14,7 +14,6 @@ type state = {
   boardCards: list(Messages.board_card_data),
   players: list(player_data),
   game: game_update_data,
-  previousMove: option(move_data),
   msgs: list(string),
   drawerOpen: bool,
   currentPlayerName: option(string),
@@ -95,6 +94,13 @@ let updatePlayerShuffles = (shuffle_data: shuffle_data, players: list(player_dat
   };
 };
 
+let moveDataToString = (theme, move_data) => {
+  let s0 = Theme.card_to_string(theme, move_data.card0.card);
+  let s1 = Theme.card_to_string(theme, move_data.card1.card);
+  let s2 = Theme.card_to_string(theme, move_data.card2.card);
+  Printf.sprintf("Previous move: (%s, %s, %s)", s0, s1, s2);
+};
+
 let handleReceiveMessage = (state, msg) =>
   switch (msg) {
   | Server_game(d) =>
@@ -138,12 +144,12 @@ let handleReceiveMessage = (state, msg) =>
       msgs: [ClientUtil.player_name(state.players, d.player_id) ++ " " ++ action ++ "!"],
     });
   | Server_move_info(d) =>
+    Js.log(moveDataToString(state.game.theme, d.move_data));
     ReasonReact.Update({
       ...state,
-      previousMove: Some(d.move_data),
       players: updatePlayerScore(d.score_data, state.players),
       msgs: [ClientUtil.player_name(state.players, d.score_data.player_id) ++ " scored!"],
-    })
+    });
   | Server_shuffles(d) =>
     ReasonReact.Update({
       ...state,
@@ -189,7 +195,6 @@ let make = _children => {
     boardCards: [],
     players: [],
     game: make_game_update_data(0, "new", "classic", 3, 4),
-    previousMove: None,
     msgs: [],
     drawerOpen: false,
     currentPlayerName: None,
