@@ -217,7 +217,8 @@ let make = _children => {
   render: self => {
     let sendMessage = msg => self.ReasonReact.send(SendMessage(msg));
     let toggleDrawer = _evt => self.ReasonReact.send(ToggleDrawer);
-    let toggleDialog = _evt => self.ReasonReact.send(ToggleDialog);
+    let toggleDialogState = () => self.ReasonReact.send(ToggleDialog);
+    let toggleDialogEvt = _evt => toggleDialogState();
     let playerName =
       switch (self.state.currentPlayerName) {
       | Some(name) => name
@@ -237,8 +238,14 @@ let make = _children => {
                     <Typography variant=`H6 color=`Inherit className=classes.grow>
                       (ReasonReact.string("SetML"))
                     </Typography>
-                    <Button color=`Inherit onClick=toggleDialog> (ReasonReact.string(playerName)) </Button>
-                    <NameDialog open_=self.state.dialogOpen onClose=toggleDialog currentName=playerName sendMessage />
+                    <Button color=`Inherit onClick=toggleDialogEvt> (ReasonReact.string(playerName)) </Button>
+                    <NameDialog
+                      open_=self.state.dialogOpen
+                      onCloseState=toggleDialogState
+                      onCloseEvt=toggleDialogEvt
+                      currentName=playerName
+                      sendMessage
+                    />
                   </Toolbar>
                 </AppBar>
               </div>
