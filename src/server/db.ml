@@ -197,6 +197,14 @@ module Q = struct
         {eos|
             update players
             set name = ?
+            where id = ?;
+        |eos}
+
+    let get_player_name_query =
+        Caqti_request.find Caqti_type.int Caqti_type.string
+        {eos|
+            select name
+            from players
             where id = ?
             limit 1;
         |eos}
@@ -482,6 +490,10 @@ module I = struct
         C.exec Q.update_player_name_query (name, player_id) >>=? fun () ->
         Lwt.return_ok ()
 
+    let get_player_name (module C : Caqti_lwt.CONNECTION) player_id =
+        C.find Q.get_player_name_query player_id >>=? fun name ->
+        Lwt.return_ok name
+
     let find_board_cards (module C : Caqti_lwt.CONNECTION) game_id =
         C.collect_list Q.find_board_cards_query game_id >>=? fun board_cards ->
         Lwt.return_ok (List.map (fun (idx, card_id) ->
@@ -564,6 +576,8 @@ let start_game p arg = with_pool p I.start_game arg
 let end_game p arg = with_pool p I.end_game arg
 
 let update_player_name p arg = with_pool p I.update_player_name arg
+
+let get_player_name p arg = with_pool p I.get_player_name arg
 
 let find_board_cards p arg = with_pool p I.find_board_cards arg
 

@@ -103,6 +103,12 @@ module Server_message_converter : Messages.CONVERT = struct
                     (type_key, `String (message_type_to_string Client_start_game_type));
                     (token_key, `String (token_to_string token));
                 ]
+            | Client_name (token, name) ->
+                `Assoc [
+                    (type_key, `String (message_type_to_string Client_name_type));
+                    (token_key, `String (token_to_string token));
+                    (name_key, `String name);
+                ]
         in
         aux x |> to_string
 
@@ -192,6 +198,11 @@ module Server_message_converter : Messages.CONVERT = struct
                 | Client_start_game_type ->
                     let token = json |> Util.member token_key |> Util.to_string |> token_of_string in
                     Client_start_game token
+                | Client_name_type ->
+                    let token = json |> Util.member token_key |> Util.to_string |> token_of_string in
+                    let name = json |> Util.member name_key |> Util.to_string in
+                    Client_name (token, name)
+
         in
         let json = from_string str in
         aux json

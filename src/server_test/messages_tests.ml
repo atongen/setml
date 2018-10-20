@@ -48,6 +48,7 @@ let convert_tests =
     make_client_move "wow" (make_move_data (1,1) (2,2) (3, 3));
     make_client_shuffle "my-token";
     make_client_start_game "my-other-token";
+    make_client_name "some weird token" "some weird name";
   ]
   in
   cases_of check messages

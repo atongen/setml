@@ -48,8 +48,9 @@ let (>>=?) m f =
 let (>>=*) m f =
   m >>= function
   | Ok x -> f x
-  | Error _ -> (*Caqti_error.show err |> log*)
-    log "shit"
+  | Error e ->
+    let msg = Caqti_error.show e in
+    log msg
 
 let handle_message pool game_id player_id player_token json =
     let msg = Server_messages.Server_message_converter.of_json json in
@@ -73,6 +74,10 @@ let handle_message pool game_id player_id player_token json =
     | Client_shuffle in_token ->
         if in_token <> player_token then Lwt.return_unit else
         Db.create_shuffle pool (game_id, player_id) >>=* fun _ ->
+        Lwt.return_unit
+    | Client_name (in_token, name) ->
+        if in_token <> player_token then Lwt.return_unit else
+        Db.update_player_name pool (player_id, name) >>=* fun _ ->
         Lwt.return_unit
 
 let make_handler pool pubsub clients crypto =

@@ -60,6 +60,11 @@ let make_start_game_msg = () => {
   Messages.Client_start_game(token);
 };
 
+let make_name_msg = name => {
+  let token = meta_content("token");
+  Messages.Client_name((token, name));
+};
+
 [@bs.get] external location : Dom.window => Dom.location = "";
 
 [@bs.get] external pathname : Dom.location => string = "";

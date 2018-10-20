@@ -103,6 +103,12 @@ module ClientMessageConverter: CONVERT = {
         object_([
           (type_key, string(message_type_to_string(Client_start_game_type))),
           (token_key, string(token_to_string(token))),
+        ])
+      | Client_name((token, name)) =>
+        object_([
+          (type_key, string(message_type_to_string(Client_name_type))),
+          (token_key, string(token_to_string(token))),
+          (name_key, string(name)),
         ]);
     aux(x) |> Json.stringify;
   };
@@ -191,6 +197,10 @@ module ClientMessageConverter: CONVERT = {
       | Client_start_game_type =>
         let token = json |> field(token_key, string) |> token_of_string;
         Client_start_game(token);
+      | Client_name_type =>
+        let token = json |> field(token_key, string) |> token_of_string;
+        let name = json |> field(name_key, string);
+        Client_name((token, name));
       };
     };
     let json = Json.parseOrRaise(str);

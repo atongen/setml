@@ -100,4 +100,8 @@ let _ =
         test "Client_start_game" (fun () ->
             test_convert (make_client_start_game "other-token")
         );
+
+        test "Client_name" (fun () ->
+            test_convert (make_client_name "a weird token" "a weird name")
+        );
     )

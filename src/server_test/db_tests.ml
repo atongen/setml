@@ -214,3 +214,14 @@ let game_status_test db =
         Db.start_game db game_id >>=? fun () ->
         Db.end_game db game_id >>=? fun () ->
         Lwt.return_unit
+
+let update_player_name_test db =
+    fun () ->
+        let new_name = "Michael Scott" in
+        Db.create_player db () >>=? fun player_id ->
+        Db.get_player_name db player_id >>=? fun player_name_before ->
+        assert_equal "" player_name_before;
+        Db.update_player_name db (player_id, new_name) >>=? fun () ->
+        Db.get_player_name db player_id >>=? fun player_name_after ->
+        assert_equal new_name player_name_after;
+        Lwt.return_unit

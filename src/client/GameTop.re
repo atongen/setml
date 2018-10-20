@@ -7,7 +7,8 @@ open ClientMessages;
 type action =
   | SendMessage(Messages.t)
   | ReceiveMessage(string)
-  | ToggleDrawer;
+  | ToggleDrawer
+  | ToggleDialog;
 
 type state = {
   ws: ref(option(WebSockets.WebSocket.t)),
@@ -16,6 +17,7 @@ type state = {
   game: game_update_data,
   msgs: list(string),
   drawerOpen: bool,
+  dialogOpen: bool,
   currentPlayerName: option(string),
 };
 
@@ -158,7 +160,8 @@ let handleReceiveMessage = (state, msg) =>
     })
   | Client_move(_)
   | Client_shuffle(_)
-  | Client_start_game(_) =>
+  | Client_start_game(_)
+  | Client_name(_) =>
     Js.log("Client received a client message");
     ReasonReact.NoUpdate;
   };
@@ -189,6 +192,7 @@ let make = _children => {
       };
       ReasonReact.NoUpdate;
     | ToggleDrawer => ReasonReact.Update({...state, drawerOpen: ! state.drawerOpen, msgs: []})
+    | ToggleDialog => ReasonReact.Update({...state, dialogOpen: ! state.dialogOpen, msgs: []})
     },
   initialState: () => {
     ws: ref(None),
@@ -197,6 +201,7 @@ let make = _children => {
     game: make_game_update_data(0, "new", "classic", 3, 4),
     msgs: [],
     drawerOpen: false,
+    dialogOpen: false,
     currentPlayerName: None,
   },
   didMount: self => {
@@ -212,6 +217,7 @@ let make = _children => {
   render: self => {
     let sendMessage = msg => self.ReasonReact.send(SendMessage(msg));
     let toggleDrawer = _evt => self.ReasonReact.send(ToggleDrawer);
+    let toggleDialog = _evt => self.ReasonReact.send(ToggleDialog);
     let playerName =
       switch (self.state.currentPlayerName) {
       | Some(name) => name
@@ -225,13 +231,14 @@ let make = _children => {
               <div className=classes.root>
                 <AppBar position=`Fixed>
                   <Toolbar>
-                    <Button className=classes.menuButton onClick=(_event => self.send(ToggleDrawer)) color=`Inherit>
+                    <Button className=classes.menuButton onClick=toggleDrawer color=`Inherit>
                       <Icon> (ReasonReact.string("menu")) </Icon>
                     </Button>
                     <Typography variant=`H6 color=`Inherit className=classes.grow>
                       (ReasonReact.string("SetML"))
                     </Typography>
-                    <Button color=`Inherit> (ReasonReact.string(playerName)) </Button>
+                    <Button color=`Inherit onClick=toggleDialog> (ReasonReact.string(playerName)) </Button>
+                    <NameDialog open_=self.state.dialogOpen onClose=toggleDialog currentName=playerName sendMessage />
                   </Toolbar>
                 </AppBar>
               </div>

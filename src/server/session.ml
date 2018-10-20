@@ -13,6 +13,15 @@ let make () = {
     token = Crypto.random_hex ();
     token_expiration = Unix.time () +. token_lifetime
 }
+
+let to_string sess =
+    let player_id = match sess.player_id with
+    | Some(pid) -> string_of_int pid
+    | None -> "NONE"
+    in
+    Printf.sprintf "id: %s, player_id: %s, token: %s, expiration: %f"
+        sess.session_id player_id sess.token sess.token_expiration
+
 let session_id_key = "s"
 let player_id_key = "p"
 let token_key = "t"

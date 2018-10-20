@@ -20,6 +20,7 @@ val is_game_over : t -> int -> (bool, Caqti_error.t) result Lwt.t
 val start_game : t -> int -> (unit, Caqti_error.t) result Lwt.t
 val end_game : t -> int -> (unit, Caqti_error.t) result Lwt.t
 val update_player_name : t -> (int * string) -> (unit, Caqti_error.t) result Lwt.t
+val get_player_name : t -> int -> (string, Caqti_error.t) result Lwt.t
 val find_board_cards : t -> int -> (Shared.Messages.board_card_data list, Caqti_error.t) result Lwt.t
 val find_game_cards : t -> (int * int) -> (Shared.Messages.card_data list, Caqti_error.t) result Lwt.t
 val find_player_data : t -> int -> (Shared.Messages.player_data list, Caqti_error.t) result Lwt.t

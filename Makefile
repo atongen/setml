@@ -31,17 +31,14 @@ all:
 utop: all
 	OCAMLPATH=_build/install/default/lib:$(OCAMLPATH) utop
 
-setup_tests: all
-	@export SETML_ENV=test
+test_processes: all
+	SETML_ENV=test ./bin/test_processes -runner processes
 
-test_processes: setup_tests
-	./bin/test_processes -runner processes
+test_sequential: all
+	SETML_ENV=test ./bin/test_sequential -runner sequential
 
-test_sequential: setup_tests
-	./bin/test_sequential -runner sequential
-
-test_async: setup_tests
-	./bin/test_async -runner processes
+test_async: all
+	SETML_ENV=test ./bin/test_async -runner processes
 
 build_client:
 	npm run-script build
