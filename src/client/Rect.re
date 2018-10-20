@@ -7,6 +7,8 @@ type t = {
   h: float,
 };
 
+let to_string = r => Printf.sprintf("x: %f, y: %f, w: %f, h: %f", r.x, r.y, r.w, r.h);
+
 let make = (x, y, w, h) => {x, y, w, h};
 
 let makei = (x, y, w, h) => make(float_of_int(x), float_of_int(y), float_of_int(w), float_of_int(h));

@@ -55,36 +55,40 @@ let make = (_children, ~boardCards, ~players, ~game: Messages.game_update_data, 
     let columns = self.state.columns;
     let rows = self.state.rows;
     let sidebarMinRatio = 0.2;
-    let appBarOffset = 64;
-    let usableHeight = screen.height - appBarOffset;
+    let appBarOffset = 64.0;
+    let boardOffsetX = 0.0;
+    let boardOffsetY = appBarOffset;
+    let width = float_of_int(screen.width);
+    let height = float_of_int(screen.height);
+    let usableHeight = height -. appBarOffset;
     let (boardRect, sidebarRect) =
-      if (screen.width >= usableHeight) {
+      if (width >= usableHeight) {
         /* landscape */
-        let idealBoard = float_of_int(usableHeight);
+        let idealBoard = usableHeight;
         let idealBlock = idealBoard /. float_of_int(rows);
-        let idealSidebar = float_of_int(screen.width) -. idealBlock *. float_of_int(columns);
-        let minSidebar = float_of_int(screen.width) *. sidebarMinRatio;
-        let sidebar = Shared_util.roundi(max(minSidebar, idealSidebar));
-        let board = screen.width - sidebar;
+        let idealSidebar = width -. idealBlock *. float_of_int(columns);
+        let minSidebar = width *. sidebarMinRatio;
+        let sidebar = max(minSidebar, idealSidebar);
+        let board = width -. sidebar;
         (
-          Rect.makei(0, appBarOffset, board, usableHeight),
-          Rect.makei(board, appBarOffset, screen.width - board, usableHeight),
+          Rect.make(0.0, appBarOffset, board, usableHeight),
+          Rect.make(board, appBarOffset, width -. board, usableHeight),
         );
       } else {
         /* portrait */
-        let idealBoard = float_of_int(screen.width);
+        let idealBoard = width;
         let idealBlock = idealBoard /. float_of_int(columns);
-        let idealSidebar = float_of_int(usableHeight) -. idealBlock *. float_of_int(rows);
-        let minSidebar = float_of_int(usableHeight) *. sidebarMinRatio;
-        let sidebar = Shared_util.roundi(max(minSidebar, idealSidebar));
-        let board = usableHeight - sidebar;
+        let idealSidebar = usableHeight -. idealBlock *. float_of_int(rows);
+        let minSidebar = usableHeight *. sidebarMinRatio;
+        let sidebar = max(minSidebar, idealSidebar);
+        let board = usableHeight -. sidebar;
         (
-          Rect.makei(0, appBarOffset, screen.width, board),
-          Rect.makei(0, board + appBarOffset, screen.width, usableHeight - board),
+          Rect.make(0.0, appBarOffset, width, board),
+          Rect.make(0.0, board +. appBarOffset, width, usableHeight -. board),
         );
       };
     <div>
-      <Board rect=boardRect ratio=screen.ratio columns rows boardCards game sendMessage />
+      <Board rect=boardRect ratio=screen.ratio columns rows boardCards game sendMessage boardOffsetX boardOffsetY />
       <Sidebar rect=sidebarRect boardCards players game sendMessage />
     </div>;
   },

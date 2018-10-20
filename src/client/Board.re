@@ -3,7 +3,6 @@ open Belt;
 type canvas;
 
 [@bs.send] external getContext : (canvas, string) => Canvas2dRe.t = "";
-
 module BoardCardDataComparator =
   Belt.Id.MakeComparable(
     {
@@ -25,6 +24,8 @@ type dimensions = {
   size: Rect.t,
   border: Rect.t,
   blocks: array(Rect.t),
+  xOffset: float,
+  yOffset: float,
 };
 
 type state = {
@@ -38,8 +39,9 @@ type state = {
 
 let component = ReasonReact.reducerComponent("Board");
 
-let getClick = evt =>
-  Click((float_of_int(ReactEvent.Mouse.clientX(evt)), float_of_int(ReactEvent.Mouse.clientY(evt))));
+let getClick = (evt, xOffset, yOffset) => {
+    Click((float_of_int(ReactEvent.Mouse.clientX(evt)) -. xOffset, float_of_int(ReactEvent.Mouse.clientY(evt)) -. yOffset));
+};
 
 let getHover = evt =>
   Hover((float_of_int(ReactEvent.Mouse.clientX(evt)), float_of_int(ReactEvent.Mouse.clientY(evt))));
@@ -133,6 +135,8 @@ let makeDims = (rect, ratio, columns, rows) => {
     size: rect,
     border: Rect.make(borderX, borderY, rect.w -. 2. *. borderX, rect.h -. 2. *. borderY),
     blocks,
+    xOffset: xOffset +. b,
+    yOffset: yOffset +. b,
   };
 };
 
@@ -149,12 +153,12 @@ let printSets = (boardCards: list(Messages.board_card_data), theme) => {
 let shouldRedraw = (oldState: state, newState: state) =>
   oldState.dims.size != newState.dims.size || oldState.boardCards != newState.boardCards;
 
-let make = (_children, ~rect, ~ratio, ~columns, ~rows, ~boardCards, ~game, ~sendMessage) => {
+let make = (_children, ~rect, ~ratio, ~columns, ~rows, ~boardCards, ~game, ~sendMessage, ~boardOffsetX, ~boardOffsetY) => {
   ...component,
   reducer: (action, state) =>
     switch (action) {
     | Click((x, y)) =>
-      switch (Rect.findRect(state.dims.blocks, (x, y))) {
+      switch (Rect.findRect(state.dims.blocks, (x -. boardOffsetX, y -. boardOffsetY))) {
       | Some(idx) =>
         switch (getBoardCard(state.boardCards, idx)) {
         | Some(bcd) =>
@@ -191,9 +195,9 @@ let make = (_children, ~rect, ~ratio, ~columns, ~rows, ~boardCards, ~game, ~send
         | None => ReasonReact.NoUpdate
         }
       | None => ReasonReact.NoUpdate
-      }
+      };
     | Hover((x, y)) =>
-      let newHovered = Rect.findRect(state.dims.blocks, (x, y));
+      let newHovered = Rect.findRect(state.dims.blocks, (x -. boardOffsetX, y -. boardOffsetY));
       switch (state.hovered, newHovered) {
       | (Some(oldIdx), Some(newIdx)) =>
         if (oldIdx == newIdx) {
@@ -239,7 +243,7 @@ let make = (_children, ~rect, ~ratio, ~columns, ~rows, ~boardCards, ~game, ~send
       width=(Shared_util.roundis(state.dims.size.w))
       height=(Shared_util.roundis(state.dims.size.h))
       style=(Rect.toStyle(rect))
-      onClick=(evt => send(getClick(evt)))
+      onClick=(evt => send(getClick(evt, state.dims.xOffset, state.dims.yOffset)))
       onMouseMove=(evt => send(getHover(evt)))
     />,
 };
