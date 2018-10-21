@@ -30,8 +30,14 @@ let simplePlural = (word, num) =>
     word ++ "s";
   };
 
-[%mui.withStyles "Styles"({
+[%mui.withStyles "StyledSidebar"({
     root: ReactDOMRe.Style.make(~flexGrow="1", ()),
+    list: ReactDOMRe.Style.make(
+        ~listStyle="none",
+        ~padding="0px",
+        ~marginRight="1em",
+    ()),
+    playerScores: ReactDOMRe.Style.make(()),
 })];
 
 let make = (_children, ~rect, ~boardCards, ~players, ~game: Messages.game_update_data, ~sendMessage) => {
@@ -43,29 +49,33 @@ let make = (_children, ~rect, ~boardCards, ~players, ~game: Messages.game_update
     ...component,
     render: _self =>
       <section id="sidebar" style=(Rect.toStyle(rect))>
-        <Styles
+        <StyledSidebar
           render=(
             classes =>
-              <div className=classes.root>
-                <MaterialUi.Grid container=true>
-                  <MaterialUi.Grid item=true> button </MaterialUi.Grid>
-                  <MaterialUi.Grid item=true>
-                    <ul>
-                      <li>
-                        (
-                          ReasonReact.string(
-                            string_of_int(setsOnBoard) ++ " " ++ simplePlural("set", setsOnBoard) ++ " on board",
+              MaterialUi.(
+                <div className=classes.root>
+                  <Grid container=true>
+                    <Grid item=true> button </Grid>
+                    <Grid item=true>
+                      <ul className=classes.list>
+                        <li>
+                          (
+                            ReasonReact.string(
+                              string_of_int(setsOnBoard) ++ " " ++ simplePlural("set", setsOnBoard) ++ " on board",
+                            )
                           )
-                        )
-                      </li>
-                      <li> (ReasonReact.string(string_of_int(cardsRemaining) ++ " cards remaining")) </li>
-                    </ul>
-                  </MaterialUi.Grid>
-                  <MaterialUi.Grid item=true>
-                    <PlayerScores players />
-                  </MaterialUi.Grid>
-                </MaterialUi.Grid>
-              </div>
+                        </li>
+                        <li> (ReasonReact.string(string_of_int(cardsRemaining) ++ " cards remaining")) </li>
+                      </ul>
+                    </Grid>
+                    <Grid item=true>
+                      <Paper className=classes.playerScores>
+                        <PlayerScores players />
+                      </Paper>
+                    </Grid>
+                  </Grid>
+                </div>
+              )
           )
         />
       </section>,

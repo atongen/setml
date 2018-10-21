@@ -140,11 +140,13 @@ let handleReceiveMessage = (state, msg) =>
       } else {
         "left";
       };
-    ReasonReact.Update({
-      ...state,
-      players: updatePlayerPresence(d, state.players),
-      msgs: [ClientUtil.player_name(state.players, d.player_id) ++ " " ++ action ++ "!"],
-    });
+    let msgs =
+      if (ClientUtil.is_current_player(d.player_id)) {
+        [];
+      } else {
+        [ClientUtil.player_name(state.players, d.player_id) ++ " " ++ action ++ "!"];
+      };
+    ReasonReact.Update({...state, players: updatePlayerPresence(d, state.players), msgs});
   | Server_move_info(d) =>
     Js.log(moveDataToString(state.game.theme, d.move_data));
     ReasonReact.Update({

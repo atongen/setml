@@ -161,6 +161,12 @@ let current_player_id = () =>
   | None => None
   };
 
+let is_current_player = id =>
+  switch (current_player_id()) {
+  | Some(pid) => pid == id
+  | None => false
+  };
+
 let current_player_name = (players: list(Messages.player_data)) =>
   switch (current_player_id()) {
   | Some(pid) => Some(player_name(players, pid))

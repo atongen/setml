@@ -7,17 +7,23 @@ let playerDataRow = (player_data: Messages.player_data) => {
   let name = ClientUtil.get_player_name(player_data);
   let nameStyle =
     if (player_data.presence) {
-      ReactDOMRe.Style.make(~fontWeight="bold", ());
+      if (ClientUtil.is_current_player(player_data.player_id)) {
+        ReactDOMRe.Style.make(~fontWeight="bold", ~color="blue", ());
+      } else {
+        ReactDOMRe.Style.make(~fontWeight="bold", ());
+      };
     } else {
       ReactDOMRe.Style.make(~color="gray", ());
     };
   let scoreStyle = ReactDOMRe.Style.make(~width="100%", ~textAlign="right", ());
-  <MaterialUi.ListItem key=pid>
-    <MaterialUi.ListItemText>
-      <span style=scoreStyle> (ReasonReact.string(string_of_int(player_data.score))) </span>
-    </MaterialUi.ListItemText>
-    <MaterialUi.ListItemText> <span style=nameStyle> (ReasonReact.string(name)) </span> </MaterialUi.ListItemText>
-  </MaterialUi.ListItem>;
+  MaterialUi.(
+    <ListItem key=pid>
+      <ListItemText>
+        <span style=scoreStyle> (ReasonReact.string(string_of_int(player_data.score))) </span>
+      </ListItemText>
+      <ListItemText> <span style=nameStyle> (ReasonReact.string(name)) </span> </ListItemText>
+    </ListItem>
+  );
 };
 
 let comparePlayers = (p0: Messages.player_data, p1: Messages.player_data) =>
