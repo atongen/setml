@@ -8,6 +8,7 @@ let page_tpl ~player_id id page_title token =
         html (list [
             head (list [
                 title (string page_title);
+                meta ~name: "viewport" ~content: "width=device-width, initial-scale=1, user-scalable=0, maximum-scale=1, minimum-scale=1" [];
                 meta ~charset:"UTF-8" [];
                 meta ~name:"token" ~content:token [];
                 meta ~name:"player_id" ~content:pid [];
@@ -32,6 +33,7 @@ let error_tpl msg =
         html (list [
             head (list [
                 title (string "Error!");
+                meta ~name: "viewport" ~content: "width=device-width, initial-scale=1, user-scalable=0, maximum-scale=1, minimum-scale=1" [];
                 meta ~charset:"UTF-8" [];
                 link ~rel:"stylesheet" (Uri.of_string "https://fonts.googleapis.com/css?family=Roboto:300,400,500");
                 link ~rel:"stylesheet" (Uri.of_string "https://fonts.googleapis.com/icon?family=Material+Icons");

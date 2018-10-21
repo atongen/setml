@@ -7,14 +7,16 @@ type document;
 [@bs.send] external getCanvasById : (document, string) => canvas = "getElementById";
 
 [@bs.send] external getContext : (canvas, string) => Canvas2dRe.t = "";
+
 [@bs.get] external canvasFromCtx : Canvas2dRe.t => canvas = "canvas";
 
 [@bs.get] external width : canvas => float = "clientWidth";
+
 [@bs.get] external height : canvas => float = "clientHeight";
 
 let ctxSize = ctx => {
-    let canvas = canvasFromCtx(ctx);
-    (width(canvas), height(canvas));
+  let canvas = canvasFromCtx(ctx);
+  (width(canvas), height(canvas));
 };
 
 let getContext = id => {
@@ -33,8 +35,8 @@ let drawRectangle = (ctx, x, y, w, h, inFillStyle) => {
 let drawRect = (ctx, rect, fillStyle) => drawRectangle(ctx, rect.Rect.x, rect.y, rect.w, rect.h, fillStyle);
 
 let reset = (ctx, fillStyle) => {
-    let (width, height) = ctxSize(ctx);
-    drawRectangle(ctx, 0.0, 0.0, width, height, fillStyle);
+  let (width, height) = ctxSize(ctx);
+  drawRectangle(ctx, 0.0, 0.0, width, height, fillStyle);
 };
 
 let fill = (ctx, inFillStyle) => {
@@ -53,6 +55,7 @@ let stroke = (ctx, inStrokeStyle) => {
   setStrokeStyle(ctx, st, ss);
 };
 
+/* https://stackoverflow.com/questions/1255512/how-to-draw-a-rounded-rectangle-on-html-canvas */
 let drawRoundRectangle = (ctx, x, y, w, h, radius, fillStyle, maybeStrokeStyle) => {
   Canvas2dRe.beginPath(ctx);
   Canvas2dRe.moveTo(ctx, ~x=x +. radius, ~y);
@@ -66,12 +69,11 @@ let drawRoundRectangle = (ctx, x, y, w, h, radius, fillStyle, maybeStrokeStyle) 
   Canvas2dRe.quadraticCurveTo(ctx, ~cp1x=x, ~cp1y=y, ~x=x +. radius, ~y);
   Canvas2dRe.closePath(ctx);
   fill(ctx, fillStyle);
-  switch(maybeStrokeStyle) {
-  | Some(strokeStyle) => stroke(ctx, strokeStyle);
+  switch (maybeStrokeStyle) {
+  | Some(strokeStyle) => stroke(ctx, strokeStyle)
   | None => ()
   };
 };
 
-let drawRoundRect = (ctx, rect, radius, fillStyle, strokeStyle) => {
+let drawRoundRect = (ctx, rect, radius, fillStyle, strokeStyle) =>
   drawRoundRectangle(ctx, rect.Rect.x, rect.y, rect.w, rect.h, radius, fillStyle, strokeStyle);
-};
