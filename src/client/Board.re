@@ -53,7 +53,7 @@ let randomColor = () => {
 };
 
 let drawBlock = (ctx, color, idx, rect, cardOpt) => {
-  CanvasUtils.drawRect(ctx, color, rect);
+  CanvasUtils.drawRect(ctx, rect, color);
   Canvas2dRe.font(ctx, "24px serif");
   let text = Printf.sprintf("%d (%d)", idx, Card.to_int_opt(cardOpt));
   Canvas2dRe.strokeText(text, ctx, ~x=rect.x +. 30., ~y=rect.y +. 30.);
@@ -80,7 +80,7 @@ let getBoardCard = (boardCards: list(Messages.board_card_data), idx) =>
   };
 
 let drawBoard = (ctx, dims, cards: list(Messages.board_card_data)) => {
-  CanvasUtils.drawRect(ctx, randomColor(), dims.border);
+  CanvasUtils.drawRoundRect(ctx, dims.border, 5.0, "#3f51b5", None);
   for (i in 0 to dims.rows - 1) {
     for (j in 0 to dims.columns - 1) {
       let idx = i * dims.columns + j;
@@ -206,7 +206,7 @@ let make = (_children, ~rect, ~ratio, ~columns, ~rows, ~boardCards, ~game, ~send
   didMount: self => {
     let context = CanvasUtils.getContext("board");
     self.state.context := Some(context);
-    CanvasUtils.reset(context, "white", self.state.dims.size.w, self.state.dims.size.h);
+    CanvasUtils.reset(context, "white");
     drawBoard(context, self.state.dims, self.state.boardCards);
     ();
   },
@@ -215,7 +215,7 @@ let make = (_children, ~rect, ~ratio, ~columns, ~rows, ~boardCards, ~game, ~send
       printSets(newSelf.state.boardCards, newSelf.state.game.theme);
       switch (newSelf.state.context) {
       | {contents: Some(ctx)} =>
-        CanvasUtils.reset(ctx, "white", newSelf.state.dims.size.w, newSelf.state.dims.size.h);
+        CanvasUtils.reset(ctx, "white");
         drawBoard(ctx, newSelf.state.dims, newSelf.state.boardCards);
       | _ => Js.log("Unable to redraw blocks: No context found!")
       };

@@ -103,6 +103,13 @@ let moveDataToString = (theme, move_data) => {
   Printf.sprintf("Previous move: (%s, %s, %s)", s0, s1, s2);
 };
 
+let msgIfNotCurrentPlayer = (player_id, msg) =>
+  if (ClientUtil.is_current_player(player_id)) {
+    [];
+  } else {
+    [msg];
+  };
+
 let handleReceiveMessage = (state, msg) =>
   switch (msg) {
   | Server_game(d) =>
@@ -117,10 +124,10 @@ let handleReceiveMessage = (state, msg) =>
   | Server_player(d) => ReasonReact.Update({...state, players: replacePlayer(d, state.players), msgs: []})
   | Server_name(d) =>
     let old_name = ClientUtil.player_name(state.players, d.player_id);
-    let msg = old_name ++ " is now called " ++ d.name;
     let new_players = updatePlayerName(d, state.players);
     let currentPlayerName = ClientUtil.current_player_name(new_players);
-    ReasonReact.Update({...state, players: new_players, currentPlayerName, msgs: [msg]});
+    let msgs = msgIfNotCurrentPlayer(d.player_id, old_name ++ " is now called " ++ d.name)
+    ReasonReact.Update({...state, players: new_players, currentPlayerName, msgs});
   | Server_card(_) =>
     Js.log("Received unhandled Server_card message");
     ReasonReact.NoUpdate;
@@ -140,25 +147,22 @@ let handleReceiveMessage = (state, msg) =>
       } else {
         "left";
       };
-    let msgs =
-      if (ClientUtil.is_current_player(d.player_id)) {
-        [];
-      } else {
-        [ClientUtil.player_name(state.players, d.player_id) ++ " " ++ action ++ "!"];
-      };
+    let msgs = msgIfNotCurrentPlayer(d.player_id, ClientUtil.player_name(state.players, d.player_id) ++ " " ++ action ++ "!");
     ReasonReact.Update({...state, players: updatePlayerPresence(d, state.players), msgs});
   | Server_move_info(d) =>
     Js.log(moveDataToString(state.game.theme, d.move_data));
+    let msgs = msgIfNotCurrentPlayer(d.score_data.player_id, ClientUtil.player_name(state.players, d.score_data.player_id) ++ " scored!");
     ReasonReact.Update({
       ...state,
       players: updatePlayerScore(d.score_data, state.players),
-      msgs: [ClientUtil.player_name(state.players, d.score_data.player_id) ++ " scored!"],
+      msgs,
     });
   | Server_shuffles(d) =>
+    let msgs = msgIfNotCurrentPlayer(d.player_id, ClientUtil.player_name(state.players, d.player_id) ++ " shuffled!");
     ReasonReact.Update({
       ...state,
       players: updatePlayerShuffles(d, state.players),
-      msgs: [ClientUtil.player_name(state.players, d.player_id) ++ " shuffled!"],
+      msgs,
     })
   | Client_move(_)
   | Client_shuffle(_)
