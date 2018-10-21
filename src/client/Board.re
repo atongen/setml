@@ -1,8 +1,5 @@
 open Belt;
 
-type canvas;
-
-[@bs.send] external getContext : (canvas, string) => Canvas2dRe.t = "";
 module BoardCardDataComparator =
   Belt.Id.MakeComparable(
     {
@@ -39,9 +36,11 @@ type state = {
 
 let component = ReasonReact.reducerComponent("Board");
 
-let getClick = (evt, xOffset, yOffset) => {
-    Click((float_of_int(ReactEvent.Mouse.clientX(evt)) -. xOffset, float_of_int(ReactEvent.Mouse.clientY(evt)) -. yOffset));
-};
+let getClick = (evt, xOffset, yOffset) =>
+  Click((
+    float_of_int(ReactEvent.Mouse.clientX(evt)) -. xOffset,
+    float_of_int(ReactEvent.Mouse.clientY(evt)) -. yOffset,
+  ));
 
 let getHover = evt =>
   Hover((float_of_int(ReactEvent.Mouse.clientX(evt)), float_of_int(ReactEvent.Mouse.clientY(evt))));
@@ -53,27 +52,12 @@ let randomColor = () => {
   "rgb(" ++ string_of_int(r) ++ ", " ++ string_of_int(g) ++ ", " ++ string_of_int(b) ++ ")";
 };
 
-let drawRectangle = (ctx, color, x, y, w, h) => {
-  Canvas2dRe.setFillStyle(ctx, Canvas2dRe.String, color);
-  Canvas2dRe.fillRect(
-    ~x=Shared_util.round(x),
-    ~y=Shared_util.round(y),
-    ~w=Shared_util.round(w),
-    ~h=Shared_util.round(h),
-    ctx,
-  );
-};
-
-let drawRect = (ctx, color, rect) => drawRectangle(ctx, color, rect.Rect.x, rect.y, rect.w, rect.h);
-
 let drawBlock = (ctx, color, idx, rect, cardOpt) => {
-  drawRect(ctx, color, rect);
+  CanvasUtils.drawRect(ctx, color, rect);
   Canvas2dRe.font(ctx, "24px serif");
   let text = Printf.sprintf("%d (%d)", idx, Card.to_int_opt(cardOpt));
   Canvas2dRe.strokeText(text, ctx, ~x=rect.x +. 30., ~y=rect.y +. 30.);
 };
-
-let reset = (ctx, color, width, height) => drawRectangle(ctx, color, 0.0, 0.0, width, height);
 
 let blockSize = (width, height, columns, rows) => {
   let idealWidth = width /. columns;
@@ -96,7 +80,7 @@ let getBoardCard = (boardCards: list(Messages.board_card_data), idx) =>
   };
 
 let drawBoard = (ctx, dims, cards: list(Messages.board_card_data)) => {
-  drawRect(ctx, randomColor(), dims.border);
+  CanvasUtils.drawRect(ctx, randomColor(), dims.border);
   for (i in 0 to dims.rows - 1) {
     for (j in 0 to dims.columns - 1) {
       let idx = i * dims.columns + j;
@@ -195,7 +179,7 @@ let make = (_children, ~rect, ~ratio, ~columns, ~rows, ~boardCards, ~game, ~send
         | None => ReasonReact.NoUpdate
         }
       | None => ReasonReact.NoUpdate
-      };
+      }
     | Hover((x, y)) =>
       let newHovered = Rect.findRect(state.dims.blocks, (x -. boardOffsetX, y -. boardOffsetY));
       switch (state.hovered, newHovered) {
@@ -220,10 +204,9 @@ let make = (_children, ~rect, ~ratio, ~columns, ~rows, ~boardCards, ~game, ~send
   },
   willReceiveProps: self => {...self.state, dims: makeDims(rect, ratio, columns, rows), boardCards, game},
   didMount: self => {
-    let myCanvas: canvas = [%bs.raw {| document.getElementById("board") |}];
-    let context = getContext(myCanvas, "2d");
+    let context = CanvasUtils.getContext("board");
     self.state.context := Some(context);
-    reset(context, "white", self.state.dims.size.w, self.state.dims.size.h);
+    CanvasUtils.reset(context, "white", self.state.dims.size.w, self.state.dims.size.h);
     drawBoard(context, self.state.dims, self.state.boardCards);
     ();
   },
@@ -232,7 +215,7 @@ let make = (_children, ~rect, ~ratio, ~columns, ~rows, ~boardCards, ~game, ~send
       printSets(newSelf.state.boardCards, newSelf.state.game.theme);
       switch (newSelf.state.context) {
       | {contents: Some(ctx)} =>
-        reset(ctx, "white", newSelf.state.dims.size.w, newSelf.state.dims.size.h);
+        CanvasUtils.reset(ctx, "white", newSelf.state.dims.size.w, newSelf.state.dims.size.h);
         drawBoard(ctx, newSelf.state.dims, newSelf.state.boardCards);
       | _ => Js.log("Unable to redraw blocks: No context found!")
       };

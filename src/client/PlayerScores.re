@@ -8,7 +8,7 @@ let playerDataRow = (player_data: Messages.player_data) => {
   let nameStyle =
     if (player_data.presence) {
       if (ClientUtil.is_current_player(player_data.player_id)) {
-        ReactDOMRe.Style.make(~fontWeight="bold", ~color="blue", ());
+        ReactDOMRe.Style.make(~fontWeight="bold", ~color="#3f51b5", ());
       } else {
         ReactDOMRe.Style.make(~fontWeight="bold", ());
       };

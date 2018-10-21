@@ -171,6 +171,7 @@ let start_server (config: Config.t) =
         ignore (Lwt_preemptive.detach Pubsub.start pubsub);
         Db.make ~max_size:config.db_pool (Config.db_uri_str config) >>= function
         | Ok pool ->
+            (* https://stackoverflow.com/questions/40497364/lwt-and-cohttp-fatal-error-exception-unix-unix-errorunix-econnreset-read *)
             Lwt.async_exception_hook := (function
                 | Unix.Unix_error (error, func, arg) ->
                     Logs.warn (fun m ->
