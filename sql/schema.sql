@@ -9,7 +9,7 @@ drop table if exists players cascade;
 
 create table players (
     id bigserial not null primary key,
-    name character varying(255) not null default '',
+    name character varying(16) not null default '',
     created_at timestamp without time zone default now()
 );
 
