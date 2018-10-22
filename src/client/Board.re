@@ -1,15 +1,5 @@
 open Belt;
 
-module BoardCardDataComparator =
-  Belt.Id.MakeComparable(
-    {
-      type t = Messages.board_card_data;
-      let cmp = (a: t, b: t) => Pervasives.compare(a, b);
-    },
-  );
-
-let emptySelections = Set.make(~id=(module BoardCardDataComparator));
-
 type action =
   | Click((float, float))
   | Hover((float, float));
@@ -28,7 +18,7 @@ type dimensions = {
 type state = {
   dims: dimensions,
   hovered: option(int),
-  selected: Set.t(Messages.board_card_data, BoardCardDataComparator.identity),
+  selected: Selected.t,
   context: ref(option(Canvas2dRe.t)),
   boardCards: list(Messages.board_card_data),
   game: Messages.game_update_data,
@@ -45,11 +35,18 @@ let getClick = (evt, xOffset, yOffset) =>
 let getHover = evt =>
   Hover((float_of_int(ReactEvent.Mouse.clientX(evt)), float_of_int(ReactEvent.Mouse.clientY(evt))));
 
-let randomColor = () => {
-  let r = Random.int(256);
-  let g = Random.int(256);
-  let b = Random.int(256);
-  "rgb(" ++ string_of_int(r) ++ ", " ++ string_of_int(g) ++ ", " ++ string_of_int(b) ++ ")";
+let blockColor = idx => {
+  let c = Shared_util.roundi(float_of_int(idx) *. 3.16);
+  "rgb(" ++ string_of_int(256 - c) ++ ", " ++ string_of_int(c) ++ ", " ++ string_of_int(256 - c) ++ ")";
+};
+
+let boardCardColor = maybeCard => {
+  let idx =
+    switch (maybeCard) {
+    | Some(card) => Card.to_int(card)
+    | None => 81
+    };
+  blockColor(idx);
 };
 
 let drawBlock = (ctx, color, idx, rect, cardOpt) => {
@@ -85,10 +82,10 @@ let drawBoard = (ctx, dims, cards: list(Messages.board_card_data)) => {
     for (j in 0 to dims.columns - 1) {
       let idx = i * dims.columns + j;
       switch (dims.blocks[idx], getBoardCard(cards, idx)) {
-      | (Some(rect), Some(bcd)) => drawBlock(ctx, randomColor(), idx, rect, bcd.card)
+      | (Some(rect), Some(bcd)) => drawBlock(ctx, boardCardColor(bcd.card), idx, rect, bcd.card)
       | (Some(rect), None) =>
         /* Js.log("drawBoard error: No board card provided at idx" ++ string_of_int(idx) ++ "!"); */
-        drawBlock(ctx, randomColor(), idx, rect, None)
+        drawBlock(ctx, boardCardColor(None), idx, rect, None)
       | (None, _) => Js.log("drawBoard error: No block found at idx " ++ string_of_int(idx) ++ "!")
       };
     };
@@ -137,6 +134,8 @@ let printSets = (boardCards: list(Messages.board_card_data), theme) => {
 let shouldRedraw = (oldState: state, newState: state) =>
   oldState.dims.size != newState.dims.size || oldState.boardCards != newState.boardCards;
 
+let printSelections = selected => Js.log(Selected.to_string(selected));
+
 let make = (_children, ~rect, ~ratio, ~columns, ~rows, ~boardCards, ~game, ~sendMessage, ~boardOffsetX, ~boardOffsetY) => {
   ...component,
   reducer: (action, state) =>
@@ -146,34 +145,26 @@ let make = (_children, ~rect, ~ratio, ~columns, ~rows, ~boardCards, ~game, ~send
       | Some(idx) =>
         switch (getBoardCard(state.boardCards, idx)) {
         | Some(bcd) =>
-          if (Set.has(state.selected, bcd)) {
-            let newSelected = Set.remove(state.selected, bcd);
-            Js.log(
-              "Current selections: ("
-              ++ String.concat(",", List.map(Set.toList(newSelected), Messages.board_card_data_to_string))
-              ++ ")",
-            );
+          if (Selected.has(state.selected, bcd)) {
+            let newSelected = Selected.remove(state.selected, bcd);
+            printSelections(newSelected);
             ReasonReact.Update({...state, selected: newSelected});
           } else {
-            let newSelected = Set.add(state.selected, bcd);
-            let l = Set.size(newSelected);
+            let newSelected = Selected.add(state.selected, bcd);
+            let l = Selected.size(newSelected);
             if (l < 3) {
-              Js.log(
-                "Current selections: ("
-                ++ String.concat(",", List.map(Set.toList(newSelected), Messages.board_card_data_to_string))
-                ++ ")",
-              );
+              printSelections(newSelected);
               ReasonReact.Update({...state, selected: newSelected});
             } else {
-              let l = Set.toList(newSelected);
+              let l = Selected.to_list(newSelected);
               switch (Messages_util.board_cards_list_is_set(l)) {
               | Some((cd0, cd1, cd2)) =>
                 sendMessage(ClientUtil.make_move_msg(cd0, cd1, cd2));
                 Js.log("You got a set!");
               | None => Js.log("That's not a set, dummy!")
               };
-              Js.log("Current selections: ()");
-              ReasonReact.Update({...state, selected: emptySelections});
+              printSelections(Selected.empty);
+              ReasonReact.Update({...state, selected: Selected.empty});
             };
           }
         | None => ReasonReact.NoUpdate
@@ -197,7 +188,7 @@ let make = (_children, ~rect, ~ratio, ~columns, ~rows, ~boardCards, ~game, ~send
   initialState: () => {
     dims: makeDims(rect, ratio, columns, rows),
     hovered: None,
-    selected: emptySelections,
+    selected: Selected.empty,
     context: ref(None),
     boardCards,
     game,
