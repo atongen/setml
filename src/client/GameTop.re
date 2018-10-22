@@ -21,6 +21,15 @@ type state = {
   currentPlayerName: option(string),
 };
 
+let try_this = {
+    let n = 3;
+    let result = Base_conv.make(~base=n, ['a', 'b', 'c']) |> Base_conv.to_int(~base=n);
+    switch(result) {
+    | Ok(n) => n
+    | Error(_s) => 0
+    }
+};
+
 let receiveMessage = (evt, self) => {
   let str = WebSockets.MessageEvent.stringData(evt);
   self.ReasonReact.send(ReceiveMessage(str));

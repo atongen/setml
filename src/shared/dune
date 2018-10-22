@@ -1,6 +1,7 @@
 (library
  (name shared)
  (modules
+  base_conv
   card
   combinatorics
   game_status
