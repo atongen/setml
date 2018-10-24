@@ -12,6 +12,7 @@ let suite =
     "shared" >::: [
       "card" >::: Card_tests.suite;
       "combinatorics" >::: Combinatorics_tests.suite;
+      "base_conv" >::: Base_conv_tests.suite;
     ];
     "messages" >::: Messages_tests.suite;
   ]

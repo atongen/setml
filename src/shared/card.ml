@@ -34,26 +34,8 @@ let make n f c s =
     shape = attr_of_int s;
   }
 
-(* encode from base-10 positive integer to base-3 list of 4 *)
-let base3_list_of_int n =
-  let rec aux n ac =
-    if n < 0 || n > 80 then
-      raise (Invalid_argument ("Only values 0 through 80 are supported"))
-    else if n = 0 then ac
-    else
-      let next = n / 3 in
-      let remainder = n mod 3 in
-      aux next (remainder :: ac)
-  in
-  let rec fill l n v =
-    if List.length l < n then
-      fill (v :: l) n v
-    else l
-  in
-  fill (aux n []) 4 0
-
 let of_int n =
-  let v = base3_list_of_int n |> Array.of_list in
+  let v = Base_conv.base_list_of_int ~base:3 ~size:4 n |> Array.of_list in
   make v.(0) v.(1) v.(2) v.(3)
 
 let of_int_opt n =

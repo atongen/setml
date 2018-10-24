@@ -36,8 +36,13 @@ let getHover = evt =>
   Hover((float_of_int(ReactEvent.Mouse.clientX(evt)), float_of_int(ReactEvent.Mouse.clientY(evt))));
 
 let blockColor = idx => {
-  let c = Shared_util.roundi(float_of_int(idx) *. 3.16);
-  "rgb(" ++ string_of_int(256 - c) ++ ", " ++ string_of_int(c) ++ ", " ++ string_of_int(256 - c) ++ ")";
+  let m = 207126.1234567901;
+  /* 81 * m = 16777216 = 256^3 */
+  let n = Shared_util.roundi(float_of_int(idx) *. m);
+  let a = Base_conv.base_list_of_int(~base=256, ~size=3, n) |> List.toArray;
+  let f = i => Array.getUnsafe(a, i) |> string_of_int;
+  let (r, g, b) = (f(0), f(1), f(2));
+  "rgb(" ++ r ++ ", " ++ g ++ ", " ++ b ++ ")";
 };
 
 let boardCardColor = maybeCard => {

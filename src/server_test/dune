@@ -10,6 +10,7 @@
   (name test_processes)
   (public_name test_processes)
   (modules
+   base_conv_tests
    card_tests
    clients_tests
    combinatorics_tests

@@ -38,14 +38,6 @@ let redirect ?headers uri =
 
 let log msg = Lwt_io.printlf "%s" msg
 
-let try_this =
-    let n = 3 in
-    let result = Shared.Base_conv.make ~base:n ['a'; 'b'; 'c'] |> Shared.Base_conv.to_int ~base:n in
-    match result with
-    | Ok n -> n
-    | Error _s -> 0
-
-
 (* render chain *)
 let (>>=?) m f =
   m >>= function

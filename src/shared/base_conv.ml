@@ -1,26 +1,3 @@
-(* compatibility between ocaml & reasonml/bucklescript (ocaml 4.02.3) *)
-type ('a, 'b) result = Ok of 'a | Error of 'b
-
-type sign = Positive | Negative
-
-type t = {
-    base: int;
-    sign: sign;
-    chars: char list
-}
-
-let make ~base ?(positive=true) chars = {
-    base;
-    sign = if positive then Positive else Negative;
-    chars;
-}
-
-let sign_to_int = function
-    | Positive -> 1
-    | Negative -> (-1)
-
-let int_to_sign n = if n >= 0 then Positive else Negative
-
 let (--) i j =
     let rec aux n acc =
       if n < i then acc else aux (n-1) (n :: acc)
@@ -102,43 +79,34 @@ let base_of_int n b =
 (* encode from base-10 positive integer to base-36 string *)
 let base36_of_int n = base_of_int n 36
 
-(*
- * new interface functions start below this comment
- *)
+(* encode base-10 positive integer into list of length size of base ints *)
+let base_list_of_int ~base ~size n =
+    let max = pow base size in
+    let rec aux n ac =
+        if n < 0 then
+            raise (Invalid_argument "n is less than zero")
+        else if n > max then
+            raise (Invalid_argument (Printf.sprintf "n (%d) > max (%d = %d^%d)" n max base size))
+        else if n = 0 then ac else
+            let next = n / base in
+            let remainder = n mod base in
+            aux next (remainder :: ac)
+    in
+    let rec fill l n v =
+        if List.length l < n then
+            fill (v :: l) n v
+        else l
+    in
+    fill (aux n []) size 0
 
-let to_int ~base ?(mapping=default_char_map) bc =
-    if base < 2 || base > 10 then Error "base must be 2 through 10"  else
-    if bc.base > Array.length(mapping) then Error "mapping length must equal base_conv length" else
+let int_of_base_list ~base l =
     let rec aux l pos ac =
         match l with
         | [] -> ac
         | hd :: tl ->
-            match find_idx (fun x -> x = hd) mapping with
-            | Some ((idx, _)) -> aux tl (pos+1) (ac + (idx * (pow base pos)))
-            | None -> raise (Invalid_argument ("Invalid base " ^ string_of_int base ^ " char: " ^ String.make 1 hd))
+            if hd < 0 || hd >= base then
+                raise (Invalid_argument ("Invalid value for base: " ^ string_of_int hd))
+            else
+                aux tl (pos+1) (ac + (hd * (pow base pos)))
     in
-    let i = sign_to_int bc.sign in
-    try
-        let result = i * (aux (List.rev bc.chars) 0 0) in
-        Ok result
-    with Invalid_argument s  -> Error s
-
-let of_int ~base ?(mapping=default_char_map) i =
-    let rec aux n ac =
-        if n < 0 then
-            raise (Invalid_argument ("Negative values unsupported"))
-        else if n = 0 then
-            if ac = [] then [mapping.(0)] else ac
-        else
-            let next = n / base in
-            let remainder = n mod base in
-            let chr = mapping.(remainder) in
-            aux next (chr :: ac)
-    in
-    let sign = int_to_sign i in
-    let m = abs i in
-    {
-        sign;
-        chars = aux m [];
-        base;
-    }
+    aux (List.rev l) 0 0
