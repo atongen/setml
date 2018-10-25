@@ -17,7 +17,7 @@ type dimensions = {
 
 type state = {
   dims: dimensions,
-  hovered: option(int),
+  hovered: option(Messages.board_card_data),
   selected: Selected.t,
   context: ref(option(Canvas2dRe.t)),
   boardCards: list(Messages.board_card_data),
@@ -137,7 +137,22 @@ let printSets = (boardCards: list(Messages.board_card_data), theme) => {
 };
 
 let shouldRedraw = (oldState: state, newState: state) =>
-  oldState.dims.size != newState.dims.size || oldState.boardCards != newState.boardCards;
+  if (oldState.dims.size != newState.dims.size) {
+    true;
+  } else if (oldState.boardCards != newState.boardCards) {
+    Js.log("board is different");
+    printSets(newState.boardCards, newState.game.theme);
+    true;
+  } else if (Selected.is_symmetric_diff(oldState.selected, newState.selected)) {
+    Js.log("selected is different");
+    true;
+  } else if (! Option.eq(oldState.hovered, newState.hovered, (a, b) => a == b)) {
+    Js.log("hovered is different");
+    true;
+  } else {
+    Js.log("not different");
+    false;
+  };
 
 let printSelections = selected => Js.log(Selected.to_string(selected));
 
@@ -177,16 +192,21 @@ let make = (_children, ~rect, ~ratio, ~columns, ~rows, ~boardCards, ~game, ~send
       | None => ReasonReact.NoUpdate
       }
     | Hover((x, y)) =>
-      let newHovered = Rect.findRect(state.dims.blocks, (x -. boardOffsetX, y -. boardOffsetY));
-      switch (state.hovered, newHovered) {
-      | (Some(oldIdx), Some(newIdx)) =>
-        if (oldIdx == newIdx) {
+      let maybeNewHoveredIdx = Rect.findRect(state.dims.blocks, (x -. boardOffsetX, y -. boardOffsetY));
+      let maybeNewHovered =
+        switch (maybeNewHoveredIdx) {
+        | Some(newHoveredIdx) => getBoardCard(state.boardCards, newHoveredIdx)
+        | None => None
+        };
+      switch (state.hovered, maybeNewHovered) {
+      | (Some(oldHovered), Some(newHovered)) =>
+        if (oldHovered == newHovered) {
           ReasonReact.NoUpdate;
         } else {
-          ReasonReact.Update({...state, hovered: Some(newIdx)});
+          ReasonReact.Update({...state, hovered: Some(newHovered)});
         }
-      | (Some(_oldIdx), None) => ReasonReact.Update({...state, hovered: None})
-      | (None, Some(newIdx)) => ReasonReact.Update({...state, hovered: Some(newIdx)})
+      | (Some(_oldHovered), None) => ReasonReact.Update({...state, hovered: None})
+      | (None, Some(newHovered)) => ReasonReact.Update({...state, hovered: Some(newHovered)})
       | (None, None) => ReasonReact.NoUpdate
       };
     },
@@ -208,7 +228,6 @@ let make = (_children, ~rect, ~ratio, ~columns, ~rows, ~boardCards, ~game, ~send
   },
   didUpdate: ({oldSelf, newSelf}) =>
     if (shouldRedraw(oldSelf.state, newSelf.state)) {
-      printSets(newSelf.state.boardCards, newSelf.state.game.theme);
       switch (newSelf.state.context) {
       | {contents: Some(ctx)} =>
         CanvasUtils.reset(ctx, "white");
