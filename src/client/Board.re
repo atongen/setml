@@ -54,8 +54,20 @@ let boardCardColor = maybeCard => {
   blockColor(idx);
 };
 
-let drawBlock = (ctx, color, idx, rect, cardOpt) => {
-  CanvasUtils.drawRect(ctx, rect, color);
+let blockStroke = (selected, hovered) =>
+  if (selected && hovered) {
+    Some("purple");
+  } else if (selected) {
+    Some("red");
+  } else if (hovered) {
+    Some("blue");
+  } else {
+    None;
+  };
+
+let drawBlock = (ctx, color, idx, rect, cardOpt, border, selected, hovered) => {
+  let shrinkRect = Rect.shrink(rect, border);
+  CanvasUtils.drawRoundRect(ctx, shrinkRect, 5.0, color, blockStroke(selected, hovered));
   Canvas2dRe.font(ctx, "24px serif");
   let text = Printf.sprintf("%d (%d)", idx, Card.to_int_opt(cardOpt));
   Canvas2dRe.strokeText(text, ctx, ~x=rect.x +. 30., ~y=rect.y +. 30.);
@@ -73,7 +85,7 @@ let blockSize = (width, height, columns, rows) => {
   };
 };
 
-let border = (width, height) => min(width, height) /. 25.;
+let border = (width, height) => min(width, height) /. 50.;
 
 let getBoardCard = (boardCards: list(Messages.board_card_data), idx) =>
   switch (List.getBy(boardCards, bcd => bcd.idx == idx)) {
@@ -81,17 +93,24 @@ let getBoardCard = (boardCards: list(Messages.board_card_data), idx) =>
   | None => None
   };
 
-let drawBoard = (ctx, dims, cards: list(Messages.board_card_data)) => {
+let drawBoard = (ctx, dims, cards: list(Messages.board_card_data), selected, hovered) => {
+  let cardBoarder = min(dims.border.x, dims.border.y);
   CanvasUtils.drawRoundRect(ctx, dims.border, 5.0, "#3f51b5", None);
   for (i in 0 to dims.rows - 1) {
     for (j in 0 to dims.columns - 1) {
       let idx = i * dims.columns + j;
       switch (dims.blocks[idx], getBoardCard(cards, idx)) {
-      | (Some(rect), Some(bcd)) => drawBlock(ctx, boardCardColor(bcd.card), idx, rect, bcd.card)
+      | (Some(rect), Some(bcd)) =>
+        let is_selected = Selected.has(selected, bcd);
+        let is_hovered = switch(hovered) {
+        | Some(h) => h == bcd
+        | None => false
+        };
+        drawBlock(ctx, boardCardColor(bcd.card), idx, rect, bcd.card, cardBoarder, is_selected, is_hovered)
       | (Some(rect), None) =>
         /* Js.log("drawBoard error: No board card provided at idx" ++ string_of_int(idx) ++ "!"); */
-        drawBlock(ctx, boardCardColor(None), idx, rect, None)
-      | (None, _) => Js.log("drawBoard error: No block found at idx " ++ string_of_int(idx) ++ "!")
+        drawBlock(ctx, boardCardColor(None), idx, rect, None, cardBoarder, false, false)
+      | (None, _c) => Js.log("drawBoard error: No block found at idx " ++ string_of_int(idx) ++ "!")
       };
     };
   };
@@ -140,17 +159,12 @@ let shouldRedraw = (oldState: state, newState: state) =>
   if (oldState.dims.size != newState.dims.size) {
     true;
   } else if (oldState.boardCards != newState.boardCards) {
-    Js.log("board is different");
-    printSets(newState.boardCards, newState.game.theme);
     true;
   } else if (Selected.is_symmetric_diff(oldState.selected, newState.selected)) {
-    Js.log("selected is different");
     true;
   } else if (! Option.eq(oldState.hovered, newState.hovered, (a, b) => a == b)) {
-    Js.log("hovered is different");
     true;
   } else {
-    Js.log("not different");
     false;
   };
 
@@ -223,15 +237,16 @@ let make = (_children, ~rect, ~ratio, ~columns, ~rows, ~boardCards, ~game, ~send
     let context = CanvasUtils.getContext("board");
     self.state.context := Some(context);
     CanvasUtils.reset(context, "white");
-    drawBoard(context, self.state.dims, self.state.boardCards);
+    drawBoard(context, self.state.dims, self.state.boardCards, self.state.selected, self.state.hovered);
     ();
   },
   didUpdate: ({oldSelf, newSelf}) =>
     if (shouldRedraw(oldSelf.state, newSelf.state)) {
+      printSets(newState.boardCards, newState.game.theme);
       switch (newSelf.state.context) {
       | {contents: Some(ctx)} =>
         CanvasUtils.reset(ctx, "white");
-        drawBoard(ctx, newSelf.state.dims, newSelf.state.boardCards);
+        drawBoard(ctx, newSelf.state.dims, newSelf.state.boardCards, newSelf.state.selected, newSelf.state.hovered);
       | _ => Js.log("Unable to redraw blocks: No context found!")
       };
     },

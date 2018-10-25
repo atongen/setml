@@ -49,3 +49,5 @@ let findRect = (rects, (x, y)) => {
     };
   aux(0);
 };
+
+let shrink = (rect, i) => make(rect.x +. i /. 2.0, rect.y +. i /. 2.0, rect.w -. i, rect.h -. i);
