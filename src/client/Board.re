@@ -242,7 +242,7 @@ let make = (_children, ~rect, ~ratio, ~columns, ~rows, ~boardCards, ~game, ~send
   },
   didUpdate: ({oldSelf, newSelf}) =>
     if (shouldRedraw(oldSelf.state, newSelf.state)) {
-      printSets(newState.boardCards, newState.game.theme);
+      printSets(newSelf.state.boardCards, newSelf.state.game.theme);
       switch (newSelf.state.context) {
       | {contents: Some(ctx)} =>
         CanvasUtils.reset(ctx, "white");
