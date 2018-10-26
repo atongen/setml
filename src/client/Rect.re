@@ -31,7 +31,6 @@ let toStyle = rect =>
     ~right=Shared_util.roundis(right(rect)) ++ "px",
     ~width=Shared_util.roundis(rect.w) ++ "px",
     ~height=Shared_util.roundis(rect.h) ++ "px",
-    (),
   );
 
 let isWithin = (rect, (x, y)) => rect.x <= x && x <= right(rect) && rect.y <= y && y <= bottom(rect);

@@ -13,6 +13,7 @@ type dimensions = {
   blocks: array(Rect.t),
   xOffset: float,
   yOffset: float,
+  blockSize: float,
 };
 
 type state = {
@@ -20,17 +21,15 @@ type state = {
   hovered: option(Messages.board_card_data),
   selected: Selected.t,
   context: ref(option(Canvas2dRe.t)),
+  renderContext: ref(option(Canvas2dRe.t)),
   boardCards: list(Messages.board_card_data),
   game: Messages.game_update_data,
 };
 
 let component = ReasonReact.reducerComponent("Board");
 
-let getClick = (evt, xOffset, yOffset) =>
-  Click((
-    float_of_int(ReactEvent.Mouse.clientX(evt)) -. xOffset,
-    float_of_int(ReactEvent.Mouse.clientY(evt)) -. yOffset,
-  ));
+let getClick = evt =>
+  Click((float_of_int(ReactEvent.Mouse.clientX(evt)), float_of_int(ReactEvent.Mouse.clientY(evt))));
 
 let getHover = evt =>
   Hover((float_of_int(ReactEvent.Mouse.clientX(evt)), float_of_int(ReactEvent.Mouse.clientY(evt))));
@@ -94,6 +93,7 @@ let getBoardCard = (boardCards: list(Messages.board_card_data), idx) =>
   };
 
 let drawBoard = (ctx, dims, cards: list(Messages.board_card_data), selected, hovered) => {
+  CanvasUtils.reset(ctx, "white");
   let cardBoarder = min(dims.border.x, dims.border.y);
   CanvasUtils.drawRoundRect(ctx, dims.border, 5.0, "#3f51b5", None);
   for (i in 0 to dims.rows - 1) {
@@ -102,11 +102,12 @@ let drawBoard = (ctx, dims, cards: list(Messages.board_card_data), selected, hov
       switch (dims.blocks[idx], getBoardCard(cards, idx)) {
       | (Some(rect), Some(bcd)) =>
         let is_selected = Selected.has(selected, bcd);
-        let is_hovered = switch(hovered) {
-        | Some(h) => h == bcd
-        | None => false
-        };
-        drawBlock(ctx, boardCardColor(bcd.card), idx, rect, bcd.card, cardBoarder, is_selected, is_hovered)
+        let is_hovered =
+          switch (hovered) {
+          | Some(h) => h == bcd
+          | None => false
+          };
+        drawBlock(ctx, boardCardColor(bcd.card), idx, rect, bcd.card, cardBoarder, is_selected, is_hovered);
       | (Some(rect), None) =>
         /* Js.log("drawBoard error: No board card provided at idx" ++ string_of_int(idx) ++ "!"); */
         drawBlock(ctx, boardCardColor(None), idx, rect, None, cardBoarder, false, false)
@@ -142,6 +143,7 @@ let makeDims = (rect, ratio, columns, rows) => {
     blocks,
     xOffset: xOffset +. b,
     yOffset: yOffset +. b,
+    blockSize: bs,
   };
 };
 
@@ -229,34 +231,38 @@ let make = (_children, ~rect, ~ratio, ~columns, ~rows, ~boardCards, ~game, ~send
     hovered: None,
     selected: Selected.empty,
     context: ref(None),
+    renderContext: ref(None),
     boardCards,
     game,
   },
   willReceiveProps: self => {...self.state, dims: makeDims(rect, ratio, columns, rows), boardCards, game},
   didMount: self => {
     let context = CanvasUtils.getContext("board");
+    let renderContext = CanvasUtils.getContext("card-render");
     self.state.context := Some(context);
-    CanvasUtils.reset(context, "white");
-    drawBoard(context, self.state.dims, self.state.boardCards, self.state.selected, self.state.hovered);
+    self.state.renderContext := Some(renderContext);
     ();
   },
   didUpdate: ({oldSelf, newSelf}) =>
     if (shouldRedraw(oldSelf.state, newSelf.state)) {
       printSets(newSelf.state.boardCards, newSelf.state.game.theme);
-      switch (newSelf.state.context) {
-      | {contents: Some(ctx)} =>
-        CanvasUtils.reset(ctx, "white");
+      switch ((newSelf.state.context, newSelf.state.renderContext)) {
+      | ({contents: Some(ctx)}, {contents: Some(_rndCtx)}) =>
         drawBoard(ctx, newSelf.state.dims, newSelf.state.boardCards, newSelf.state.selected, newSelf.state.hovered);
       | _ => Js.log("Unable to redraw blocks: No context found!")
       };
     },
-  render: ({state, send}) =>
-    <canvas
-      id="board"
-      width=(Shared_util.roundis(state.dims.size.w))
-      height=(Shared_util.roundis(state.dims.size.h))
-      style=(Rect.toStyle(rect))
-      onClick=(evt => send(getClick(evt, state.dims.xOffset, state.dims.yOffset)))
-      onMouseMove=(evt => send(getHover(evt)))
-    />,
+  render: ({state, send}) => {
+    <div>
+      <CardRender id="card-render" blockSize=state.dims.blockSize theme=state.game.theme />
+      <canvas
+        id="board"
+        width=(Shared_util.roundis(state.dims.size.w))
+        height=(Shared_util.roundis(state.dims.size.h))
+        style=(Rect.toStyle(rect, ()))
+        onClick=(evt => send(getClick(evt)))
+        onMouseMove=(evt => send(getHover(evt)))
+      />
+    </div>
+  },
 };

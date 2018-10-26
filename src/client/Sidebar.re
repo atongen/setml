@@ -30,15 +30,13 @@ let simplePlural = (word, num) =>
     word ++ "s";
   };
 
-[%mui.withStyles "StyledSidebar"({
+[%mui.withStyles
+  "StyledSidebar"({
     root: ReactDOMRe.Style.make(~flexGrow="1", ()),
-    list: ReactDOMRe.Style.make(
-        ~listStyle="none",
-        ~padding="0px",
-        ~marginRight="1em",
-    ()),
-    playerScores: ReactDOMRe.Style.make(()),
-})];
+    list: ReactDOMRe.Style.make(~listStyle="none", ~padding="0px", ~marginRight="1em", ()),
+    playerScores: ReactDOMRe.Style.make(),
+  })
+];
 
 let make = (_children, ~rect, ~boardCards, ~players, ~game: Messages.game_update_data, ~sendMessage) => {
   let setsOnBoard = Messages_util.board_cards_count_sets(boardCards);
@@ -48,7 +46,7 @@ let make = (_children, ~rect, ~boardCards, ~players, ~game: Messages.game_update
   {
     ...component,
     render: _self =>
-      <section id="sidebar" style=(Rect.toStyle(rect))>
+      <section id="sidebar" style=(Rect.toStyle(rect, ()))>
         <StyledSidebar
           render=(
             classes =>
@@ -68,11 +66,7 @@ let make = (_children, ~rect, ~boardCards, ~players, ~game: Messages.game_update
                         <li> (ReasonReact.string(string_of_int(cardsRemaining) ++ " cards remaining")) </li>
                       </ul>
                     </Grid>
-                    <Grid item=true>
-                      <Paper className=classes.playerScores>
-                        <PlayerScores players />
-                      </Paper>
-                    </Grid>
+                    <Grid item=true> <Paper className=classes.playerScores> <PlayerScores players /> </Paper> </Grid>
                   </Grid>
                 </div>
               )

@@ -14,6 +14,8 @@ type document;
 
 [@bs.get] external height : canvas => float = "clientHeight";
 
+[@bs.get] external getLineWidth : Canvas2dRe.t => float = "lineWidth";
+
 let ctxSize = ctx => {
   let canvas = canvasFromCtx(ctx);
   (width(canvas), height(canvas));
@@ -39,6 +41,11 @@ let reset = (ctx, fillStyle) => {
   drawRectangle(ctx, 0.0, 0.0, width, height, fillStyle);
 };
 
+let clear = ctx => {
+  let (width, height) = ctxSize(ctx);
+  drawRectangle(ctx, 0.0, 0.0, width, height, "rgba(0, 0, 0, 0.0)");
+};
+
 let fill = (ctx, inFillStyle) => {
   open Canvas2dRe;
   let (ft, fs) = fillStyle(ctx);
@@ -47,12 +54,15 @@ let fill = (ctx, inFillStyle) => {
   setFillStyle(ctx, ft, fs);
 };
 
-let stroke = (ctx, inStrokeStyle) => {
+let stroke = (~inStrokeStyle, ~inLineWidth=5.0, ctx) => {
   open Canvas2dRe;
   let (st, ss) = strokeStyle(ctx);
+  let lw = getLineWidth(ctx);
   setStrokeStyle(ctx, String, inStrokeStyle);
+  lineWidth(ctx, inLineWidth);
   stroke(ctx);
   setStrokeStyle(ctx, st, ss);
+  lineWidth(ctx, lw);
 };
 
 /* https://stackoverflow.com/questions/1255512/how-to-draw-a-rounded-rectangle-on-html-canvas */
@@ -70,7 +80,7 @@ let drawRoundRectangle = (ctx, x, y, w, h, radius, fillStyle, maybeStrokeStyle) 
   Canvas2dRe.closePath(ctx);
   fill(ctx, fillStyle);
   switch (maybeStrokeStyle) {
-  | Some(strokeStyle) => stroke(ctx, strokeStyle)
+  | Some(strokeStyle) => stroke(~inStrokeStyle=strokeStyle, ctx)
   | None => ()
   };
 };
