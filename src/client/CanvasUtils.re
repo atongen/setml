@@ -20,7 +20,7 @@ type document;
 external drawImage :
   (
     Canvas2dRe.t,
-    ~image: Canvas2dRe.t,
+    ~image: canvas,
     ~sx: float,
     ~sy: float,
     ~sWidth: float,
@@ -33,14 +33,21 @@ external drawImage :
   unit =
   "";
 
+[@bs.send.pipe: canvas] external getBoundingClientRect : Dom.domRect = "";
+
+/*
+ [@bs.set] external set_onload: (x, [@bs.this] ((x, int) => unit)) => unit = "onload";
+ */
+let getCanvas = id => getCanvasById(doc, id);
+
+let offset = canvas => {
+  let rect = getBoundingClientRect(canvas);
+  (float_of_int(DomRectRe.left(rect)), float_of_int(DomRectRe.top(rect)));
+};
+
 let ctxSize = ctx => {
   let canvas = canvasFromCtx(ctx);
   (width(canvas), height(canvas));
-};
-
-let getContext = id => {
-  let canvas = getCanvasById(doc, id);
-  getContext(canvas, "2d");
 };
 
 let drawRectangle = (ctx, x, y, w, h, inFillStyle) => {
@@ -108,7 +115,7 @@ let drawRoundRect = (ctx, rect, radius, fillStyle, strokeStyle) =>
 let drawCanvas = (srcCtx, srcRect, dstCtx, dstRect) =>
   drawImage(
     dstCtx,
-    ~image=srcCtx,
+    ~image=canvasFromCtx(srcCtx),
     ~sx=srcRect.Rect.x,
     ~sy=srcRect.y,
     ~sWidth=srcRect.w,

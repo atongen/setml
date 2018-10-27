@@ -56,11 +56,10 @@ let make = (_children, ~boardCards, ~players, ~game: Messages.game_update_data, 
     let rows = self.state.rows;
     let sidebarMinRatio = 0.2;
     let appBarOffset = 64.0;
-    let boardOffsetY = appBarOffset;
     let width = float_of_int(screen.width);
     let height = float_of_int(screen.height);
     let usableHeight = height -. appBarOffset;
-    let (boardRect, sidebarRect, boardOffsetX) =
+    let (boardRect, sidebarRect) =
       if (width >= usableHeight) {
         /* landscape */
         let idealBoard = usableHeight;
@@ -72,7 +71,6 @@ let make = (_children, ~boardCards, ~players, ~game: Messages.game_update_data, 
         (
           Rect.make(0.0, appBarOffset, board, usableHeight),
           Rect.make(board, appBarOffset, width -. board, usableHeight),
-          0.0,
         );
       } else {
         /* portrait */
@@ -85,11 +83,10 @@ let make = (_children, ~boardCards, ~players, ~game: Messages.game_update_data, 
         (
           Rect.make(0.0, appBarOffset, width, board),
           Rect.make(0.0, board +. appBarOffset, width, usableHeight -. board),
-          0.0,
         );
       };
     <div>
-      <Board rect=boardRect ratio=screen.ratio columns rows boardCards game sendMessage boardOffsetX boardOffsetY />
+      <Board rect=boardRect columns rows boardCards game sendMessage />
       <Sidebar rect=sidebarRect boardCards players game sendMessage />
     </div>;
   },

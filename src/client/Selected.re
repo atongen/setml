@@ -14,7 +14,7 @@ let empty = Set.make(~id=(module BoardCardDataComparator));
 
 let is_empty = s => Set.isEmpty(s);
 
-let of_list = l => Set.fromArray(List.toArray(l), (module BoardCardDataComparator));
+let of_list = l => Set.fromArray(List.toArray(l), ~id=(module BoardCardDataComparator));
 
 let to_list = s => Set.toList(s);
 
