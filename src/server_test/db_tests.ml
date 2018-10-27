@@ -225,3 +225,19 @@ let update_player_name_test db =
         Db.get_player_name db player_id >>=? fun player_name_after ->
         assert_equal new_name player_name_after;
         Lwt.return_unit
+
+let create_many_games_test db =
+    fun () ->
+        let rec aux i n r =
+            Db.create_game db (3, 4) >>=? fun game_id ->
+            if i mod r = 0 then begin
+                let b = Base_conv.base36_of_int game_id in
+                ignore(
+                    Lwt_io.eprintf "i=%d game_id=%d b36=%s\n" i game_id b >>= fun () ->
+                    Lwt.return_unit
+                );
+            end;
+            if i < n then aux (i + 1) n r
+            else Lwt.return_unit
+        in
+        aux 0 50000 100

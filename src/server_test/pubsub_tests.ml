@@ -15,7 +15,7 @@ let setup_game pubsub =
 
 let setup_player pubsub =
     let player_id = Crypto.random_int 1_000 1_000_000 in
-    let player_name = Crypto.random_hex () in
+    let player_name = String.sub (Crypto.random_hex ()) 0 16 in
     Pubsub.empty_query pubsub ("insert into players (id, name) values (" ^ string_of_int player_id ^ ", '"^ player_name ^"');");
     (player_id, player_name)
 
