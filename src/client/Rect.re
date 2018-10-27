@@ -50,3 +50,16 @@ let findRect = (rects, (x, y)) => {
 };
 
 let shrink = (rect, i) => make(rect.x +. i /. 2.0, rect.y +. i /. 2.0, rect.w -. i, rect.h -. i);
+
+let eq = (r0, r1) => r0.x == r1.x && r0.y == r1.y && r0.w == r0.w && r0.h == r0.h;
+
+let area = r => r.w *. r.h;
+
+let compare = (r0, r1) =>
+  if (eq(r0, r1)) {
+    0;
+  } else if (area(r0) <= area(r1)) {
+    -1;
+  } else {
+    1;
+  };

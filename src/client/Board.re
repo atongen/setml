@@ -34,25 +34,6 @@ let getClick = evt =>
 let getHover = evt =>
   Hover((float_of_int(ReactEvent.Mouse.clientX(evt)), float_of_int(ReactEvent.Mouse.clientY(evt))));
 
-let blockColor = idx => {
-  let m = 207126.1234567901;
-  /* 81 * m = 16777216 = 256^3 */
-  let n = Shared_util.roundi(float_of_int(idx) *. m);
-  let a = Base_conv.base_list_of_int(~base=256, ~size=3, n) |> List.toArray;
-  let f = i => Array.getUnsafe(a, i) |> string_of_int;
-  let (r, g, b) = (f(0), f(1), f(2));
-  "rgb(" ++ r ++ ", " ++ g ++ ", " ++ b ++ ")";
-};
-
-let boardCardColor = maybeCard => {
-  let idx =
-    switch (maybeCard) {
-    | Some(card) => Card.to_int(card)
-    | None => 81
-    };
-  blockColor(idx);
-};
-
 let blockStroke = (selected, hovered) =>
   if (selected && hovered) {
     Some("purple");
@@ -64,12 +45,9 @@ let blockStroke = (selected, hovered) =>
     None;
   };
 
-let drawBlock = (ctx, color, idx, rect, cardOpt, border, selected, hovered) => {
-  let shrinkRect = Rect.shrink(rect, border);
-  CanvasUtils.drawRoundRect(ctx, shrinkRect, 5.0, color, blockStroke(selected, hovered));
-  Canvas2dRe.font(ctx, "24px serif");
-  let text = Printf.sprintf("%d (%d)", idx, Card.to_int_opt(cardOpt));
-  Canvas2dRe.strokeText(text, ctx, ~x=rect.x +. 30., ~y=rect.y +. 30.);
+let drawBlock = (ctx, _srcCtx, dstRect, _blockSize, cardIdx, selected, hovered) => {
+  let shrinkRect = Rect.shrink(dstRect, 6.0);
+  CanvasUtils.drawRoundRect(ctx, shrinkRect, 5.0, CardRender.cardColor(cardIdx), blockStroke(selected, hovered));
 };
 
 let blockSize = (width, height, columns, rows) => {
@@ -92,9 +70,8 @@ let getBoardCard = (boardCards: list(Messages.board_card_data), idx) =>
   | None => None
   };
 
-let drawBoard = (ctx, dims, cards: list(Messages.board_card_data), selected, hovered) => {
+let drawBoard = (ctx, srcCtx, dims, cards: list(Messages.board_card_data), selected, hovered) => {
   CanvasUtils.reset(ctx, "white");
-  let cardBoarder = min(dims.border.x, dims.border.y);
   CanvasUtils.drawRoundRect(ctx, dims.border, 5.0, "#3f51b5", None);
   for (i in 0 to dims.rows - 1) {
     for (j in 0 to dims.columns - 1) {
@@ -107,10 +84,10 @@ let drawBoard = (ctx, dims, cards: list(Messages.board_card_data), selected, hov
           | Some(h) => h == bcd
           | None => false
           };
-        drawBlock(ctx, boardCardColor(bcd.card), idx, rect, bcd.card, cardBoarder, is_selected, is_hovered);
+        drawBlock(ctx, srcCtx, rect, dims.blockSize, Card.to_int_opt(bcd.card), is_selected, is_hovered);
       | (Some(rect), None) =>
         /* Js.log("drawBoard error: No board card provided at idx" ++ string_of_int(idx) ++ "!"); */
-        drawBlock(ctx, boardCardColor(None), idx, rect, None, cardBoarder, false, false)
+        drawBlock(ctx, srcCtx, rect, dims.blockSize, Card.to_int_opt(None), false, false)
       | (None, _c) => Js.log("drawBoard error: No block found at idx " ++ string_of_int(idx) ++ "!")
       };
     };
@@ -246,15 +223,28 @@ let make = (_children, ~rect, ~ratio, ~columns, ~rows, ~boardCards, ~game, ~send
   didUpdate: ({oldSelf, newSelf}) =>
     if (shouldRedraw(oldSelf.state, newSelf.state)) {
       printSets(newSelf.state.boardCards, newSelf.state.game.theme);
-      switch ((newSelf.state.context, newSelf.state.renderContext)) {
-      | ({contents: Some(ctx)}, {contents: Some(_rndCtx)}) =>
-        drawBoard(ctx, newSelf.state.dims, newSelf.state.boardCards, newSelf.state.selected, newSelf.state.hovered);
+      switch (newSelf.state.context, newSelf.state.renderContext) {
+      | ({contents: Some(ctx)}, {contents: Some(srcCtx)}) =>
+        drawBoard(
+          ctx,
+          srcCtx,
+          newSelf.state.dims,
+          newSelf.state.boardCards,
+          newSelf.state.selected,
+          newSelf.state.hovered,
+        )
       | _ => Js.log("Unable to redraw blocks: No context found!")
       };
     },
   render: ({state, send}) => {
+    let renderRect = CardRender.makeRect(state.dims.blockSize);
     <div>
-      <CardRender id="card-render" blockSize=state.dims.blockSize theme=state.game.theme />
+      <canvas
+        id="card-render"
+        width=(Shared_util.roundis(renderRect.w))
+        height=(Shared_util.roundis(renderRect.h))
+        style=(Rect.toStyle(renderRect, ()))
+      />
       <canvas
         id="board"
         width=(Shared_util.roundis(state.dims.size.w))
@@ -263,6 +253,6 @@ let make = (_children, ~rect, ~ratio, ~columns, ~rows, ~boardCards, ~game, ~send
         onClick=(evt => send(getClick(evt)))
         onMouseMove=(evt => send(getHover(evt)))
       />
-    </div>
+    </div>;
   },
 };

@@ -16,6 +16,23 @@ type document;
 
 [@bs.get] external getLineWidth : Canvas2dRe.t => float = "lineWidth";
 
+[@bs.send]
+external drawImage :
+  (
+    Canvas2dRe.t,
+    ~image: Canvas2dRe.t,
+    ~sx: float,
+    ~sy: float,
+    ~sWidth: float,
+    ~sHeight: float,
+    ~dx: float,
+    ~dy: float,
+    ~dWidth: float,
+    ~dHeight: float
+  ) =>
+  unit =
+  "";
+
 let ctxSize = ctx => {
   let canvas = canvasFromCtx(ctx);
   (width(canvas), height(canvas));
@@ -87,3 +104,17 @@ let drawRoundRectangle = (ctx, x, y, w, h, radius, fillStyle, maybeStrokeStyle) 
 
 let drawRoundRect = (ctx, rect, radius, fillStyle, strokeStyle) =>
   drawRoundRectangle(ctx, rect.Rect.x, rect.y, rect.w, rect.h, radius, fillStyle, strokeStyle);
+
+let drawCanvas = (srcCtx, srcRect, dstCtx, dstRect) =>
+  drawImage(
+    dstCtx,
+    ~image=srcCtx,
+    ~sx=srcRect.Rect.x,
+    ~sy=srcRect.y,
+    ~sWidth=srcRect.w,
+    ~sHeight=srcRect.h,
+    ~dx=dstRect.Rect.x,
+    ~dy=dstRect.y,
+    ~dWidth=dstRect.w,
+    ~dHeight=dstRect.h,
+  );
