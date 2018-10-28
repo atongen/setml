@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
-
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-cd "${DIR}/.." || exit 1
-
-env="${1:-development}"
-export PGCLUSTER="10/main"
-
-psql "setml_${env}"
+cd "$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
+eval `script/db_env.sh`
+PGPASSWORD="$DB_PASS" \
+  psql \
+  --host "$DB_HOST" \
+  --port "$DB_PORT" \
+  "$DB_NAME" "$DB_USER"

@@ -24,7 +24,7 @@ let make ?(n=32) ?(retries=0) conninfo clients =
         with Postgresql.Error e ->
             let msg = Postgresql.string_of_error e in
             if attempt < max then (
-                ignore(print_endline "Error connecting to pubsub db, retrying...");
+                ignore(print_endline (Printf.sprintf "Error connecting to pubsub db with '%s', retrying..." conninfo));
                 Unix.sleep 1;
                 aux (attempt + 1) max
             ) else (
