@@ -178,4 +178,4 @@ let closeToSquare = (~d0=5.0, ~d1=6.0, width, height) => {
   ratio >= d0 /. d1 && ratio <= d1 /. d0;
 };
 
-let calculateBorder = (width, height) => min(width, height) /. 50.;
+let calculateBorder = (width, height) => min(width, height) /. 75.;

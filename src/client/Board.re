@@ -29,7 +29,7 @@ let getClick = (evt, offset) => Click(evtPoint(evt, offset));
 
 let getHover = (evt, offset) => Hover(evtPoint(evt, offset));
 
-let cardBorderColor = (selected, hovered, default) =>
+let cardBorderColor = (selected, hovered) =>
   if (selected && hovered) {
     "#900c3f";
   } else if (selected) {
@@ -37,19 +37,19 @@ let cardBorderColor = (selected, hovered, default) =>
   } else if (hovered) {
     "#ff5733";
   } else {
-      default
+    "#d6d4cb"
   };
 
-let drawBlock = (srcCtx, srcRect, dstCtx, dstRect, cardIdx, selected, hovered) => {
-  CanvasUtils.drawRect(dstCtx, dstRect, cardBorderColor(selected, hovered, CardRender.cardColor(cardIdx)));
-  let content = Rect.shrink(~i=5.0, dstRect);
+let drawBlock = (srcCtx, srcRect, dstCtx, dstRect, _theme, border, selected, hovered) => {
+  CanvasUtils.drawRoundRect(dstCtx, dstRect, 10.0, cardBorderColor(selected, hovered), None);
+  let content = Rect.shrink(~i=border, dstRect);
   CanvasUtils.drawCanvas(srcCtx, srcRect, dstCtx, content);
 };
 
-let drawBoard = (srcCtx, srcGrid, dstCtx, dstGrid, selected, hovered) => {
+let drawBoard = (srcCtx, srcGrid, dstCtx, dstGrid, theme, selected, hovered) => {
   CanvasUtils.reset(dstCtx, "white");
   let outerRect = Grid.paddedRect(dstGrid);
-  CanvasUtils.drawRoundRect(dstCtx, outerRect, 5.0, "#3f51b5", None);
+  CanvasUtils.drawRoundRect(dstCtx, outerRect, 10.0, "#3f51b5", None);
   Grid.forEachWithIndex(dstGrid, (dstRect, maybeBcd, idx) => {
     let (cardIdx, isSelected, isHovered) = switch (maybeBcd) {
     | Some((bcd: Messages.board_card_data)) =>
@@ -64,7 +64,7 @@ let drawBoard = (srcCtx, srcGrid, dstCtx, dstGrid, selected, hovered) => {
     | None => (Card.to_int_opt(None), false, false)
     };
     switch(Grid.findKeyByIdx(srcGrid, cardIdx)) {
-    | Some(srcRect) => drawBlock(srcCtx, srcRect, dstCtx, dstRect, cardIdx, isSelected, isHovered);
+    | Some(srcRect) => drawBlock(srcCtx, srcRect, dstCtx, dstRect, theme, dstGrid.border, isSelected, isHovered);
     | None => ();
     }
   });
@@ -188,7 +188,7 @@ let make = (_children, ~rect, ~columns, ~rows, ~boardCards, ~game, ~sendMessage)
         }
         if (redrawBoard) {
           printSets(newSelf.state.boardGrid.values, newSelf.state.game.theme);
-          drawBoard(srcCtx, newSelf.state.cardGrid, dstCtx, newSelf.state.boardGrid, newSelf.state.selected, newSelf.state.hovered)
+          drawBoard(srcCtx, newSelf.state.cardGrid, dstCtx, newSelf.state.boardGrid, newSelf.state.game.theme, newSelf.state.selected, newSelf.state.hovered)
         }
       | _ => Js.log("Unable to redraw blocks: No context found!")
       };

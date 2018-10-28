@@ -32,7 +32,7 @@ let render = (ctx, grid, theme) => {
     switch (maybeCard) {
     | Some(card) =>
       let cardIdx = Card.to_int(card);
-      CanvasUtils.drawRect(ctx, rect, cardColor(cardIdx));
+      CanvasUtils.drawRoundRect(ctx, rect, 10.0, cardColor(cardIdx), None);
       let cardDesc = Theme.card_to_string(theme, card);
       Canvas2dRe.font(ctx, "24px serif");
       let text = Printf.sprintf("%d %s", idx, cardDesc);
