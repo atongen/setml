@@ -21,15 +21,11 @@ type t('a) = {
   blocks: Map.t(Rect.t, int, RectComparator.identity),
 };
 
-let makeRect = (grid, x0, y0) => {
-  Rect.make(x0, y0, grid.width -. 2. *. x0, grid.height -. 2. *. y0);
-}
+let makeRect = (grid, x0, y0) => Rect.make(x0, y0, grid.width -. 2. *. x0, grid.height -. 2. *. y0);
 
 let outerRect = grid => makeRect(grid, 0.0, 0.0);
 
-let paddedRect = grid => {
-    makeRect(grid, grid.marginX, grid.marginY);
-};
+let paddedRect = grid => makeRect(grid, grid.marginX, grid.marginY);
 
 let innerRect = grid => {
   let x0 = grid.marginX +. grid.border;
@@ -69,38 +65,39 @@ let findKeyByIdx = (grid: t('a), idx) => {
   };
 };
 
-let forEachWithIndex = (grid: t('a), f) => {
-  Map.forEach(grid.blocks, (k, v) => f(k, grid.values[v], v));
+let forEachWithIndex = (grid: t('a), f) => Map.forEach(grid.blocks, (k, v) => f(k, grid.values[v], v));
+
+let calculateUsableSize = (~border=0.0, ~width, ~height, ~columns, ~rows) => {
+  let cp = float_of_int(columns + 1);
+  let rp = float_of_int(rows + 1);
+  (width -. cp *. border, height -. rp *. border);
 };
 
-let calculateUsableSize = (~border=0.0, ~width, ~height) => (
-  width -. 2. *. border,
-  height -. 2. *. border,
-);
-
-let calculateBlockSize = (width, height, columns, rows) => {
-  let idealWidth = width /. columns;
-  let idealHeight = height /. rows;
+let calculateBlockSize = (~width, ~height, ~columns, ~rows) => {
+  let c = float_of_int(columns);
+  let r = float_of_int(rows);
+  let idealWidth = width /. c;
+  let idealHeight = height /. r;
   if (idealWidth >= idealHeight) {
-    let marginX = (width -. idealHeight *. columns) /. 2.;
+    let marginX = (width -. idealHeight *. c) /. 2.;
     (idealHeight, marginX, 0.);
   } else {
-    let marginY = (height -. idealWidth *. rows) /. 2.;
+    let marginY = (height -. idealWidth *. r) /. 2.;
     (idealWidth, 0., marginY);
   };
 };
 
 let make = (~border=0.0, ~width, ~height, ~columns, ~rows, values) : t('a) => {
-  let c = float_of_int(columns);
-  let r = float_of_int(rows);
-  let (usableWidth, usableHeight) = calculateUsableSize(~border, ~width, ~height);
-  let (blockSize, marginX, marginY) = calculateBlockSize(usableWidth, usableHeight, c, r);
+  let (usableWidth, usableHeight) = calculateUsableSize(~border, ~width, ~height, ~columns, ~rows);
+  let (blockSize, marginX, marginY) = calculateBlockSize(~width=usableWidth, ~height=usableHeight, ~columns, ~rows);
   let rec aux = (m, n, acc) => {
     let i = m / columns;
     let j = m mod columns;
+    let ii = float_of_int(i);
+    let jj = float_of_int(j);
     let idx = i * columns + j;
-    let bx = float_of_int(j) *. blockSize;
-    let by = float_of_int(i) *. blockSize;
+    let bx = jj *. (blockSize +. border);
+    let by = ii *. (blockSize +. border);
     let rect = Rect.make(bx +. border +. marginX, by +. border +. marginY, blockSize, blockSize);
     let result = [(rect, idx), ...acc];
     if (m < n - 1) {

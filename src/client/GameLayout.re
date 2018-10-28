@@ -54,39 +54,36 @@ let make = (_children, ~boardCards, ~players, ~game: Messages.game_update_data, 
     let screen = self.state.screen;
     let columns = self.state.columns;
     let rows = self.state.rows;
+    let c = float_of_int(columns);
+    let r = float_of_int(rows);
     let sidebarMinRatio = 0.2;
     let appBarOffset = 64.0;
     let width = float_of_int(screen.width);
-    let height = float_of_int(screen.height);
-    let usableHeight = height -. appBarOffset;
+    let height = float_of_int(screen.height) -. appBarOffset;
     let (boardRect, sidebarRect) =
-      if (width >= usableHeight) {
+      if (width >= height) {
         /* landscape */
-        let idealBoard = usableHeight;
-        let idealBlock = idealBoard /. float_of_int(rows);
-        let idealSidebar = width -. idealBlock *. float_of_int(columns);
+        let idealBoard = height;
+        let idealBlock = idealBoard /. r;
+        let idealSidebar = width -. idealBlock *. c;
         let minSidebar = width *. sidebarMinRatio;
         let sidebar = max(minSidebar, idealSidebar);
         let board = width -. sidebar;
-        (
-          Rect.make(0.0, appBarOffset, board, usableHeight),
-          Rect.make(board, appBarOffset, width -. board, usableHeight),
-        );
+        (Rect.make(0.0, appBarOffset, board, height), Rect.make(board, appBarOffset, width -. board, height));
       } else {
         /* portrait */
         let idealBoard = width;
-        let idealBlock = idealBoard /. float_of_int(columns);
-        let idealSidebar = usableHeight -. idealBlock *. float_of_int(rows);
-        let minSidebar = usableHeight *. sidebarMinRatio;
+        let idealBlock = idealBoard /. c;
+        let idealSidebar = height -. idealBlock *. r;
+        let minSidebar = height *. sidebarMinRatio;
         let sidebar = max(minSidebar, idealSidebar);
-        let board = usableHeight -. sidebar;
-        (
-          Rect.make(0.0, appBarOffset, width, board),
-          Rect.make(0.0, board +. appBarOffset, width, usableHeight -. board),
-        );
+        let board = height -. sidebar;
+        (Rect.make(0.0, appBarOffset, width, board), Rect.make(0.0, board +. appBarOffset, width, height -. board));
       };
+      let boardBorder = ClientUtil.calculateBorder(boardRect.w, boardRect.h);
+      let br = Rect.shrink(~i=boardBorder, boardRect);
     <div>
-      <Board rect=boardRect columns rows boardCards game sendMessage />
+      <Board rect=br columns rows boardCards game sendMessage />
       <Sidebar rect=sidebarRect boardCards players game sendMessage />
     </div>;
   },

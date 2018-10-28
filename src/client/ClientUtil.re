@@ -172,3 +172,10 @@ let current_player_name = (players: list(Messages.player_data)) =>
   | Some(pid) => Some(player_name(players, pid))
   | None => None
   };
+
+let closeToSquare = (~d0=5.0, ~d1=6.0, width, height) => {
+  let ratio = width /. height;
+  ratio >= d0 /. d1 && ratio <= d1 /. d0;
+};
+
+let calculateBorder = (width, height) => min(width, height) /. 50.;

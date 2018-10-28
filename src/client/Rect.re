@@ -49,7 +49,13 @@ let findRect = (rects, (x, y)) => {
   aux(0);
 };
 
-let shrink = (rect, i) => make(rect.x +. i /. 2.0, rect.y +. i /. 2.0, rect.w -. i, rect.h -. i);
+let shrink = (~i, rect) => make(rect.x +. i /. 2.0, rect.y +. i /. 2.0, rect.w -. i, rect.h -. i);
+
+let pad = (~i, rect) => make(rect.x +. i, rect.y +. i, rect.w -. i *. 2.0, rect.h -. i *. 2.0);
+
+let padNW = (~i, rect) => make(rect.x +. i, rect.y +. i, rect.w -. i, rect.h -. i);
+
+let padSW = (~i, rect) => make(rect.x, rect.y, rect.w -. i, rect.h -. i);
 
 let eq = (r0, r1) => r0.x == r1.x && r0.y == r1.y && r0.w == r0.w && r0.h == r0.h;
 
@@ -59,7 +65,7 @@ let compare = (r0, r1) =>
   if (eq(r0, r1)) {
     0;
   } else if (area(r0) <= area(r1)) {
-    -1;
+    (-1);
   } else {
     1;
   };

@@ -29,34 +29,49 @@ let getClick = (evt, offset) => Click(evtPoint(evt, offset));
 
 let getHover = (evt, offset) => Hover(evtPoint(evt, offset));
 
-let calculateBorder = (width, height) => min(width, height) /. 50.;
+let cardBorderColor = (selected, hovered, default) =>
+  if (selected && hovered) {
+    "#900c3f";
+  } else if (selected) {
+    "#c70039";
+  } else if (hovered) {
+    "#ff5733";
+  } else {
+      default
+  };
+
+let drawBlock = (srcCtx, srcRect, dstCtx, dstRect, cardIdx, selected, hovered) => {
+  CanvasUtils.drawRect(dstCtx, dstRect, cardBorderColor(selected, hovered, CardRender.cardColor(cardIdx)));
+  let content = Rect.shrink(~i=5.0, dstRect);
+  CanvasUtils.drawCanvas(srcCtx, srcRect, dstCtx, content);
+};
 
 let drawBoard = (srcCtx, srcGrid, dstCtx, dstGrid, selected, hovered) => {
   CanvasUtils.reset(dstCtx, "white");
   let outerRect = Grid.paddedRect(dstGrid);
   CanvasUtils.drawRoundRect(dstCtx, outerRect, 5.0, "#3f51b5", None);
   Grid.forEachWithIndex(dstGrid, (dstRect, maybeBcd, idx) => {
-    let (card_idx, is_selected, is_hovered) = switch (maybeBcd) {
+    let (cardIdx, isSelected, isHovered) = switch (maybeBcd) {
     | Some((bcd: Messages.board_card_data)) =>
       assert (bcd.idx == idx);
-      let is_selected = Selected.has(selected, bcd);
-      let is_hovered =
+      let isSelected = Selected.has(selected, bcd);
+      let isHovered =
         switch (hovered) {
         | Some(h) => h == bcd
         | None => false
         };
-        (Card.to_int_opt(bcd.card), is_selected, is_hovered)
+        (Card.to_int_opt(bcd.card), isSelected, isHovered)
     | None => (Card.to_int_opt(None), false, false)
     };
-    switch(Grid.findKeyByIdx(srcGrid, card_idx)) {
-    | Some(srcRect) => CardRender.drawBlock(srcCtx, srcRect, dstCtx, dstRect, card_idx, is_selected, is_hovered);
+    switch(Grid.findKeyByIdx(srcGrid, cardIdx)) {
+    | Some(srcRect) => drawBlock(srcCtx, srcRect, dstCtx, dstRect, cardIdx, isSelected, isHovered);
     | None => ();
     }
   });
 };
 
 let makeBoardGrid = (width, height, columns, rows, boardCards) => {
-  let border = calculateBorder(width, height);
+  let border = ClientUtil.calculateBorder(width, height);
   Grid.make(~border, ~width, ~height, ~columns, ~rows, List.toArray(boardCards));
 };
 
