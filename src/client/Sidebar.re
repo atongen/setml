@@ -43,6 +43,7 @@ let make = (_children, ~rect, ~boardCards, ~players, ~game: Messages.game_update
   let cardsRemaining = 81 - game.card_idx + Messages_util.board_cards_count(boardCards);
   let buttonStyle = ReactDOMRe.Style.make(~display="block", ~margin="1em", ());
   let button = makeButton(game.status, setsOnBoard, sendMessage, buttonStyle);
+  let palette = Theme.palette(game.theme);
   {
     ...component,
     render: _self =>
@@ -66,7 +67,9 @@ let make = (_children, ~rect, ~boardCards, ~players, ~game: Messages.game_update
                         <li> (ReasonReact.string(string_of_int(cardsRemaining) ++ " cards remaining")) </li>
                       </ul>
                     </Grid>
-                    <Grid item=true> <Paper className=classes.playerScores> <PlayerScores players /> </Paper> </Grid>
+                    <Grid item=true>
+                      <Paper className=classes.playerScores> <PlayerScores players palette /> </Paper>
+                    </Grid>
                   </Grid>
                 </div>
               )

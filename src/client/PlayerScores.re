@@ -2,13 +2,13 @@ open Belt;
 
 let component = ReasonReact.statelessComponent("PlayerScores");
 
-let playerDataRow = (player_data: Messages.player_data) => {
+let playerDataRow = (~palette: Theme.palette, player_data: Messages.player_data) => {
   let pid = string_of_int(player_data.player_id);
   let name = ClientUtil.get_player_name(player_data);
   let nameStyle =
     if (player_data.presence) {
       if (ClientUtil.is_current_player(player_data.player_id)) {
-        ReactDOMRe.Style.make(~fontWeight="bold", ~color="#3f51b5", ());
+        ReactDOMRe.Style.make(~fontWeight="bold", ~color=palette.primary, ());
       } else {
         ReactDOMRe.Style.make(~fontWeight="bold", ());
       };
@@ -33,9 +33,9 @@ let comparePlayers = (p0: Messages.player_data, p1: Messages.player_data) =>
     compare(p1.score, p0.score);
   };
 
-let make = (_children, ~players) => {
+let make = (_children, ~players, ~palette) => {
   let sortedPlayers = List.sort(players, comparePlayers);
-  let playerItems = List.map(sortedPlayers, playerDataRow);
+  let playerItems = List.map(sortedPlayers, playerDataRow(~palette));
   {
     ...component,
     render: _self => <MaterialUi.List> (ReasonReact.array(List.toArray(playerItems))) </MaterialUi.List>,

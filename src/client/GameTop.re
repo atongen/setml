@@ -97,9 +97,9 @@ let updatePlayerShuffles = (shuffle_data: shuffle_data, players: list(player_dat
 };
 
 let moveDataToString = (theme, move_data) => {
-  let s0 = Theme.card_to_string(theme, move_data.card0.card);
-  let s1 = Theme.card_to_string(theme, move_data.card1.card);
-  let s2 = Theme.card_to_string(theme, move_data.card2.card);
+  let s0 = Theme.card_to_string(~theme, move_data.card0.card);
+  let s1 = Theme.card_to_string(~theme, move_data.card1.card);
+  let s2 = Theme.card_to_string(~theme, move_data.card2.card);
   Printf.sprintf("Previous move: (%s, %s, %s)", s0, s1, s2);
 };
 

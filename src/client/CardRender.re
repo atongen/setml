@@ -33,7 +33,7 @@ let render = (ctx, grid, theme) => {
     | Some(card) =>
       let cardIdx = Card.to_int(card);
       CanvasUtils.drawRoundRect(ctx, rect, 10.0, cardColor(cardIdx), None);
-      let cardDesc = Theme.card_to_string(theme, card);
+      let cardDesc = Theme.card_to_string(~theme, card);
       Canvas2dRe.font(ctx, "24px serif");
       let text = Printf.sprintf("%d %s", idx, cardDesc);
       Canvas2dRe.strokeText(text, ctx, ~x=rect.x +. 30., ~y=rect.y +. 30.);

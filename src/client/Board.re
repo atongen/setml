@@ -49,7 +49,7 @@ let drawBlock = (srcCtx, srcRect, dstCtx, dstRect, _theme, border, selected, hov
 let drawBoard = (srcCtx, srcGrid, dstCtx, dstGrid, theme, selected, hovered) => {
   CanvasUtils.reset(dstCtx, "white");
   let outerRect = Grid.paddedRect(dstGrid);
-  CanvasUtils.drawRoundRect(dstCtx, outerRect, 10.0, "#3f51b5", None);
+  CanvasUtils.drawRoundRect(dstCtx, outerRect, 10.0, Theme.palette(theme).primary, None);
   Grid.forEachWithIndex(dstGrid, (dstRect, maybeBcd, idx) => {
     let (cardIdx, isSelected, isHovered) = switch (maybeBcd) {
     | Some((bcd: Messages.board_card_data)) =>
@@ -77,7 +77,7 @@ let makeBoardGrid = (width, height, columns, rows, boardCards) => {
 
 let printSets = (boardCards: array(Messages.board_card_data), theme) => {
   let sets = Messages_util.board_cards_sets(List.fromArray(boardCards));
-  let s = c => Theme.card_to_string(theme, c);
+  let s = c => Theme.card_to_string(~theme, c);
   List.forEach(sets, ((c0, c1, c2)) =>
     Js.log(
       Printf.sprintf("Set: (%d: %s, %d: %s, %d: %s)", c0.idx, s(c0.card), c1.idx, s(c1.card), c2.idx, s(c2.card)),
