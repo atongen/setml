@@ -65,6 +65,8 @@ let findKeyByIdx = (grid: t('a), idx) => {
   };
 };
 
+let forEach = (grid: t('a), f) => Map.forEach(grid.blocks, (k, v) => f(k, grid.values[v]));
+
 let forEachWithIndex = (grid: t('a), f) => Map.forEach(grid.blocks, (k, v) => f(k, grid.values[v], v));
 
 let calculateUsableSize = (~border=0.0, ~width, ~height, ~columns, ~rows) => {

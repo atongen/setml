@@ -17,7 +17,7 @@ type document;
 [@bs.get] external getLineWidth : Canvas2dRe.t => float = "lineWidth";
 
 [@bs.send]
-external drawImage :
+external drawCanvasImage :
   (
     Canvas2dRe.t,
     ~image: canvas,
@@ -31,13 +31,34 @@ external drawImage :
     ~dHeight: float
   ) =>
   unit =
-  "";
+  "drawImage";
+
+[@bs.send]
+external drawImageImage :
+  (
+    Canvas2dRe.t,
+    ~image: HtmlImageElementRe.t,
+    ~sx: float,
+    ~sy: float,
+    ~sWidth: float,
+    ~sHeight: float,
+    ~dx: float,
+    ~dy: float,
+    ~dWidth: float,
+    ~dHeight: float
+  ) =>
+  unit =
+  "drawImage";
+
+[@bs.send]
+external drawImageSimple : (Canvas2dRe.t, ~image: HtmlImageElementRe.t, ~sx: float, ~sy: float) => unit = "drawImage";
 
 [@bs.send.pipe: canvas] external getBoundingClientRect : Dom.domRect = "";
 
-/*
- [@bs.set] external set_onload: (x, [@bs.this] ((x, int) => unit)) => unit = "onload";
- */
+[@bs.set] external setImageSrc : (HtmlImageElementRe.t, string) => unit = "src";
+
+[@bs.set] external setOnload : (HtmlImageElementRe.t, unit => unit) => unit = "onload";
+
 let getCanvas = id => getCanvasById(doc, id);
 
 let offset = canvas => {
@@ -113,7 +134,7 @@ let drawRoundRect = (ctx, rect, radius, fillStyle, strokeStyle) =>
   drawRoundRectangle(ctx, rect.Rect.x, rect.y, rect.w, rect.h, radius, fillStyle, strokeStyle);
 
 let drawCanvas = (srcCtx, srcRect, dstCtx, dstRect) =>
-  drawImage(
+  drawCanvasImage(
     dstCtx,
     ~image=canvasFromCtx(srcCtx),
     ~sx=srcRect.Rect.x,
@@ -125,3 +146,17 @@ let drawCanvas = (srcCtx, srcRect, dstCtx, dstRect) =>
     ~dWidth=dstRect.w,
     ~dHeight=dstRect.h,
   );
+
+let drawSvgImage = (svg, ctx, rect) => {
+  let image = HtmlImageElementRe.makeWithSize(int_of_float(rect.Rect.w), int_of_float(rect.h));
+  setOnload(
+    image,
+    () => {
+      Js.log("drawing svg image on card grid");
+      drawImageSimple(ctx, ~image, ~sx=rect.Rect.x, ~sy=rect.y);
+    },
+  );
+  let src = "data:image/svg+xml;utf8," ++ svg;
+  Js.log(src);
+  setImageSrc(image, src);
+};

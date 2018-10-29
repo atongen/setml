@@ -23,6 +23,8 @@ let left = rect => rect.x;
 
 let right = rect => rect.x +. rect.w;
 
+let shift = rect => make(0.0, 0.0, rect.w, rect.h);
+
 let toStyle = rect =>
   ReactDOMRe.Style.make(
     ~top=Shared_util.roundis(top(rect)) ++ "px",
