@@ -149,14 +149,6 @@ let drawCanvas = (srcCtx, srcRect, dstCtx, dstRect) =>
 
 let drawSvgImage = (svg, ctx, rect) => {
   let image = HtmlImageElementRe.makeWithSize(int_of_float(rect.Rect.w), int_of_float(rect.h));
-  setOnload(
-    image,
-    () => {
-      Js.log("drawing svg image on card grid");
-      drawImageSimple(ctx, ~image, ~sx=rect.Rect.x, ~sy=rect.y);
-    },
-  );
-  let src = "data:image/svg+xml;utf8," ++ svg;
-  Js.log(src);
-  setImageSrc(image, src);
+  setOnload(image, () => drawImageSimple(ctx, ~image, ~sx=rect.Rect.x, ~sy=rect.y));
+  setImageSrc(image, Printf.sprintf("data:image/svg+xml;utf8,%s", svg));
 };

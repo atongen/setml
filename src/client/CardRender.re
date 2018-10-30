@@ -29,36 +29,42 @@ let cardColor = idx => {
 let defaultViewRect = Rect.make(0.0, 0.0, 200.0, 200.0);
 
 let svg = (width, height, viewRect, content) => {
-    let sr = (~re, ~s, str) => Js.String.replaceByRe(re, s, str);
-    Printf.sprintf({svg|
+  let sr = (~re, ~s, str) => Js.String.replaceByRe(re, s, str);
+  Printf.sprintf(
+    {svg|
       <svg xmlns='http://www.w3.org/2000/svg' width='%f' height='%f' viewBox='%d %d %d %d'>
         %s
       </svg>
-    |svg}, width, height, int_of_float(viewRect.Rect.x), int_of_float(viewRect.y), int_of_float(viewRect.w), int_of_float(viewRect.h), content)
-    |> sr(~re=[%re "/>[\\n\\r\\t ]+</g"], ~s="><")
-    |> sr(~re=[%re "/[\\n\\r\\t ]+/g"], ~s=" ")
-    |> sr(~re=[%re "/\"/g"], ~s="'")
-    |> sr(~re=[%re "/#/g"], ~s="%23")
-    |> sr(~re=[%re "/</g"], ~s="%3C")
-    |> sr(~re=[%re "/>/g"], ~s="%3E")
-    |> Js.String.trim;
+    |svg},
+    width,
+    height,
+    int_of_float(viewRect.Rect.x),
+    int_of_float(viewRect.y),
+    int_of_float(viewRect.w),
+    int_of_float(viewRect.h),
+    content,
+  )
+  |> sr(~re=[%re "/>[\\n\\r\\t ]+</g"], ~s="><")
+  |> sr(~re=[%re "/[\\n\\r\\t ]+/g"], ~s=" ")
+  |> sr(~re=[%re "/\"/g"], ~s="'")
+  |> sr(~re=[%re "/#/g"], ~s="%23")
+  |> sr(~re=[%re "/</g"], ~s="%3C")
+  |> sr(~re=[%re "/>/g"], ~s="%3E")
+  |> Js.String.trim;
 };
 
 let c = {wow|
   <circle cx="100" cy="100" r="100" fill="#529fca" />
-|wow}
+|wow};
 
 let renderCard = (ctx, card, rect, theme) =>
   switch (theme) {
   | Theme.Classic =>
-    /* CanvasUtils.drawRoundRect(ctx, rect, 10.0, "white", None); */
     let svgStr = svg(rect.Rect.w, rect.h, defaultViewRect, c);
     CanvasUtils.drawSvgImage(svgStr, ctx, rect);
-    /*
     let cardDesc = Theme.card_to_string(~theme, card);
     Canvas2dRe.font(ctx, "24px serif");
     Canvas2dRe.strokeText(cardDesc, ctx, ~x=rect.x +. 30., ~y=rect.y +. 30.);
-    */
   | Theme.Open_source =>
     CanvasUtils.drawRoundRect(ctx, rect, 10.0, "white", None);
     let cardDesc = Theme.card_to_string(~theme, card);

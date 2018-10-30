@@ -71,9 +71,6 @@ let make = (_children, ~rect, ~boardCards, ~players, ~game: Messages.game_update
                       <Paper className=classes.playerScores> <PlayerScores players palette /> </Paper>
                     </Grid>
                   </Grid>
-                  <img
-                    src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='143.531496' height='143.531496' viewBox='0 0 200 200'%3E%3Ccircle cx='100' cy='100' r='100' fill='%23529fca' /%3E%3C/svg%3E"
-                  />
                 </div>
               )
           )

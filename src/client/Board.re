@@ -40,23 +40,15 @@ let cardBorderColor = (selected, hovered) =>
     "#d6d4cb"
   };
 
-let drawBlock = (srcCtx, srcRect, dstCtx, dstRect, _theme, border, selected, hovered) => {
-  Js.log("drawing board card");
-    /*
+let drawBlock = (srcCtx, srcRect, dstCtx, dstRect, _theme, _border, selected, hovered) => {
   CanvasUtils.drawRoundRect(dstCtx, dstRect, 10.0, cardBorderColor(selected, hovered), None);
-  let content = Rect.shrink(~i=border, dstRect);
-  */
   CanvasUtils.drawCanvas(srcCtx, srcRect, dstCtx, dstRect);
-  ();
 };
 
 let drawBoard = (srcCtx, srcGrid, dstCtx, dstGrid, theme, selected, hovered) => {
-    /*
   CanvasUtils.reset(dstCtx, "white");
   let outerRect = Grid.paddedRect(dstGrid);
   CanvasUtils.drawRoundRect(dstCtx, outerRect, 10.0, Theme.palette(theme).primary, None);
-  */
-  Js.log("drawing board");
   Grid.forEachWithIndex(dstGrid, (dstRect, maybeBcd, idx) => {
     let (cardIdx, isSelected, isHovered) = switch (maybeBcd) {
     | Some((bcd: Messages.board_card_data)) =>
@@ -208,7 +200,7 @@ let make = (_children, ~rect, ~columns, ~rows, ~boardCards, ~game, ~sendMessage)
         id="card-render"
         width=(Shared_util.roundis(renderRect.w))
         height=(Shared_util.roundis(renderRect.h))
-        style=(Rect.toStyle(renderRect, ()))
+        style=(Rect.toStyle(renderRect, ~display="none", ()))
       />
       <canvas
         id="board"
