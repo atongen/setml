@@ -147,8 +147,20 @@ let drawCanvas = (srcCtx, srcRect, dstCtx, dstRect) =>
     ~dHeight=dstRect.h,
   );
 
+let formatDataUrl = (mimeType, content) => {
+  let sr = (~re, ~s, str) => Js.String.replaceByRe(re, s, str);
+  Printf.sprintf("data:%s,%s", mimeType, content)
+  |> sr(~re=[%re "/>[\\n\\r\\t ]+</g"], ~s="><")
+  |> sr(~re=[%re "/[\\n\\r\\t ]+/g"], ~s=" ")
+  |> sr(~re=[%re "/\"/g"], ~s="'")
+  |> sr(~re=[%re "/#/g"], ~s="%23")
+  |> sr(~re=[%re "/</g"], ~s="%3C")
+  |> sr(~re=[%re "/>/g"], ~s="%3E")
+  |> Js.String.trim;
+};
+
 let drawSvgImage = (svg, ctx, rect) => {
   let image = HtmlImageElementRe.makeWithSize(int_of_float(rect.Rect.w), int_of_float(rect.h));
   setOnload(image, () => drawImageSimple(ctx, ~image, ~sx=rect.Rect.x, ~sy=rect.y));
-  setImageSrc(image, Printf.sprintf("data:image/svg+xml;utf8,%s", svg));
+  setImageSrc(image, formatDataUrl("image/svg+xml", svg));
 };
