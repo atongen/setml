@@ -88,26 +88,12 @@ let make_svg ~width ~height ~vx ~vy ~vw ~vh content =
         |eosvg}
     width height vx vy vw vh content
 
-let range_ex i j =
-    let rec aux n acc =
-        if n < j then aux (n+1) (n :: acc) else acc
-    in List.rev (aux i [])
-
 module type CARD_SVG_THEME = sig
     val make_card_svgs : width:float -> height:float -> Card.t -> string list
 end
 
 module Card_svg_classic : CARD_SVG_THEME = struct
     let make_classic_shape_svg ~i ~n card =
-        let (x, y) = match (i, n) with
-        | (1, 1) -> (16, 1)
-        | (1, 2) -> (16, 131)
-        | (2, 2) -> (16, 557)
-        | (1, 3) -> (16, 16)
-        | (2, 3) -> (16, 344)
-        | (3, 3) -> (16, 672)
-        | (p, q) -> raise (Invalid_argument (Printf.sprintf "Invalid num: %d of %d" p q))
-        in
         let color = match Card.color card with
         | ColorZero -> "red"
         | ColorOne -> "blue"
@@ -116,34 +102,44 @@ module Card_svg_classic : CARD_SVG_THEME = struct
         let (defs, fill) = match Card.fill card with
         | FillZero -> (* open *) ("", "fill=\"none\"")
         | FillOne -> (* shaded *)
-            let defs = {eodefs|
-                <defs>
-                    <pattern id="a" patternTransform="scale(10)" height="1" width="2" patternUnits="userSpaceOnUse">
-                        <path d="M0-.5h1v2H0z" />
-                    </pattern>
-                </defs>
-            |eodefs}
+            let defs = Printf.sprintf
+                {eodefs|
+                    <defs>
+                        <pattern id="a" patternTransform="scale(10)" height="1" width="2" patternUnits="userSpaceOnUse">
+                            <path d="M0-.5h1v2H0z" color="%s" />
+                        </pattern>
+                    </defs>
+                |eodefs}
+                color
             in
             let fill = "fill=\"url(#a)\"" in
             (defs, fill)
-        | FillTwo -> (* *) ("", Printf.sprintf "fill=\"%s\"" color)
+        | FillTwo -> (* solid *) ("", Printf.sprintf "fill=\"%s\"" color)
         in
         match Card.shape card with
         | ShapeZero -> ( (* oval *)
+            let path_d = match (i, n) with
+            | (1, 1) | (2, 3) -> "M250 350a150 150 0 0 0-150 150 150 150 0 0 0 150 150h510v-.354A150 150 0 0 0 900 500a150 150 0 0 0-140-149.5v-.5H250z"
+            | (1, 2) -> "M252.5 124v1.498A154.501 153.787 0 0 0 99.998 279.215 154.501 153.787 0 0 0 252.5 432.902V433h1.96a154.501 153.787 0 0 0 .04.002 154.501 153.787 0 0 0 .055-.002H747.5v-.07A154.5 153.965 0 0 0 900 279.035 154.5 153.965 0 0 0 747.5 125.17V124h-495z"
+            | (2, 2) -> "M250 567a150 150 0 0 0-150 150 150 150 0 0 0 150 150 150 150 0 0 0 2.5-.088V867h495v-.125a150 150 0 0 0 2.5.125 150 150 0 0 0 150-150 150 150 0 0 0-150-150 150 150 0 0 0-2.5.088V567h-495v.125A150 150 0 0 0 250 567z"
+            | (1, 3) -> "M250 25a150 150 0 0 0-150 150 150 150 0 0 0 150 150h510v-.354A150 150 0 0 0 900 175 150 150 0 0 0 760 25.5V25H250z"
+            | (3, 3) -> "M250 675a150 150 0 0 0-150 150 150 150 0 0 0 150 150h510v-.354A150 150 0 0 0 900 825a150 150 0 0 0-140-149.5v-.5H250z"
+            | (p, q) -> raise (Invalid_argument (Printf.sprintf "Invalid num: %d of %d" p q))
+            in
             Printf.sprintf
             {eoshape|
                 %s
                 <path
                     style="isolation:auto;mix-blend-mode:normal;solid-color:#000;solid-opacity:1"
-                    d="M200 340A160 160 0 0 0 40 500a160 160 0 0 0 160 160h600a160 160 0 0 0 160-160 160 160 0 0 0-160-160H200z"
+                    d="%s"
                     color="%s"
                     overflow="visible"
                     %s
                     stroke="%s"
-                    stroke-width="10"
+                    stroke-width="20"
                 />
             |eoshape}
-            defs color fill color
+            defs path_d color fill color
         )
         | ShapeOne -> ( (* diamonds *)
             Printf.sprintf
@@ -182,11 +178,17 @@ module Card_svg_classic : CARD_SVG_THEME = struct
 
     let make_card_svgs ~width ~height card =
         let (vw, vh) = default_card_size in
-        let n = Card.num_to_int card.Card.num in
-        List.map (fun i ->
+        let build i n =
             let content = make_classic_shape_svg ~i ~n card in
             make_svg ~width ~height ~vx:0.0 ~vy:0.0 ~vw ~vh content
-        ) (range_ex 1 n)
+        in
+        match Card.num card with
+        | NumZero -> (* one *)
+            [build 1 1]
+        | NumOne -> (* two *)
+            [build 1 2; build 2 2]
+        | NumTwo -> (* three *)
+            [build 1 3; build 2 3; build 3 3]
 end
 
 let make_card_svgs ~width ~height ~theme card =
