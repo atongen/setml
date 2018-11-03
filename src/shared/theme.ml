@@ -8,6 +8,7 @@ type palette = {
     tertiary: string;
 }
 
+
 let to_string = function
     | Classic -> "classic"
     | Open_source -> "open_source"
@@ -85,120 +86,130 @@ let make_svg ~width ~height ~vx ~vy ~vw ~vh content =
         |eosvg}
     width height vx vy vw vh content
 
-let make_classic_shape_svg card =
-    let color = match Card.color card with
-    | ColorZero -> "red"
-    | ColorOne -> "blue"
-    | ColorTwo -> "green"
-    in
-    match Card.shape card with
-    | ShapeZero -> ( (* oval *)
-        match Card.fill card with
-        | FillZero -> ( (* open *)
-            Printf.sprintf
-            {eoshape|
-                <path
-                    style="isolation:auto;mix-blend-mode:normal;solid-color:#000;solid-opacity:1"
-                    d="M200 340A160 160 0 0 0 40 500a160 160 0 0 0 160 160h600a160 160 0 0 0 160-160 160 160 0 0 0-160-160H200z"
-                    color="%s"
-                    overflow="visible"
-                    fill="none"
-                    stroke="%s"
-                    stroke-width="10"
-                />
-            |eoshape}
-            color color
-        )
-        | FillOne -> ( (* shaded *)
-            Printf.sprintf
-            {eoshape|
-                <defs>
-                    <pattern id="a" patternTransform="scale(10)" height="1" width="2" patternUnits="userSpaceOnUse">
-                        <path d="M0-.5h1v2H0z" />
-                    </pattern>
-                </defs>
-                <path
-                    style="isolation:auto;mix-blend-mode:normal;solid-color:#000;solid-opacity:1"
-                    d="M200 340A160 160 0 0 0 40 500a160 160 0 0 0 160 160h600a160 160 0 0 0 160-160 160 160 0 0 0-160-160H200z"
-                    color="%s"
-                    overflow="visible"
-                    fill="url(#a)"
-                    fill-rule="evenodd"
-                    stroke="%s"
-                    stroke-width="10"
-                />
-            |eoshape}
-            color color
-        )
-        | FillTwo -> ( (* solid *)
-            Printf.sprintf
-            {eoshape|
-                <path
-                    style="isolation:auto;mix-blend-mode:normal;solid-color:#000;solid-opacity:1"
-                    d="M200 340A160 160 0 0 0 40 500a160 160 0 0 0 160 160h600a160 160 0 0 0 160-160 160 160 0 0 0-160-160H200z"
-                    color="%s"
-                    overflow="visible"
-                    fill="%s"
-                    fill-rule="evenodd"
-                    stroke="%s"
-                    stroke-width="10"
-                />
-            |eoshape}
-            color color color
-        )
-    )
-    | ShapeOne -> ( (* diamonds *)
-        match Card.fill card with
-        | FillZero -> ( (* open *)
-            Printf.sprintf
-            {eoshape|
-                <circle cx="500" cy="500" r="500" fill="%s" />
-            |eoshape}
-            color
-        )
-        | FillOne -> ( (* shaded *)
-            Printf.sprintf
-            {eoshape|
-                <circle cx="500" cy="500" r="500" fill="%s" />
-            |eoshape}
-            color
-        )
-        | FillTwo -> ( (* solid *)
-            Printf.sprintf
-            {eoshape|
-                <circle cx="500" cy="500" r="500" fill="%s" />
-            |eoshape}
-            color
-        )
-    )
-    | ShapeTwo -> ( (* bowtie *)
-        match Card.fill card with
-        | FillZero -> ( (* open *)
-            Printf.sprintf
-            {eoshape|
-                <circle cx="500" cy="500" r="500" fill="%s" />
-            |eoshape}
-            color
-        )
-        | FillOne -> ( (* shaded *)
-            Printf.sprintf
-            {eoshape|
-                <circle cx="500" cy="500" r="500" fill="%s" />
-            |eoshape}
-            color
-        )
-        | FillTwo -> ( (* solid *)
-            Printf.sprintf
-            {eoshape|
-                <circle cx="500" cy="500" r="500" fill="%s" />
-            |eoshape}
-            color
-        )
-    )
+module type CARD_SVG_THEME = sig
+    val make_card_svgs : width:float -> height:float -> Card.t -> string list
+end
 
-let make_card_svg ~width ~height ~theme card =
-    match theme with
-    | Classic | Open_source ->
+module Card_svg_classic : CARD_SVG_THEME = struct
+    let make_classic_shape_svg card =
+        let color = match Card.color card with
+        | ColorZero -> "red"
+        | ColorOne -> "blue"
+        | ColorTwo -> "green"
+        in
+        match Card.shape card with
+        | ShapeZero -> ( (* oval *)
+            match Card.fill card with
+            | FillZero -> ( (* open *)
+                Printf.sprintf
+                {eoshape|
+                    <path
+                        style="isolation:auto;mix-blend-mode:normal;solid-color:#000;solid-opacity:1"
+                        d="M200 340A160 160 0 0 0 40 500a160 160 0 0 0 160 160h600a160 160 0 0 0 160-160 160 160 0 0 0-160-160H200z"
+                        color="%s"
+                        overflow="visible"
+                        fill="none"
+                        stroke="%s"
+                        stroke-width="10"
+                    />
+                |eoshape}
+                color color
+            )
+            | FillOne -> ( (* shaded *)
+                Printf.sprintf
+                {eoshape|
+                    <defs>
+                        <pattern id="a" patternTransform="scale(10)" height="1" width="2" patternUnits="userSpaceOnUse">
+                            <path d="M0-.5h1v2H0z" />
+                        </pattern>
+                    </defs>
+                    <path
+                        style="isolation:auto;mix-blend-mode:normal;solid-color:#000;solid-opacity:1"
+                        d="M200 340A160 160 0 0 0 40 500a160 160 0 0 0 160 160h600a160 160 0 0 0 160-160 160 160 0 0 0-160-160H200z"
+                        color="%s"
+                        overflow="visible"
+                        fill="url(#a)"
+                        fill-rule="evenodd"
+                        stroke="%s"
+                        stroke-width="10"
+                    />
+                |eoshape}
+                color color
+            )
+            | FillTwo -> ( (* solid *)
+                Printf.sprintf
+                {eoshape|
+                    <path
+                        style="isolation:auto;mix-blend-mode:normal;solid-color:#000;solid-opacity:1"
+                        d="M200 340A160 160 0 0 0 40 500a160 160 0 0 0 160 160h600a160 160 0 0 0 160-160 160 160 0 0 0-160-160H200z"
+                        color="%s"
+                        overflow="visible"
+                        fill="%s"
+                        fill-rule="evenodd"
+                        stroke="%s"
+                        stroke-width="10"
+                    />
+                |eoshape}
+                color color color
+            )
+        )
+        | ShapeOne -> ( (* diamonds *)
+            match Card.fill card with
+            | FillZero -> ( (* open *)
+                Printf.sprintf
+                {eoshape|
+                    <circle cx="500" cy="500" r="500" fill="%s" />
+                |eoshape}
+                color
+            )
+            | FillOne -> ( (* shaded *)
+                Printf.sprintf
+                {eoshape|
+                    <circle cx="500" cy="500" r="500" fill="%s" />
+                |eoshape}
+                color
+            )
+            | FillTwo -> ( (* solid *)
+                Printf.sprintf
+                {eoshape|
+                    <circle cx="500" cy="500" r="500" fill="%s" />
+                |eoshape}
+                color
+            )
+        )
+        | ShapeTwo -> ( (* bowtie *)
+            match Card.fill card with
+            | FillZero -> ( (* open *)
+                Printf.sprintf
+                {eoshape|
+                    <circle cx="500" cy="500" r="500" fill="%s" />
+                |eoshape}
+                color
+            )
+            | FillOne -> ( (* shaded *)
+                Printf.sprintf
+                {eoshape|
+                    <circle cx="500" cy="500" r="500" fill="%s" />
+                |eoshape}
+                color
+            )
+            | FillTwo -> ( (* solid *)
+                Printf.sprintf
+                {eoshape|
+                    <circle cx="500" cy="500" r="500" fill="%s" />
+                |eoshape}
+                color
+            )
+        )
+
+    let make_card_svgs ~width ~height card =
         let content = make_classic_shape_svg card in
         let (vx, vy, vw, vh) = (0.0, 0.0, 1000.0, 1000.0) in
-        make_svg ~width ~height ~vx ~vy ~vw ~vh content
+        let svg = make_svg ~width ~height ~vx ~vy ~vw ~vh content in
+        [svg];
+end
+
+let make_card_svgs ~width ~height ~theme card =
+    match theme with
+    | Classic | Open_source ->
+        Card_svg_classic.make_card_svgs ~width ~height card

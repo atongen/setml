@@ -13,8 +13,8 @@ let render = (ctx, grid, theme) => {
   Grid.forEach(grid, (rect, maybeCard) =>
     switch (maybeCard) {
     | Some(card) =>
-      let cardSvg = Theme.make_card_svg(~width=rect.Rect.w, ~height=rect.h, ~theme, card);
-      CanvasUtils.drawSvgImage(cardSvg, ctx, rect);
+      let svgs = Theme.make_card_svgs(~width=rect.Rect.w, ~height=rect.h, ~theme, card);
+      List.iter(svg => CanvasUtils.drawSvgImage(svg, ctx, rect), svgs);
     | None => ()
     }
   );
