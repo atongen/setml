@@ -20,40 +20,40 @@ let of_string = function
 let num ~card = function
     | Classic | Open_source ->
         match Card.num card with
-        | AttrZero -> "one"
-        | AttrOne -> "two"
-        | AttrTwo -> "three"
+        | NumZero -> "one"
+        | NumOne -> "two"
+        | NumTwo -> "three"
 
 let fill ~card = function
     | Classic | Open_source ->
         match Card.fill card with
-        | AttrZero -> "open"
-        | AttrOne -> "shaded"
-        | AttrTwo -> "solid"
+        | FillZero -> "open"
+        | FillOne -> "shaded"
+        | FillTwo -> "solid"
 
 let color ~card = function
     | Classic | Open_source ->
         match Card.color card with
-        | AttrZero -> "red"
-        | AttrOne -> "blue"
-        | AttrTwo -> "green"
+        | ColorZero -> "red"
+        | ColorOne -> "blue"
+        | ColorTwo -> "green"
 
 let shape ?(plural=false) ~card = function
     | Classic -> (
         match Card.shape card with
-        | AttrZero ->
+        | ShapeZero ->
             if plural then "ovals" else "oval"
-        | AttrOne ->
+        | ShapeOne ->
             if plural then "diamonds" else "diamond"
-        | AttrTwo ->
+        | ShapeTwo ->
             if plural then "bowties" else "bowtie")
     | Open_source -> (
         match Card.shape card with
-        | AttrZero ->
+        | ShapeZero ->
             if plural then "penguins" else "penguin"
-        | AttrOne ->
+        | ShapeOne ->
             if plural then "elephants" else "elephant"
-        | AttrTwo ->
+        | ShapeTwo ->
             if plural then "camels" else "camel")
 
 let palette = function
@@ -72,7 +72,7 @@ let card_to_string ~theme card =
     let num_attr = num ~card theme in
     let fill_attr = fill ~card theme in
     let color_attr = color ~card theme in
-    let plural = card.num != AttrZero in
+    let plural = card.num != NumZero in
     let shape_attr = shape ~plural ~card theme in
     Printf.sprintf "%s %s %s %s" num_attr fill_attr color_attr shape_attr
 
@@ -87,14 +87,14 @@ let make_svg ~width ~height ~vx ~vy ~vw ~vh content =
 
 let make_classic_shape_svg card =
     let color = match Card.color card with
-    | AttrZero -> "red"
-    | AttrOne -> "blue"
-    | AttrTwo -> "green"
+    | ColorZero -> "red"
+    | ColorOne -> "blue"
+    | ColorTwo -> "green"
     in
     match Card.shape card with
-    | AttrZero -> ( (* oval *)
+    | ShapeZero -> ( (* oval *)
         match Card.fill card with
-        | AttrZero -> ( (* open *)
+        | FillZero -> ( (* open *)
             Printf.sprintf
             {eoshape|
                 <path
@@ -109,7 +109,7 @@ let make_classic_shape_svg card =
             |eoshape}
             color color
         )
-        | AttrOne -> ( (* shaded *)
+        | FillOne -> ( (* shaded *)
             Printf.sprintf
             {eoshape|
                 <defs>
@@ -130,7 +130,7 @@ let make_classic_shape_svg card =
             |eoshape}
             color color
         )
-        | AttrTwo -> ( (* solid *)
+        | FillTwo -> ( (* solid *)
             Printf.sprintf
             {eoshape|
                 <path
@@ -147,23 +147,23 @@ let make_classic_shape_svg card =
             color color color
         )
     )
-    | AttrOne -> ( (* diamonds *)
+    | ShapeOne -> ( (* diamonds *)
         match Card.fill card with
-        | AttrZero -> ( (* open *)
+        | FillZero -> ( (* open *)
             Printf.sprintf
             {eoshape|
                 <circle cx="500" cy="500" r="500" fill="%s" />
             |eoshape}
             color
         )
-        | AttrOne -> ( (* shaded *)
+        | FillOne -> ( (* shaded *)
             Printf.sprintf
             {eoshape|
                 <circle cx="500" cy="500" r="500" fill="%s" />
             |eoshape}
             color
         )
-        | AttrTwo -> ( (* solid *)
+        | FillTwo -> ( (* solid *)
             Printf.sprintf
             {eoshape|
                 <circle cx="500" cy="500" r="500" fill="%s" />
@@ -171,23 +171,23 @@ let make_classic_shape_svg card =
             color
         )
     )
-    | AttrTwo -> ( (* bowtie *)
+    | ShapeTwo -> ( (* bowtie *)
         match Card.fill card with
-        | AttrZero -> ( (* open *)
+        | FillZero -> ( (* open *)
             Printf.sprintf
             {eoshape|
                 <circle cx="500" cy="500" r="500" fill="%s" />
             |eoshape}
             color
         )
-        | AttrOne -> ( (* shaded *)
+        | FillOne -> ( (* shaded *)
             Printf.sprintf
             {eoshape|
                 <circle cx="500" cy="500" r="500" fill="%s" />
             |eoshape}
             color
         )
-        | AttrTwo -> ( (* solid *)
+        | FillTwo -> ( (* solid *)
             Printf.sprintf
             {eoshape|
                 <circle cx="500" cy="500" r="500" fill="%s" />

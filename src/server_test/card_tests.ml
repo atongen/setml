@@ -45,6 +45,10 @@ let set_no_list = [
   (5, 6, 7); (5, 6, 8); (5, 7, 8);
 ]
 
+let num_combos_zero_through_nine =
+    Combinatorics.triples [0; 1; 2; 3; 4; 5; 6; 7; 8]
+    |> List.length
+
 let set_no_cards = List.map triple_to_cards set_no_list
 
 let cards_tests =
@@ -69,7 +73,7 @@ let cards_tests =
     test_case (ase "{ n: 2, f: 2, c: 2, s: 2 }" (Card.to_string (deck.(80))));
 
     test_case (aie (List.length set_yes_list) (Card.count_sets (0 --^ 9)));
-    test_case (aie (List.length set_no_list) (Card.count_non_sets (0 --^ 9)));
+    test_case (aie (num_combos_zero_through_nine - (List.length set_no_list)) (Card.count_sets (0 --^ 9)));
   ]
 
 let set_desc prefix c0 c1 c2 =
