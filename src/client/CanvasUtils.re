@@ -152,6 +152,7 @@ let formatDataUrl = (mimeType, content) => {
   Printf.sprintf("data:%s,%s", mimeType, content)
   |> sr(~re=[%re "/>[\\n\\r\\t ]+</g"], ~s="><")
   |> sr(~re=[%re "/[\\n\\r\\t ]+/g"], ~s=" ")
+  |> sr(~re=[%re "/[ ]+\\/>/g"], ~s="/>")
   |> sr(~re=[%re "/\"/g"], ~s="'")
   |> sr(~re=[%re "/#/g"], ~s="%23")
   |> sr(~re=[%re "/</g"], ~s="%3C")
