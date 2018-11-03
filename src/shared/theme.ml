@@ -88,12 +88,26 @@ let make_svg ~width ~height ~vx ~vy ~vw ~vh content =
         |eosvg}
     width height vx vy vw vh content
 
+let range_ex i j =
+    let rec aux n acc =
+        if n < j then aux (n+1) (n :: acc) else acc
+    in List.rev (aux i [])
+
 module type CARD_SVG_THEME = sig
     val make_card_svgs : width:float -> height:float -> Card.t -> string list
 end
 
 module Card_svg_classic : CARD_SVG_THEME = struct
-    let make_classic_shape_svg card =
+    let make_classic_shape_svg ~i ~n card =
+        let (x, y) = match (i, n) with
+        | (1, 1) -> (16, 1)
+        | (1, 2) -> (16, 131)
+        | (2, 2) -> (16, 557)
+        | (1, 3) -> (16, 16)
+        | (2, 3) -> (16, 344)
+        | (3, 3) -> (16, 672)
+        | (p, q) -> raise (Invalid_argument (Printf.sprintf "Invalid num: %d of %d" p q))
+        in
         let color = match Card.color card with
         | ColorZero -> "red"
         | ColorOne -> "blue"
@@ -167,10 +181,12 @@ module Card_svg_classic : CARD_SVG_THEME = struct
         )
 
     let make_card_svgs ~width ~height card =
-        let content = make_classic_shape_svg card in
         let (vw, vh) = default_card_size in
-        let svg = make_svg ~width ~height ~vx:0.0 ~vy:0.0 ~vw ~vh content in
-        [svg]
+        let n = Card.num_to_int card.Card.num in
+        List.map (fun i ->
+            let content = make_classic_shape_svg ~i ~n card in
+            make_svg ~width ~height ~vx:0.0 ~vy:0.0 ~vw ~vh content
+        ) (range_ex 1 n)
 end
 
 let make_card_svgs ~width ~height ~theme card =
