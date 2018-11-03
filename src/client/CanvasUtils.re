@@ -34,7 +34,7 @@ external drawCanvasImage :
   "drawImage";
 
 [@bs.send]
-external drawImageImage :
+external drawImage :
   (
     Canvas2dRe.t,
     ~image: HtmlImageElementRe.t,
@@ -48,10 +48,10 @@ external drawImageImage :
     ~dHeight: float
   ) =>
   unit =
-  "drawImage";
+  "";
 
 [@bs.send]
-external drawImageSimple : (Canvas2dRe.t, ~image: HtmlImageElementRe.t, ~sx: float, ~sy: float) => unit = "drawImage";
+external drawImageSimple : (Canvas2dRe.t, ~image: HtmlImageElementRe.t, ~dx: float, ~dy: float) => unit = "drawImage";
 
 [@bs.send.pipe: canvas] external getBoundingClientRect : Dom.domRect = "";
 
@@ -161,6 +161,6 @@ let formatDataUrl = (mimeType, content) => {
 
 let drawSvgImage = (svg, ctx, rect) => {
   let image = HtmlImageElementRe.makeWithSize(int_of_float(rect.Rect.w), int_of_float(rect.h));
-  setOnload(image, () => drawImageSimple(ctx, ~image, ~sx=rect.Rect.x, ~sy=rect.y));
+  setOnload(image, () => drawImageSimple(ctx, ~image, ~dx=rect.Rect.x, ~dy=rect.y));
   setImageSrc(image, formatDataUrl("image/svg+xml", svg));
 };

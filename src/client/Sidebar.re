@@ -47,7 +47,7 @@ let make = (_children, ~rect, ~boardCards, ~players, ~game: Messages.game_update
   {
     ...component,
     render: _self =>
-      <section id="sidebar" style=(Rect.toStyle(rect, ()))>
+      <section id="sidebar" style=(ClientUtil.rectToStyle(rect, ()))>
         <StyledSidebar
           render=(
             classes =>

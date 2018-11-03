@@ -77,6 +77,8 @@ let card_to_string ~theme card =
     let shape_attr = shape ~plural ~card theme in
     Printf.sprintf "%s %s %s %s" num_attr fill_attr color_attr shape_attr
 
+let default_card_size = (1000.0, 1000.0)
+
 let make_svg ~width ~height ~vx ~vy ~vw ~vh content =
     Printf.sprintf
         {eosvg|
@@ -204,9 +206,9 @@ module Card_svg_classic : CARD_SVG_THEME = struct
 
     let make_card_svgs ~width ~height card =
         let content = make_classic_shape_svg card in
-        let (vx, vy, vw, vh) = (0.0, 0.0, 1000.0, 1000.0) in
-        let svg = make_svg ~width ~height ~vx ~vy ~vw ~vh content in
-        [svg];
+        let (vw, vh) = default_card_size in
+        let svg = make_svg ~width ~height ~vx:0.0 ~vy:0.0 ~vw ~vh content in
+        [svg]
 end
 
 let make_card_svgs ~width ~height ~theme card =

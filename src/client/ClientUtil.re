@@ -179,3 +179,13 @@ let closeToSquare = (~d0=5.0, ~d1=6.0, width, height) => {
 };
 
 let calculateBorder = (width, height) => min(width, height) /. 75.;
+
+let rectToStyle = rect =>
+  ReactDOMRe.Style.make(
+    ~top=Shared_util.roundis(Rect.top(rect)) ++ "px",
+    ~bottom=Shared_util.roundis(Rect.bottom(rect)) ++ "px",
+    ~left=Shared_util.roundis(Rect.left(rect)) ++ "px",
+    ~right=Shared_util.roundis(Rect.right(rect)) ++ "px",
+    ~width=Shared_util.roundis(rect.w) ++ "px",
+    ~height=Shared_util.roundis(rect.h) ++ "px",
+  );

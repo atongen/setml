@@ -200,13 +200,13 @@ let make = (_children, ~rect, ~columns, ~rows, ~boardCards, ~game, ~sendMessage)
         id="card-render"
         width=(Shared_util.roundis(renderRect.w))
         height=(Shared_util.roundis(renderRect.h))
-        style=(Rect.toStyle(renderRect, ~display="none", ()))
+        style=(ClientUtil.rectToStyle(renderRect, ~display="none", ()))
       />
       <canvas
         id="board"
         width=(Shared_util.roundis(rect.w))
         height=(Shared_util.roundis(rect.h))
-        style=(Rect.toStyle(rect, ()))
+        style=(ClientUtil.rectToStyle(rect, ()))
         onClick=(evt => send(getClick(evt, state.boardOffset)))
         onMouseMove=(evt => send(getHover(evt, state.boardOffset)))
       />
