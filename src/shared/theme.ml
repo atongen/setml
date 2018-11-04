@@ -36,7 +36,7 @@ let color ~card = function
     | Classic | Open_source ->
         match Card.color card with
         | ColorZero -> "red"
-        | ColorOne -> "blue"
+        | ColorOne -> "purple"
         | ColorTwo -> "green"
 
 let shape ?(plural=false) ~card = function
@@ -96,7 +96,7 @@ module Card_svg_classic : CARD_SVG_THEME = struct
     let make_classic_shape_svg card =
         let color = match Card.color card with
         | ColorZero -> "red"
-        | ColorOne -> "blue"
+        | ColorOne -> "purple"
         | ColorTwo -> "green"
         in
         let (defs, fill) = match Card.fill card with
@@ -117,6 +117,21 @@ module Card_svg_classic : CARD_SVG_THEME = struct
             (defs, fill)
         | FillTwo -> (* solid *) ("", Printf.sprintf "fill=\"%s\"" color)
         in
+        let make_path path_d =
+            Printf.sprintf
+            {eoshape|
+                %s
+                <path
+                    %s
+                    color="%s"
+                    stroke="%s"
+                    stroke-width="10"
+                    stroke-linejoin="round"
+                    d="%s"
+                />
+            |eoshape}
+            defs fill color color path_d
+        in
         match Card.shape card with
         | ShapeZero -> ( (* oval *)
             let path_d = match Card.num card with
@@ -124,36 +139,15 @@ module Card_svg_classic : CARD_SVG_THEME = struct
             | NumOne -> "M400 550a100 100 0 0 0-100 100 100 100 0 0 0 100 100h200a100 100 0 0 0 100-100 100 100 0 0 0-100-100H400zM400 250a100 100 0 0 0-100 100 100 100 0 0 0 100 100h200a100 100 0 0 0 100-100 100 100 0 0 0-100-100H400z"
             | NumTwo -> "M400 100a100 100 0 0 0-100 100 100 100 0 0 0 100 100h200a100 100 0 0 0 100-100 100 100 0 0 0-100-100H400zM400 400a100 100 0 0 0-100 100 100 100 0 0 0 100 100h200a100 100 0 0 0 100-100 100 100 0 0 0-100-100H400zM400 700a100 100 0 0 0-100 100 100 100 0 0 0 100 100h200a100 100 0 0 0 100-100 100 100 0 0 0-100-100H400z"
             in
-            Printf.sprintf
-            {eoshape|
-                %s
-                <g
-                    %s
-                    color="%s"
-                    stroke="%s"
-                    stroke-width="10"
-                    stroke-linejoin="round">
-                    <path d="%s"/>
-                </g>
-            |eoshape}
-            defs fill color color path_d
+            make_path path_d
         )
         | ShapeOne -> ( (* diamonds *)
-            Printf.sprintf
-            {eoshape|
-                %s
-                <circle
-                    cx="500"
-                    cy="500"
-                    r="500"
-                    color="%s"
-                    overflow="visible"
-                    %s
-                    stroke="%s"
-                    stroke-width="10"
-                />
-            |eoshape}
-            defs color fill color
+            let path_d = match Card.num card with
+            | NumZero -> "M501.18 400.838l-200 100 .89.443 199.11 99.557 200-100-200-100z"
+            | NumOne -> "M501.2 249.41l-200 100 .89.443L501.2 449.41l200-100-200-100zM501.17 549.41l-200 99.998.89.446 199.11 99.556 200-100.002-200-99.998z"
+            | NumTwo -> "M501.18 103.695l-200 100 .89.444 199.11 99.556 200-100-200-100zM501.18 400.838l-200 100 .89.443 199.11 99.557 200-100-200-100zM499.752 699.41l-200 99.998.889.446 199.11 99.556 200-100.002-199.999-99.998z"
+            in
+            make_path path_d
         )
         | ShapeTwo -> ( (* bowtie *)
             Printf.sprintf
