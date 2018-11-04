@@ -33,50 +33,6 @@ let getClick = (evt, offset) => Click(evtPoint(evt, offset));
 
 let getHover = (evt, offset) => Hover(evtPoint(evt, offset));
 
-let cardBorderColor = (selected, hovered) =>
-  if (selected && hovered) {
-    "#900c3f";
-  } else if (selected) {
-    "#c70039";
-  } else if (hovered) {
-    "#ff5733";
-  } else {
-    "white";
-  };
-
-let drawBlock = (srcCtx, srcRect, dstCtx, dstRect, _theme, _border, selected, hovered) => {
-  CanvasUtils.drawRoundRect(dstCtx, dstRect, 10.0, cardBorderColor(selected, hovered), None);
-  CanvasUtils.drawCanvas(srcCtx, srcRect, dstCtx, dstRect);
-};
-
-let drawBoard = (srcCtx, srcGrid, dstCtx, dstGrid, theme, selected, hovered) => {
-  CanvasUtils.reset(dstCtx, "white");
-  let outerRect = Grid.paddedRect(dstGrid);
-  CanvasUtils.drawRoundRect(dstCtx, outerRect, 10.0, Theme.palette(theme).primary, None);
-  Grid.forEachWithIndex(
-    dstGrid,
-    (dstRect, maybeBcd, idx) => {
-      let (cardIdx, isSelected, isHovered) =
-        switch (maybeBcd) {
-        | Some((bcd: Messages.board_card_data)) =>
-          assert(bcd.idx == idx);
-          let isSelected = Selected.has(selected, bcd);
-          let isHovered =
-            switch (hovered) {
-            | Some(h) => h == bcd
-            | None => false
-            };
-          (Card.to_int_opt(bcd.card), isSelected, isHovered);
-        | None => (Card.to_int_opt(None), false, false)
-        };
-      switch (Grid.findKeyByIdx(srcGrid, cardIdx)) {
-      | Some(srcRect) => drawBlock(srcCtx, srcRect, dstCtx, dstRect, theme, dstGrid.border, isSelected, isHovered)
-      | None => ()
-      };
-    },
-  );
-};
-
 let makeBoardGrid = (width, height, columns, rows, boardCards) => {
   let border = ClientUtil.calculateBorder(width, height);
   Grid.make(~border, ~width, ~height, ~columns, ~rows, List.toArray(boardCards));
@@ -94,6 +50,8 @@ let printSets = (boardCards: array(Messages.board_card_data), theme) => {
 
 let shouldRedraw = (oldState: state, newState: state) =>
   if (oldState.boardGrid.width != newState.boardGrid.width || oldState.boardGrid.height != newState.boardGrid.height) {
+    (true, true);
+  } else if (oldState.game.theme != newState.game.theme) {
     (true, true);
   } else if (oldState.boardGrid.values != newState.boardGrid.values) {
     (false, true);
@@ -191,7 +149,7 @@ let make = (_children, ~rect, ~columns, ~rows, ~boardCards, ~game, ~sendMessage)
             all(CardRender.render(srcCtx, newSelf.state.cardGrid, newSelf.state.game.theme))
             |> then_(_results => {
                  printSets(newSelf.state.boardGrid.values, newSelf.state.game.theme);
-                 drawBoard(
+                 CardRender.renderBoard(
                    srcCtx,
                    newSelf.state.cardGrid,
                    dstCtx,
@@ -205,7 +163,7 @@ let make = (_children, ~rect, ~columns, ~rows, ~boardCards, ~game, ~sendMessage)
           )
           |> ignore;
         } else if (redrawBoard) {
-          drawBoard(
+          CardRender.renderBoard(
             srcCtx,
             newSelf.state.cardGrid,
             dstCtx,

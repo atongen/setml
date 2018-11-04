@@ -173,7 +173,7 @@ let drawSvgImagePromise = (svg, ctx, rect) =>
       image,
       () => {
         drawImageSimple(ctx, ~image, ~dx=rect.Rect.x, ~dy=rect.y);
-        resolve(. true); /* how to return unit */
+        resolve(. true); /* how to return unit? */
       },
     );
     setImageSrc(image, formatDataUrl("image/svg+xml", svg));
