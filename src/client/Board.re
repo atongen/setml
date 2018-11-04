@@ -41,7 +41,7 @@ let cardBorderColor = (selected, hovered) =>
   } else if (hovered) {
     "#ff5733";
   } else {
-    "#d6d4cb";
+    "white";
   };
 
 let drawBlock = (srcCtx, srcRect, dstCtx, dstRect, _theme, _border, selected, hovered) => {
