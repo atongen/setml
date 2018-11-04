@@ -100,13 +100,14 @@ module Card_svg_classic : CARD_SVG_THEME = struct
         | ColorTwo -> "green"
         in
         let (defs, fill) = match Card.fill card with
-        | FillZero -> (* open *) ("", "fill=\"none\"")
+        | FillZero -> (* open *) ("", "fill=\"white\"")
         | FillOne -> (* shaded *)
             let defs = Printf.sprintf
                 {eodefs|
                     <defs>
-                        <pattern id="a" patternTransform="scale(10)" height="1" width="2" patternUnits="userSpaceOnUse">
-                            <path d="M0-.5h1v2H0z" color="%s" />
+                        <pattern id="a" height="18" width="18" patternUnits="userSpaceOnUse">
+                            <rect width="18" height="18" fill="white" />
+                            <rect x="0" y="0" width="4" height="18" fill="%s" />
                         </pattern>
                     </defs>
                 |eodefs}
