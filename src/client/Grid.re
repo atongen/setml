@@ -1,12 +1,10 @@
 open Belt;
 
 module RectComparator =
-  Belt.Id.MakeComparable(
-    {
-      type t = Rect.t;
-      let cmp = (a: t, b: t) => Rect.compare(a, b);
-    },
-  );
+  Belt.Id.MakeComparable({
+    type t = Rect.t;
+    let cmp = (a: t, b: t) => Rect.compare(a, b);
+  });
 
 type t('a) = {
   marginX: float,
@@ -68,6 +66,10 @@ let findKeyByIdx = (grid: t('a), idx) => {
 let forEach = (grid: t('a), f) => Map.forEach(grid.blocks, (k, v) => f(k, grid.values[v]));
 
 let forEachWithIndex = (grid: t('a), f) => Map.forEach(grid.blocks, (k, v) => f(k, grid.values[v], v));
+
+let map = (grid: t('a), f) => Map.reduce(grid.blocks, [], (acc, k, v) => [f(k, grid.values[v]), ...acc]);
+
+let flatMap = (grid: t('a), f) => List.flatten(map(grid, f));
 
 let calculateUsableSize = (~border=0.0, ~width, ~height, ~columns, ~rows) => {
   let cp = float_of_int(columns + 1);

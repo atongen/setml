@@ -18,11 +18,15 @@ type state = {
 let component = ReasonReact.reducerComponent("Board");
 
 let evtPoint = (evt, offset) => {
-  let (offsetX, offsetY) = switch (offset) {
-    | {contents: Some((x, y))} => (x, y);
-    | _ => (0.0, 0.0);
+  let (offsetX, offsetY) =
+    switch (offset) {
+    | {contents: Some((x, y))} => (x, y)
+    | _ => (0.0, 0.0)
     };
-  (float_of_int(ReactEvent.Mouse.clientX(evt)) -. offsetX, float_of_int(ReactEvent.Mouse.clientY(evt)) -. offsetY);
+  (
+    float_of_int(ReactEvent.Mouse.clientX(evt)) -. offsetX,
+    float_of_int(ReactEvent.Mouse.clientY(evt)) -. offsetY,
+  );
 };
 
 let getClick = (evt, offset) => Click(evtPoint(evt, offset));
@@ -37,7 +41,7 @@ let cardBorderColor = (selected, hovered) =>
   } else if (hovered) {
     "#ff5733";
   } else {
-    "#d6d4cb"
+    "#d6d4cb";
   };
 
 let drawBlock = (srcCtx, srcRect, dstCtx, dstRect, _theme, _border, selected, hovered) => {
@@ -49,24 +53,28 @@ let drawBoard = (srcCtx, srcGrid, dstCtx, dstGrid, theme, selected, hovered) => 
   CanvasUtils.reset(dstCtx, "white");
   let outerRect = Grid.paddedRect(dstGrid);
   CanvasUtils.drawRoundRect(dstCtx, outerRect, 10.0, Theme.palette(theme).primary, None);
-  Grid.forEachWithIndex(dstGrid, (dstRect, maybeBcd, idx) => {
-    let (cardIdx, isSelected, isHovered) = switch (maybeBcd) {
-    | Some((bcd: Messages.board_card_data)) =>
-      assert (bcd.idx == idx);
-      let isSelected = Selected.has(selected, bcd);
-      let isHovered =
-        switch (hovered) {
-        | Some(h) => h == bcd
-        | None => false
+  Grid.forEachWithIndex(
+    dstGrid,
+    (dstRect, maybeBcd, idx) => {
+      let (cardIdx, isSelected, isHovered) =
+        switch (maybeBcd) {
+        | Some((bcd: Messages.board_card_data)) =>
+          assert(bcd.idx == idx);
+          let isSelected = Selected.has(selected, bcd);
+          let isHovered =
+            switch (hovered) {
+            | Some(h) => h == bcd
+            | None => false
+            };
+          (Card.to_int_opt(bcd.card), isSelected, isHovered);
+        | None => (Card.to_int_opt(None), false, false)
         };
-        (Card.to_int_opt(bcd.card), isSelected, isHovered)
-    | None => (Card.to_int_opt(None), false, false)
-    };
-    switch(Grid.findKeyByIdx(srcGrid, cardIdx)) {
-    | Some(srcRect) => drawBlock(srcCtx, srcRect, dstCtx, dstRect, theme, dstGrid.border, isSelected, isHovered);
-    | None => ();
-    }
-  });
+      switch (Grid.findKeyByIdx(srcGrid, cardIdx)) {
+      | Some(srcRect) => drawBlock(srcCtx, srcRect, dstCtx, dstRect, theme, dstGrid.border, isSelected, isHovered)
+      | None => ()
+      };
+    },
+  );
 };
 
 let makeBoardGrid = (width, height, columns, rows, boardCards) => {
@@ -103,7 +111,7 @@ let make = (_children, ~rect, ~columns, ~rows, ~boardCards, ~game, ~sendMessage)
   ...component,
   reducer: (action, state) =>
     switch (action) {
-    | Click((x, y)) => {
+    | Click((x, y)) =>
       switch (Grid.findByPoint(state.boardGrid, (x, y))) {
       | Some(bcd) =>
         if (Selected.has(state.selected, bcd)) {
@@ -130,8 +138,7 @@ let make = (_children, ~rect, ~columns, ~rows, ~boardCards, ~game, ~sendMessage)
         }
       | None => ReasonReact.NoUpdate
       }
-    }
-    | Hover((x, y)) => {
+    | Hover((x, y)) =>
       let maybeNewHovered = Grid.findByPoint(state.boardGrid, (x, y));
       switch (state.hovered, maybeNewHovered) {
       | (Some(oldHovered), Some(newHovered)) =>
@@ -141,12 +148,9 @@ let make = (_children, ~rect, ~columns, ~rows, ~boardCards, ~game, ~sendMessage)
           ReasonReact.Update({...state, hovered: Some(newHovered)});
         }
       | (Some(_oldHovered), None) => ReasonReact.Update({...state, hovered: None})
-      | (None, Some(newHovered)) => {
-          ReasonReact.Update({...state, hovered: Some(newHovered)})
-      }
+      | (None, Some(newHovered)) => ReasonReact.Update({...state, hovered: Some(newHovered)})
       | (None, None) => ReasonReact.NoUpdate
       };
-    }
     },
   initialState: () => {
     let boardGrid = makeBoardGrid(rect.Rect.w, rect.h, columns, rows, boardCards);
@@ -174,7 +178,7 @@ let make = (_children, ~rect, ~columns, ~rows, ~boardCards, ~game, ~sendMessage)
     self.state.context := Some(boardContext);
     self.state.renderContext := Some(renderContext);
     self.state.boardOffset := Some(boardOffset);
-    CardRender.render(renderContext, self.state.cardGrid, self.state.game.theme);
+    CardRender.render(renderContext, self.state.cardGrid, self.state.game.theme) |> ignore;
     ();
   },
   didUpdate: ({oldSelf, newSelf}) => {
@@ -183,15 +187,37 @@ let make = (_children, ~rect, ~columns, ~rows, ~boardCards, ~game, ~sendMessage)
       switch (newSelf.state.context, newSelf.state.renderContext) {
       | ({contents: Some(dstCtx)}, {contents: Some(srcCtx)}) =>
         if (redrawCards) {
-          CardRender.render(srcCtx, newSelf.state.cardGrid, newSelf.state.game.theme);
-        }
-        if (redrawBoard) {
-          /* printSets(newSelf.state.boardGrid.values, newSelf.state.game.theme); */
-          drawBoard(srcCtx, newSelf.state.cardGrid, dstCtx, newSelf.state.boardGrid, newSelf.state.game.theme, newSelf.state.selected, newSelf.state.hovered)
+          Js.Promise.(
+            all(CardRender.render(srcCtx, newSelf.state.cardGrid, newSelf.state.game.theme))
+            |> then_(_results => {
+                 printSets(newSelf.state.boardGrid.values, newSelf.state.game.theme);
+                 drawBoard(
+                   srcCtx,
+                   newSelf.state.cardGrid,
+                   dstCtx,
+                   newSelf.state.boardGrid,
+                   newSelf.state.game.theme,
+                   newSelf.state.selected,
+                   newSelf.state.hovered,
+                 );
+                 resolve();
+               })
+          )
+          |> ignore;
+        } else if (redrawBoard) {
+          drawBoard(
+            srcCtx,
+            newSelf.state.cardGrid,
+            dstCtx,
+            newSelf.state.boardGrid,
+            newSelf.state.game.theme,
+            newSelf.state.selected,
+            newSelf.state.hovered,
+          );
         }
       | _ => Js.log("Unable to redraw blocks: No context found!")
       };
-    }
+    };
   },
   render: ({state, send}) => {
     let renderRect = Grid.outerRect(state.cardGrid);

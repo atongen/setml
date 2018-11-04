@@ -1,3 +1,5 @@
+open Belt;
+
 let rows = 10;
 
 let columns = 9;
@@ -10,12 +12,13 @@ let makeGrid = blockSize => {
 
 let render = (ctx, grid, theme) => {
   CanvasUtils.clear(ctx);
-  Grid.forEach(grid, (rect, maybeCard) =>
+  Grid.flatMap(grid, (rect, maybeCard) =>
     switch (maybeCard) {
     | Some(card) =>
       let svgs = Theme.make_card_svgs(~width=rect.Rect.w, ~height=rect.h, ~theme, card);
-      List.iter(svg => CanvasUtils.drawSvgImage(svg, ctx, rect), svgs);
-    | None => ()
+      List.map(svgs, svg => CanvasUtils.drawSvgImagePromise(svg, ctx, rect));
+    | None => []
     }
-  );
+  )
+  |> List.toArray;
 };

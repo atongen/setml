@@ -165,3 +165,16 @@ let drawSvgImage = (svg, ctx, rect) => {
   setOnload(image, () => drawImageSimple(ctx, ~image, ~dx=rect.Rect.x, ~dy=rect.y));
   setImageSrc(image, formatDataUrl("image/svg+xml", svg));
 };
+
+let drawSvgImagePromise = (svg, ctx, rect) =>
+  Js.Promise.make((~resolve, ~reject) => {
+    let image = HtmlImageElementRe.makeWithSize(int_of_float(rect.Rect.w), int_of_float(rect.h));
+    setOnload(
+      image,
+      () => {
+        drawImageSimple(ctx, ~image, ~dx=rect.Rect.x, ~dy=rect.y);
+        resolve(. true); /* how to return unit */
+      },
+    );
+    setImageSrc(image, formatDataUrl("image/svg+xml", svg));
+  });
