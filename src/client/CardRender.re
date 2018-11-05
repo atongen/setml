@@ -49,14 +49,13 @@ let renderBoardCard = (srcCtx, srcRect, dstCtx, dstRect, theme, border, selected
   };
 };
 
-let renderOuterBoard = (ctx, rect, theme, border) => {
+let renderOuterBoard = (ctx, rect, theme, border) =>
   switch (theme) {
   | Theme.Classic
   | Open_source =>
     CanvasUtils.reset(ctx, "white");
     CanvasUtils.drawRoundRect(ctx, rect, border, Theme.palette(theme).primary, None);
   };
-};
 
 let renderBoard = (srcCtx, srcGrid, dstCtx, dstGrid, theme, selected, hovered) => {
   let outerRect = Grid.paddedRect(dstGrid);
