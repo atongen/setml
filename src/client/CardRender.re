@@ -14,7 +14,6 @@ let makeGrid = blockSize => {
 let render = (ctx, grid, theme) => {
   Js.log("render: " ++ Theme.to_string(theme));
   CanvasUtils.clear(ctx);
-  CanvasUtils.reset(ctx, "white");
   Grid.flatMap(grid, (rect, maybeCard) =>
     switch (maybeCard) {
     | Some(card) =>
