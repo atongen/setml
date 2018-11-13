@@ -87,8 +87,8 @@ let reset = (ctx, fillStyle) => {
 };
 
 let clear = ctx => {
-  let (width, height) = ctxSize(ctx);
-  drawRectangle(ctx, 0.0, 0.0, width, height, "rgba(0, 0, 0, 0.0)");
+  let (w, h) = ctxSize(ctx);
+  Canvas2dRe.clearRect(~x=0.0, ~y=0.0, ~w, ~h, ctx);
 };
 
 let fill = (ctx, inFillStyle) => {
@@ -173,6 +173,7 @@ let drawSvgImagePromise = (svg, ctx, rect) =>
       image,
       () => {
         drawImageSimple(ctx, ~image, ~dx=rect.Rect.x, ~dy=rect.y);
+        Js.log("did it");
         resolve(. true); /* how to return unit? */
       },
     );

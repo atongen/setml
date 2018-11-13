@@ -204,7 +204,7 @@ let make = _children => {
     ws: ref(None),
     boardCards: [],
     players: [],
-    game: make_game_update_data(0, "new", "open_source", 3, 4),
+    game: make_game_update_data(0, "new", "classic", 3, 4),
     msgs: [],
     drawerOpen: false,
     dialogOpen: false,

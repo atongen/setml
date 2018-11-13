@@ -7,5 +7,6 @@
   game_status
   messages
   messages_util
+  path_data
   shared_util
   theme))

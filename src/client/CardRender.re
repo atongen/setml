@@ -12,12 +12,17 @@ let makeGrid = blockSize => {
 
 /* render non-visible grid of all set game cards */
 let render = (ctx, grid, theme) => {
+  Js.log("render: " ++ Theme.to_string(theme));
   CanvasUtils.clear(ctx);
+  CanvasUtils.reset(ctx, "white");
   Grid.flatMap(grid, (rect, maybeCard) =>
     switch (maybeCard) {
     | Some(card) =>
       let svgs = Theme.make_card_svgs(~width=rect.Rect.w, ~height=rect.h, ~theme, card);
-      List.map(svgs, svg => CanvasUtils.drawSvgImagePromise(svg, ctx, rect));
+      List.map(svgs, svg => {
+          Js.log("renderCard");
+          CanvasUtils.drawSvgImagePromise(svg, ctx, rect)
+      });
     | None => []
     }
   )
@@ -40,6 +45,7 @@ let boardCardBorderColor = (theme, selected, hovered) =>
   };
 
 let renderBoardCard = (srcCtx, srcRect, dstCtx, dstRect, theme, border, selected, hovered) => {
+  Js.log("renderBoardCard");
   let boarderColor = boardCardBorderColor(theme, selected, hovered);
   switch (theme) {
   | Theme.Classic
@@ -53,11 +59,12 @@ let renderOuterBoard = (ctx, rect, theme, border) =>
   switch (theme) {
   | Theme.Classic
   | Open_source =>
-    CanvasUtils.reset(ctx, "white");
     CanvasUtils.drawRoundRect(ctx, rect, border, Theme.palette(theme).primary, None);
   };
 
 let renderBoard = (srcCtx, srcGrid, dstCtx, dstGrid, theme, selected, hovered) => {
+  Js.log("renderBoard: " ++ Theme.to_string(theme));
+  CanvasUtils.reset(dstCtx, "white");
   let outerRect = Grid.paddedRect(dstGrid);
   renderOuterBoard(dstCtx, outerRect, theme, dstGrid.border);
   Grid.forEachWithIndex(

@@ -80,8 +80,8 @@ let make = (_children, ~boardCards, ~players, ~game: Messages.game_update_data, 
         let board = height -. sidebar;
         (Rect.make(0.0, appBarOffset, width, board), Rect.make(0.0, board +. appBarOffset, width, height -. board));
       };
-      let boardBorder = ClientUtil.calculateBorder(boardRect.w, boardRect.h);
-      let br = Rect.shrink(~i=boardBorder, boardRect);
+    let boardBorder = ClientUtil.calculateBorder(boardRect.w, boardRect.h);
+    let br = Rect.shrink(~i=boardBorder, boardRect);
     <div>
       <Board rect=br columns rows boardCards game sendMessage />
       <Sidebar rect=sidebarRect boardCards players game sendMessage />
