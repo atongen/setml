@@ -91,6 +91,8 @@ let clear = ctx => {
   Canvas2dRe.clearRect(~x=0.0, ~y=0.0, ~w, ~h, ctx);
 };
 
+let clearRect = (rect, ctx) => Canvas2dRe.clearRect(~x=rect.Rect.x, ~y=rect.y, ~w=rect.w, ~h=rect.h, ctx);
+
 let fill = (ctx, inFillStyle) => {
   open Canvas2dRe;
   let (ft, fs) = fillStyle(ctx);
@@ -172,10 +174,11 @@ let drawSvgImagePromise = (svg, ctx, rect) =>
     setOnload(
       image,
       () => {
+        clearRect(rect, ctx);
         drawImageSimple(ctx, ~image, ~dx=rect.Rect.x, ~dy=rect.y);
-        Js.log("did it");
         resolve(. true); /* how to return unit? */
       },
     );
+
     setImageSrc(image, formatDataUrl("image/svg+xml", svg));
   });
