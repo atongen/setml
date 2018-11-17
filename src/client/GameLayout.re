@@ -57,9 +57,8 @@ let make = (_children, ~boardCards, ~players, ~game: Messages.game_update_data, 
     let c = float_of_int(columns);
     let r = float_of_int(rows);
     let sidebarMinRatio = 0.2;
-    let appBarOffset = 64.0;
     let width = float_of_int(screen.width);
-    let height = float_of_int(screen.height) -. appBarOffset;
+    let height = float_of_int(screen.height);
     let (boardRect, sidebarRect) =
       if (width >= height) {
         /* landscape */
@@ -69,7 +68,7 @@ let make = (_children, ~boardCards, ~players, ~game: Messages.game_update_data, 
         let minSidebar = width *. sidebarMinRatio;
         let sidebar = max(minSidebar, idealSidebar);
         let board = width -. sidebar;
-        (Rect.make(0.0, appBarOffset, board, height), Rect.make(board, appBarOffset, width -. board, height));
+        (Rect.make(0.0, 0.0, board, height), Rect.make(board, 0.0, width -. board, height));
       } else {
         /* portrait */
         let idealBoard = width;
@@ -78,7 +77,7 @@ let make = (_children, ~boardCards, ~players, ~game: Messages.game_update_data, 
         let minSidebar = height *. sidebarMinRatio;
         let sidebar = max(minSidebar, idealSidebar);
         let board = height -. sidebar;
-        (Rect.make(0.0, appBarOffset, width, board), Rect.make(0.0, board +. appBarOffset, width, height -. board));
+        (Rect.make(0.0, 0.0, width, board), Rect.make(0.0, board, width, height -. board));
       };
     let boardBorder = ClientUtil.calculateBorder(boardRect.w, boardRect.h);
     let br = Rect.shrink(~i=boardBorder, boardRect);
