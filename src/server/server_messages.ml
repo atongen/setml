@@ -109,6 +109,12 @@ module Server_message_converter : Messages.CONVERT = struct
                     (token_key, `String (token_to_string token));
                     (name_key, `String name);
                 ]
+            | Client_theme (token, theme) ->
+                `Assoc [
+                    (type_key, `String (message_type_to_string Client_theme_type));
+                    (token_key, `String (token_to_string token));
+                    (theme_key, `String (Theme.to_string theme));
+                ]
         in
         aux x |> to_string
 
@@ -202,6 +208,10 @@ module Server_message_converter : Messages.CONVERT = struct
                     let token = json |> Util.member token_key |> Util.to_string |> token_of_string in
                     let name = json |> Util.member name_key |> Util.to_string in
                     Client_name (token, name)
+                | Client_theme_type ->
+                    let token = json |> Util.member token_key |> Util.to_string |> token_of_string in
+                    let theme = json |> Util.member theme_key |> Util.to_string |> Theme.of_string in
+                    Client_theme (token, theme)
 
         in
         let json = from_string str in

@@ -10,3 +10,4 @@ setml.install
 /lib
 /public/js
 /envfile
+/.vscode

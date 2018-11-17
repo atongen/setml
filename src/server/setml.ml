@@ -79,6 +79,10 @@ let handle_message pool game_id player_id player_token json =
         if in_token <> player_token then Lwt.return_unit else
         Db.update_player_name pool (player_id, name) >>=* fun _ ->
         Lwt.return_unit
+    | Client_theme (in_token, theme) ->
+        if in_token <> player_token then Lwt.return_unit else
+        Db.update_game_theme pool (game_id, theme) >>=* fun _ ->
+        Lwt.return_unit
 
 let make_handler pool pubsub clients crypto =
   fun (conn : Conduit_lwt_unix.flow * Cohttp.Connection.t)

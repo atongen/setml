@@ -38,12 +38,26 @@ let simplePlural = (word, num) =>
   })
 ];
 
+let menuItems = () =>
+  List.map(
+    theme =>
+      <MaterialUi.MenuItem value=(`String(Theme.to_string(theme)))>
+        (ReasonReact.string(Theme.to_human_string(theme)))
+      </MaterialUi.MenuItem>,
+    [Theme.Classic, Theme.Open_source],
+  );
+
 let make = (_children, ~rect, ~boardCards, ~players, ~game: Messages.game_update_data, ~sendMessage) => {
   let setsOnBoard = Messages_util.board_cards_count_sets(boardCards);
   let cardsRemaining = 81 - game.card_idx + Messages_util.board_cards_count(boardCards);
   let buttonStyle = ReactDOMRe.Style.make(~display="block", ~margin="1em", ());
   let button = makeButton(game.status, setsOnBoard, sendMessage, buttonStyle);
   let palette = Theme.palette(game.theme);
+  let themeName = Theme.to_string(game.theme);
+  let themeChange = (evt, _el) => {
+    let s = ReactEvent.Form.target(evt)##value;
+    sendMessage(ClientUtil.make_theme_msg(Theme.of_string(s)));
+  };
   {
     ...component,
     render: _self =>
@@ -69,6 +83,14 @@ let make = (_children, ~rect, ~boardCards, ~players, ~game: Messages.game_update
                     </Grid>
                     <Grid item=true>
                       <Paper className=classes.playerScores> <PlayerScores players palette /> </Paper>
+                    </Grid>
+                    <Grid item=true>
+                      <form autoComplete="off">
+                        <FormControl>
+                          <InputLabel> (ReasonReact.string("Theme")) </InputLabel>
+                          <Select value=(`String(themeName)) onChange=themeChange> (menuItems()) </Select>
+                        </FormControl>
+                      </form>
                     </Grid>
                   </Grid>
                 </div>

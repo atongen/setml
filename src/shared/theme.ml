@@ -12,6 +12,10 @@ let to_string = function
     | Classic -> "classic"
     | Open_source -> "open_source"
 
+let to_human_string = function
+    | Classic -> "Classic"
+    | Open_source -> "Open Source"
+
 let of_string = function
     | "classic" -> Classic
     | "open_source" -> Open_source

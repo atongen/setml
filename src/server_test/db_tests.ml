@@ -226,6 +226,22 @@ let update_player_name_test db =
         assert_equal new_name player_name_after;
         Lwt.return_unit
 
+let update_game_theme_test db =
+    fun () ->
+        Db.create_game db (3, 4) >>=? fun game_id ->
+        Db.find_game_data db game_id >>=? fun game_data_before ->
+        assert_equal Theme.Classic game_data_before.theme; (* classic is default *)
+
+        Db.update_game_theme db (game_id, Theme.Open_source) >>=? fun () ->
+        Db.find_game_data db game_id >>=? fun game_data_after ->
+        assert_equal Theme.Open_source game_data_after.theme;
+
+        Db.update_game_theme db (game_id, Theme.Classic) >>=? fun () ->
+        Db.find_game_data db game_id >>=? fun game_data_after2 ->
+        assert_equal Theme.Classic game_data_after2.theme;
+
+        Lwt.return_unit
+
 let create_many_games_test db =
     fun () ->
         let rec aux i n r =

@@ -192,6 +192,14 @@ module Q = struct
             select count(*) from rows;
         |eos}
 
+    let update_game_theme_query =
+        Caqti_request.exec Caqti_type.(tup2 string int)
+        {eos|
+            update games
+            set theme = ?
+            where id = ?;
+        |eos}
+
     let update_player_name_query =
         Caqti_request.exec Caqti_type.(tup2 string int)
         {eos|
@@ -486,6 +494,10 @@ module I = struct
         else
             Lwt.return_ok ()
 
+    let update_game_theme (module C : Caqti_lwt.CONNECTION) (game_id, theme) =
+        C.exec Q.update_game_theme_query (Theme.to_string theme, game_id) >>=? fun () ->
+        Lwt.return_ok ()
+
     let update_player_name (module C : Caqti_lwt.CONNECTION) (player_id, name) =
         C.exec Q.update_player_name_query (name, player_id) >>=? fun () ->
         Lwt.return_ok ()
@@ -574,6 +586,8 @@ let is_game_over p arg = with_pool p I.is_game_over arg
 let start_game p arg = with_pool p I.start_game arg
 
 let end_game p arg = with_pool p I.end_game arg
+
+let update_game_theme p arg = with_pool p I.update_game_theme arg
 
 let update_player_name p arg = with_pool p I.update_player_name arg
 

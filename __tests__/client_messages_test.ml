@@ -104,4 +104,12 @@ let _ =
         test "Client_name" (fun () ->
             test_convert (make_client_name "a weird token" "a weird name")
         );
+
+        test "Client_theme_classic" (fun () ->
+            test_convert (make_client_theme "some other token xxx777" Theme.Classic)
+        );
+
+        test "Client_theme_open_source" (fun () ->
+            test_convert (make_client_theme "some other token yyy888" Theme.Open_source)
+        );
     )

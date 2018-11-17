@@ -41,6 +41,7 @@ type message_type =
     | Client_shuffle_type
     | Client_start_game_type
     | Client_name_type
+    | Client_theme_type
 
 let message_type_to_string = function
     | Server_game_type -> "server_game"
@@ -58,6 +59,7 @@ let message_type_to_string = function
     | Client_shuffle_type -> "client_shuffle"
     | Client_start_game_type -> "client_start_game"
     | Client_name_type -> "client_name"
+    | Client_theme_type -> "client_theme"
 
 let message_type_of_string = function
     | "server_game" -> Server_game_type
@@ -75,6 +77,7 @@ let message_type_of_string = function
     | "client_shuffle" -> Client_shuffle_type
     | "client_start_game" -> Client_start_game_type
     | "client_name" -> Client_name_type
+    | "client_theme" -> Client_theme_type
     | ts -> raise (Invalid_argument ("Unknown message type string: " ^ ts))
 
 type player_data = {
@@ -232,6 +235,7 @@ type t =
     | Client_shuffle of token
     | Client_start_game of token
     | Client_name of (token * string)
+    | Client_theme of (token * Theme.t)
 
 let make_server_game player_data card_data game_update_data =
     Server_game (make_game_data player_data card_data game_update_data)
@@ -274,6 +278,8 @@ let make_client_shuffle token = Client_shuffle token
 let make_client_start_game token = Client_start_game token
 
 let make_client_name token name = Client_name (token, name)
+
+let make_client_theme token theme = Client_theme (token, theme)
 
 let card_opt_to_string = function
     | Some c -> Card.to_string c
@@ -329,6 +335,7 @@ let rec to_string = function
     | Client_shuffle _ -> Printf.sprintf "<message (%s)>" (message_type_to_string Client_shuffle_type)
     | Client_start_game _ -> Printf.sprintf "<message (%s)>" (message_type_to_string Client_start_game_type)
     | Client_name (_, name) -> Printf.sprintf "<message (%s) name='%s'>" (message_type_to_string Client_name_type) name
+    | Client_theme (_, theme) -> Printf.sprintf "<message (%s) theme='%s'>" (message_type_to_string Client_theme_type) (Theme.to_string theme)
 
 module type CONVERT = sig
     val to_json : t -> string

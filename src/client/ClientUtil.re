@@ -65,6 +65,11 @@ let make_name_msg = name => {
   Messages.Client_name((token, name));
 };
 
+let make_theme_msg = theme => {
+  let token = meta_content("token");
+  Messages.Client_theme((token, theme));
+};
+
 [@bs.get] external location : Dom.window => Dom.location = "";
 
 [@bs.get] external pathname : Dom.location => string = "";

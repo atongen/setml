@@ -49,6 +49,8 @@ let convert_tests =
     make_client_shuffle "my-token";
     make_client_start_game "my-other-token";
     make_client_name "some weird token" "some weird name";
+    make_client_theme "classic token" Theme.Classic;
+    make_client_theme "open source token" Theme.Open_source;
   ]
   in
   cases_of check messages

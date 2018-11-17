@@ -109,6 +109,12 @@ module ClientMessageConverter: CONVERT = {
           (type_key, string(message_type_to_string(Client_name_type))),
           (token_key, string(token_to_string(token))),
           (name_key, string(name)),
+        ])
+      | Client_theme((token, theme)) =>
+        object_([
+          (type_key, string(message_type_to_string(Client_theme_type))),
+          (token_key, string(token_to_string(token))),
+          (theme_key, string(Theme.to_string(theme))),
         ]);
     aux(x) |> Json.stringify;
   };
@@ -201,6 +207,10 @@ module ClientMessageConverter: CONVERT = {
         let token = json |> field(token_key, string) |> token_of_string;
         let name = json |> field(name_key, string);
         Client_name((token, name));
+      | Client_theme_type =>
+        let token = json |> field(token_key, string) |> token_of_string;
+        let theme = json |> field(theme_key, string) |> Theme.of_string;
+        Client_theme((token, theme));
       };
     };
     let json = Json.parseOrRaise(str);
