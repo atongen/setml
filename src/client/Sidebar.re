@@ -40,10 +40,12 @@ let simplePlural = (word, num) =>
 
 let menuItems = () =>
   List.map(
-    theme =>
-      <MaterialUi.MenuItem value=(`String(Theme.to_string(theme)))>
+    theme => {
+      let t = Theme.to_string(theme);
+      <MaterialUi.MenuItem key=t value=(`String(t))>
         (ReasonReact.string(Theme.to_human_string(theme)))
-      </MaterialUi.MenuItem>,
+      </MaterialUi.MenuItem>;
+    },
     [Theme.Classic, Theme.Open_source],
   );
 

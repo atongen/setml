@@ -167,7 +167,8 @@ let handleReceiveMessage = (state, msg) =>
   | Client_move(_)
   | Client_shuffle(_)
   | Client_start_game(_)
-  | Client_name(_) =>
+  | Client_name(_)
+  | Client_theme(_) =>
     Js.log("Client received a client message");
     ReasonReact.NoUpdate;
   };
