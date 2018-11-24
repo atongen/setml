@@ -18,24 +18,30 @@ COPY . .
 RUN sudo chown -R opam:nogroup . && \
     opam config exec make
 
-# Front-end
-FROM node:8-alpine as fe_deps
+# Front-end - ppx_withStyles doesn't work on alpine!
+FROM node:8-jessie as fe_deps
 
-RUN apk add --update \
-    build-base \
-    gcc \
-    wget \
-    git \
-    python
+RUN apt-get install \
+  dpkg-dev \
+  g++ \
+  gcc \
+  libc6-dev \
+  make \
+  wget \
+  git \
+  python
 
 WORKDIR /setml
 COPY package*.json ./
 RUN npm install
-COPY . .
+COPY bsconfig.json .
+COPY webpack.config.js .
+COPY src src
+COPY __tests__ __tests__
 RUN npm run-script build && \
     npm run-script webpack:production
 
-# Final
+## Final
 FROM alpine:3.8
 WORKDIR /setml
 COPY --from=be_deps /setml/_build/default/src/server/setml.exe setml
