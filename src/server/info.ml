@@ -10,9 +10,9 @@ let to_string i = Printf.sprintf "setml %s %s %s ocaml %s"
     i.version i.build_time i.build_hash i.ocaml_version
 
 let get () = {
-    version = "0.1.0";
-    build_time = "2018-11-23 23:57:55";
-    build_hash = "99912a9";
-    ocaml_version = "4.06.1";
-    bug_reports = "https://github.com/atongen/setml";
+    version = "unset";
+    build_time = "unset";
+    build_hash = "unset";
+    ocaml_version = "unset";
+    bug_reports = "unset";
 }
