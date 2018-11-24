@@ -20,17 +20,6 @@ RUN sudo chown -R opam:nogroup . && \
 
 # Front-end - ppx_withStyles doesn't work on alpine!
 FROM node:8-jessie as fe_deps
-
-RUN apt-get install \
-  dpkg-dev \
-  g++ \
-  gcc \
-  libc6-dev \
-  make \
-  wget \
-  git \
-  python
-
 WORKDIR /setml
 COPY package*.json ./
 RUN npm install
