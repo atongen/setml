@@ -1,6 +1,7 @@
 type t = {
     setml_env: string;
     listen_port: int;
+    docroot: string;
     db_name: string;
     db_host: string;
     db_port: int;

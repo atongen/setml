@@ -1,6 +1,12 @@
 open Cow
 
-let page_tpl ~player_id id page_title token =
+let manifest_path id manifest =
+    let key = id ^ ".js" in
+    match List.assoc_opt key manifest with
+    | Some value -> value
+    | None -> key
+
+let page_tpl ~player_id id page_title token manifest =
     let pid = match player_id with
     | Some pid -> string_of_int pid
     | None -> "" in
@@ -19,13 +25,15 @@ let page_tpl ~player_id id page_title token =
 
             body (list [
                 div ~id:id empty;
-                script ~src:(Uri.of_string ("/js/" ^ id ^ ".js")) empty;
+                script ~src:(Uri.of_string ("/js/runtime.js")) empty;
+                script ~src:(Uri.of_string ("/js/vendors.js")) empty;
+                script ~src:(Uri.of_string ("/js/" ^ (manifest_path id manifest))) empty;
             ])
         ])
     )
 
-let page ?player_id id title token =
-    page_tpl ~player_id id title token
+let page ~player_id id title token manifest =
+    page_tpl ~player_id id title token manifest
     |> Html.to_string
 
 let error_tpl msg =

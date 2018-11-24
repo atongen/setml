@@ -3,6 +3,7 @@ open Cmdliner
 type t = {
     setml_env: string;
     listen_port: int;
+    docroot: string;
     db_name: string;
     db_host: string;
     db_port: int;
@@ -16,8 +17,8 @@ exception RequiredMissing of string
 
 let to_string c =
     Printf.sprintf
-    "{setml_env: '%s', listen_port: %d, db_name: '%s', db_host: '%s', db_port: %d, db_user: '%s', db_pass: '%s', db_pool: %d, crypto_secret: '%s'}"
-    c.setml_env c.listen_port
+    "{setml_env: '%s', listen_port: %d, docroot: '%s', db_name: '%s', db_host: '%s', db_port: %d, db_user: '%s', db_pass: '%s', db_pool: %d, crypto_secret: '%s'}"
+    c.setml_env c.listen_port c.docroot
     c.db_name c.db_host c.db_port c.db_user c.db_pass c.db_pool
     c.crypto_secret
 
@@ -54,6 +55,9 @@ let whoami () =
 let listen_port_key = "LISTEN_PORT"
 let listen_port_default = 7777
 
+let docroot_key = "DOCROOT"
+let docroot_default = "./public"
+
 let db_name_key = "DB_NAME"
 let db_name_default = "setml_" ^ (setml_env ())
 
@@ -84,6 +88,11 @@ let listen_port =
     let doc = "Listen port" in
     let env = Arg.env_var listen_port_key ~doc in
     Arg.(value & opt int listen_port_default & info ["p"; "listen-port"] ~env ~docv:listen_port_key ~doc)
+
+let docroot =
+    let doc = "Public document root" in
+    let env = Arg.env_var docroot_key ~doc in
+    Arg.(value & opt string docroot_default & info ["r"; "docroot"] ~env ~docv:docroot_key ~doc)
 
 let db_name =
     let doc = "Database name" in
@@ -138,10 +147,11 @@ let info =
     ] in
     Term.info "setml" ~version:build_info ~doc ~exits:Term.default_exits ~man
 
-let make setml_env listen_port db_name db_host db_port db_user db_pass db_pool crypto_secret =
+let make setml_env listen_port docroot db_name db_host db_port db_user db_pass db_pool crypto_secret =
     {
         setml_env;
         listen_port;
+        docroot;
         db_name;
         db_host;
         db_port;
@@ -156,6 +166,7 @@ let make_of_env () =
     {
         setml_env = env;
         listen_port = env_or_int listen_port_key listen_port_default;
+        docroot = env_or docroot_key docroot_default;
         db_name = env_or db_name_key db_name_default;
         db_host = env_or db_host_key db_host_default;
         db_port = env_or_int db_port_key db_port_default;
@@ -169,7 +180,7 @@ let config_t =
     let open Term in
     const make $
     setml_env_a $
-    listen_port $
+    listen_port $ docroot $
     db_name $ db_host $ db_port $ db_user $ db_pass $ db_pool $
     crypto_secret
 

@@ -3,19 +3,19 @@ open Websocket_cohttp_lwt
 
 open Lib
 
-let render_index ~headers token =
+let render_index ~headers ~player_id token manifest =
   Cohttp_lwt_unix.Server.respond_string
     ~headers
     ~status:`OK
-    ~body:(Templates.page "index" "SetML" token)
+    ~body:(Templates.page ~player_id "index" "SetML" token manifest)
     ()
 
-let render_game ~headers ~player_id game_id token =
+let render_game ~headers ~player_id game_id token manifest =
   let game_id_str = Route.string_of_game_id game_id in
   Cohttp_lwt_unix.Server.respond_string
     ~headers
     ~status:`OK
-    ~body:(Templates.page ~player_id "game" ("SetML: " ^ game_id_str) token)
+    ~body:(Templates.page ~player_id "game" ("SetML: " ^ game_id_str) token manifest)
     ()
 
 let render_error ?headers msg =
@@ -84,7 +84,15 @@ let handle_message pool game_id player_id player_token json =
         Db.update_game_theme pool (game_id, theme) >>=* fun _ ->
         Lwt.return_unit
 
-let make_handler pool pubsub clients crypto =
+let get_manifest docroot =
+    let open Yojson.Basic in
+    let json = from_file (docroot ^ "/js/manifest.json") in
+    List.map (fun (key, json_value) ->
+        (key, Util.to_string json_value)
+    ) (Util.to_assoc json)
+
+let make_handler pool pubsub clients crypto docroot =
+  let manifest = get_manifest docroot in
   fun (conn : Conduit_lwt_unix.flow * Cohttp.Connection.t)
     (req  : Cohttp_lwt_unix.Request.t)
     (body : Cohttp_lwt.Body.t) ->
@@ -101,7 +109,7 @@ let make_handler pool pubsub clients crypto =
     >>= fun _ ->
 
     match Route.of_req req with
-    | Route.Index -> render_index ~headers session.token
+    | Route.Index -> render_index ~player_id:session.player_id ~headers session.token manifest
     | Route.Game_create -> (
         Cohttp_lwt.Body.to_string body >>= fun myBody ->
         match Server_util.form_value myBody "token" with
@@ -115,7 +123,7 @@ let make_handler pool pubsub clients crypto =
         match session.player_id with
         | Some (player_id) ->
           Db.game_exists pool game_id >>=? (fun exists ->
-              if exists then (render_game ~player_id ~headers game_id session.token)
+              if exists then (render_game ~player_id:(Some player_id) ~headers game_id session.token) manifest
               else render_not_found
             )
         | None ->
@@ -160,7 +168,7 @@ let make_handler pool pubsub clients crypto =
           | None -> render_error "Unable to get player id from session!"
         ) else render_not_found)
     | Route.Static ->
-      File_server.serve ~info:"SetML File Server" ~docroot:"./public" ~index:"index.html" ~headers uri path
+      File_server.serve ~info:"SetML File Server" ~docroot ~index:"index.html" ~headers uri path
     | Route.Route_not_found -> render_not_found
 
 let start_server (config: Config.t) =
@@ -187,7 +195,7 @@ let start_server (config: Config.t) =
             Lwt_io.eprintf "Listening on port %d\n%!" config.listen_port >>= fun () ->
             Cohttp_lwt_unix.Server.create
                 ~mode:(`TCP (`Port config.listen_port))
-                (Cohttp_lwt_unix.Server.make ~callback:(make_handler pool pubsub clients crypto) ~conn_closed ())
+                (Cohttp_lwt_unix.Server.make ~callback:(make_handler pool pubsub clients crypto config.docroot) ~conn_closed ())
         | Error _ -> Lwt.return (print_endline ("Db read/write connection failed!"))
     )
     | Error msg -> Lwt.return (print_endline ("Db pubsub connection failed: " ^ msg))
