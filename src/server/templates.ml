@@ -25,8 +25,8 @@ let page_tpl ~player_id id page_title token manifest =
 
             body (list [
                 div ~id:id empty;
-                script ~src:(Uri.of_string ("/js/runtime.js")) empty;
-                script ~src:(Uri.of_string ("/js/vendors.js")) empty;
+                script ~src:(Uri.of_string ("/js/" ^ (manifest_path "runtime" manifest))) empty;
+                script ~src:(Uri.of_string ("/js/" ^ (manifest_path "vendors" manifest))) empty;
                 script ~src:(Uri.of_string ("/js/" ^ (manifest_path id manifest))) empty;
             ])
         ])
