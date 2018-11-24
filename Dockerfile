@@ -15,7 +15,8 @@ RUN sudo chown -R opam:nogroup . && \
     opam install --deps-only setml && \
     opam depext -ln setml > depexts
 COPY . .
-RUN sudo chown -R opam:nogroup . && \
+RUN touch envfile && \
+    sudo chown -R opam:nogroup . && \
     opam config exec make
 
 # Front-end - ppx_withStyles doesn't work on alpine!
