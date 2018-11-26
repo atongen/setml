@@ -4,6 +4,7 @@ const isProd = process.env.NODE_ENV === "production";
 const webpack = require('webpack');
 const CompressionPlugin = require('compression-webpack-plugin');
 const ManifestPlugin = require('webpack-manifest-plugin');
+const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
 
 module.exports = {
     plugins: [
@@ -21,14 +22,20 @@ module.exports = {
         filename: isProd ? "[name].[contenthash].js" : "[name].js",
     },
     optimization: {
+        minimizer: isProd ? [new UglifyJsPlugin({sourceMap: true})] : [],
         runtimeChunk: "single",
         splitChunks: {
             cacheGroups: {
                 vendor: {
                     test: /[\\/]node_modules[\\/]/,
-                        name: 'vendors',
-                        chunks: 'all'
-                    }
+                    name: 'vendors',
+                    chunks: 'all'
+                },
+                pathData: {
+                    test: /path_data/,
+                    name: 'path_data',
+                    chunks: 'all'
+                }
             }
         }
     }
