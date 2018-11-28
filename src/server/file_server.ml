@@ -117,18 +117,16 @@ let method_filter meth (res,body) = match meth with
   | `HEAD -> Lwt.return (res,`Empty)
   | _ -> Lwt.return (res,body)
 
-let empty_headers = Cohttp.Header.init ()
-
-let serve_file ?(headers=empty_headers) ~docroot ~uri =
+let serve_file ~docroot ~uri =
   let fname = Server.resolve_local_file ~docroot ~uri in
-  Server.respond_file ~headers ~fname ()
+  Server.respond_file ~fname ()
 
 let ls_dir dir =
   Lwt_stream.to_list
     (Lwt_stream.filter ((<>) ".")
        (Lwt_unix.files_of_directory dir))
 
-let serve ?(headers=empty_headers) ~info ~docroot ~index uri path =
+let serve ~info ~docroot ~index uri path =
   let file_name = Server.resolve_local_file ~docroot ~uri in
   Lwt.catch (fun () ->
     Lwt_unix.stat file_name
@@ -140,7 +138,7 @@ let serve ?(headers=empty_headers) ~info ~docroot ~index uri path =
       then Server.respond_redirect ~uri:(Uri.with_path uri (path^"/")) ()
       else match Sys.file_exists (file_name / index) with
       | true -> let uri = Uri.with_path uri (path / index) in
-                serve_file ~docroot ~uri ~headers
+                serve_file ~docroot ~uri
       | false ->
         ls_dir file_name
         >>= Lwt_list.map_s (fun f ->
@@ -156,7 +154,7 @@ let serve ?(headers=empty_headers) ~info ~docroot ~index uri path =
         let body = html_of_listing uri path (sort listing) info in
         Server.respond_string ~status:`OK ~body ()
     end
-    | `File -> serve_file ~docroot ~uri ~headers
+    | `File -> serve_file ~docroot ~uri
     | _ ->
       Server.respond_string ~status:`Forbidden
         ~body:(html_of_forbidden_unnormal path info)
@@ -164,7 +162,7 @@ let serve ?(headers=empty_headers) ~info ~docroot ~index uri path =
   ) (function
   | Unix.Unix_error(Unix.ENOENT, "stat", p) as e ->
     if p = file_name
-    then Server.respond_string ~status:`Not_found ~headers
+    then Server.respond_string ~status:`Not_found
       ~body:(html_of_not_found path info)
       ()
     else Lwt.fail e

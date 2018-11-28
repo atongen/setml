@@ -168,7 +168,7 @@ let make_handler pool pubsub clients crypto docroot =
           | None -> render_error "Unable to get player id from session!"
         ) else render_not_found)
     | Route.Static ->
-      File_server.serve ~info:"SetML File Server" ~docroot ~index:"index.html" ~headers uri path
+      File_server.serve ~info:"SetML File Server" ~docroot ~index:"index.html" uri path
     | Route.Route_not_found -> render_not_found
 
 let start_server (config: Config.t) =
