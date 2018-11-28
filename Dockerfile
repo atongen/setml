@@ -27,7 +27,7 @@ RUN npm install
 COPY bsconfig.json .
 COPY webpack.config.js .
 COPY src src
-COPY public/css public/css
+COPY public public
 COPY __tests__ __tests__
 RUN npm run-script build && \
     npm run-script webpack:production

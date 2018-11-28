@@ -10,7 +10,11 @@ module.exports = {
     plugins: [
         new webpack.HashedModuleIdsPlugin(),
         new CompressionPlugin(),
-        new ManifestPlugin()
+        new ManifestPlugin({
+            seed: {
+                "style.css": "style.2c283251f812d1a9317208150a62c433.css"
+            }
+        })
     ],
     entry: {
         index: "./lib/js/src/client/Index.js",
@@ -18,7 +22,7 @@ module.exports = {
     },
     mode: isProd ? "production" : "development",
     output: {
-        path: path.join(__dirname, "public/js"),
+        path: path.join(__dirname, "public/assets"),
         filename: isProd ? "[name].[contenthash].js" : "[name].js",
     },
     optimization: {

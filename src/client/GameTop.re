@@ -143,7 +143,7 @@ let handleReceiveMessage = (state, msg) =>
     let msgs = msgIfNotCurrentPlayer(d.player_id, ClientUtil.player_name(state.players, d.player_id) ++ " " ++ action ++ "!");
     ReasonReact.Update({...state, players: updatePlayerPresence(d, state.players), msgs});
   | Server_move_info(d) =>
-    Js.log(moveDataToString(state.game.theme, d.move_data));
+    /* Js.log(moveDataToString(state.game.theme, d.move_data)); */
     let msgs = msgIfNotCurrentPlayer(d.score_data.player_id, ClientUtil.player_name(state.players, d.score_data.player_id) ++ " scored!");
     ReasonReact.Update({
       ...state,
@@ -182,7 +182,7 @@ let make = _children => {
     switch (action) {
     | ReceiveMessage(str) =>
       let msg = ClientMessageConverter.of_json(str);
-      Js.log(Messages.to_string(msg));
+      /* Js.log(Messages.to_string(msg)); */
       handleReceiveMessage(state, msg);
     | SendMessage(msg) =>
       let str = ClientMessageConverter.to_json(msg);

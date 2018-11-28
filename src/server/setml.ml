@@ -86,7 +86,7 @@ let handle_message pool game_id player_id player_token json =
 
 let get_manifest docroot =
     let open Yojson.Basic in
-    let json = from_file (docroot ^ "/js/manifest.json") in
+    let json = from_file (docroot ^ "/assets/manifest.json") in
     List.map (fun (key, json_value) ->
         (key, Util.to_string json_value)
     ) (Util.to_assoc json)

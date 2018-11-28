@@ -63,8 +63,6 @@ let shouldRedraw = (oldState: state, newState: state) =>
     (false, false);
   };
 
-let printSelections = selected => Js.log(Selected.to_string(selected));
-
 let make = (_children, ~rect, ~columns, ~rows, ~boardCards, ~game, ~sendMessage) => {
   ...component,
   reducer: (action, state) =>
@@ -74,23 +72,18 @@ let make = (_children, ~rect, ~columns, ~rows, ~boardCards, ~game, ~sendMessage)
       | Some(bcd) =>
         if (Selected.has(state.selected, bcd)) {
           let newSelected = Selected.remove(state.selected, bcd);
-          printSelections(newSelected);
           ReasonReact.Update({...state, selected: newSelected});
         } else {
           let newSelected = Selected.add(state.selected, bcd);
           let l = Selected.size(newSelected);
           if (l < 3) {
-            printSelections(newSelected);
             ReasonReact.Update({...state, selected: newSelected});
           } else {
             let l = Selected.to_list(newSelected);
             switch (Messages_util.board_cards_list_is_set(l)) {
-            | Some((cd0, cd1, cd2)) =>
-              sendMessage(ClientUtil.make_move_msg(cd0, cd1, cd2));
-              Js.log("You got a set!");
-            | None => Js.log("That's not a set, dummy!")
+            | Some((cd0, cd1, cd2)) => sendMessage(ClientUtil.make_move_msg(cd0, cd1, cd2))
+            | None => ()
             };
-            printSelections(Selected.empty);
             ReasonReact.Update({...state, selected: Selected.empty});
           };
         }
@@ -148,7 +141,7 @@ let make = (_children, ~rect, ~columns, ~rows, ~boardCards, ~game, ~sendMessage)
           Js.Promise.(
             all(CardRender.render(srcCtx, newSelf.state.cardGrid, newSelf.state.game.theme))
             |> then_(_results => {
-                 printSets(newSelf.state.boardGrid.values, newSelf.state.game.theme);
+                 /* printSets(newSelf.state.boardGrid.values, newSelf.state.game.theme); */
                  CardRender.renderBoard(
                    srcCtx,
                    newSelf.state.cardGrid,

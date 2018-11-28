@@ -8,6 +8,7 @@ setml.install
 /node_modules
 /bin
 /lib
-/public/js
 /envfile
 /.vscode
+/public/*
+!/public/*.css
