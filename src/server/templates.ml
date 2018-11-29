@@ -7,22 +7,38 @@ let asset_path ~manifest asset =
     in
     Uri.of_string ("/assets/" ^ path)
 
-let page_tpl ~player_id ~page_title ~token ~manifest ~assets id =
-    let pid = match player_id with
-    | Some pid -> string_of_int pid
-    | None -> "" in
+let build_meta_list ~seed content =
+    let entry key value =
+        if key = "charset" then
+            Html.meta ~charset:value []
+        else
+            Html.meta ~name:key ~content:value []
+    in
+    let rec aux acc = function
+    | [] -> acc
+    | (k,v) :: tl -> match v with
+        | Some(value) -> if value != "" then
+            aux ((entry k value) :: acc) tl
+            else aux acc tl
+        | None -> aux acc tl
+    in
+    List.append (aux [] (List.rev seed))
+                (aux [] (List.rev content))
+
+let page_tpl ~page_title ~manifest ~assets ~meta id =
+    let meta_list = build_meta_list ~seed:[
+        ("viewport", Some("width=device-width, initial-scale=1, user-scalable=0, maximum-scale=1, minimum-scale=1"));
+        ("charset", Some("UTF-8"));
+    ] meta
+    in
     Html.(
         html (list [
-            head (list [
+            head (list (List.append [
                 title (string page_title);
-                meta ~name: "viewport" ~content: "width=device-width, initial-scale=1, user-scalable=0, maximum-scale=1, minimum-scale=1" [];
-                meta ~charset:"UTF-8" [];
-                meta ~name:"token" ~content:token [];
-                meta ~name:"player_id" ~content:pid [];
                 link ~rel:"stylesheet" (Uri.of_string "https://fonts.googleapis.com/css?family=Roboto:300,400,500");
                 link ~rel:"stylesheet" (Uri.of_string "https://fonts.googleapis.com/icon?family=Material+Icons");
                 link ~rel:"stylesheet" (asset_path ~manifest "style.css" );
-            ]);
+            ] meta_list));
 
             body (list (List.append [
                 div ~id:id empty;
@@ -34,12 +50,24 @@ let page_tpl ~player_id ~page_title ~token ~manifest ~assets id =
         ])
     )
 
-let index_page ~player_id ~title ~token ~manifest =
-    page_tpl ~player_id ~page_title:title ~token ~manifest ~assets:["index.js"] "index"
+let pid = function
+    | Some(id) -> Some(string_of_int id)
+    | None -> None
+
+let index_page ~title ~player_id ~token ~manifest =
+    let meta = [
+        ("player_id", pid player_id);
+        ("token", Some(token));
+    ] in
+    page_tpl ~page_title:title ~manifest ~assets:["index.js"] ~meta "index"
     |> Html.to_string
 
-let game_page ~player_id ~title ~token ~manifest =
-    page_tpl ~player_id ~page_title:title ~token ~manifest ~assets:["path_data.js"; "game.js"] "game"
+let game_page ~title ~player_id ~token ~manifest =
+    let meta = [
+        ("player_id", pid player_id);
+        ("token", Some(token));
+    ] in
+    page_tpl ~page_title:title ~manifest ~assets:["path_data.js"; "game.js"] ~meta "game"
     |> Html.to_string
 
 let error_tpl msg =
