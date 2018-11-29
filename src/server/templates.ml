@@ -1,13 +1,13 @@
 open Cow
 
-let asset_path asset manifest =
+let asset_path ~manifest asset =
     let path = match List.assoc_opt asset manifest with
     | Some value -> value
     | None -> asset
     in
     Uri.of_string ("/assets/" ^ path)
 
-let page_tpl ~player_id id page_title token manifest =
+let page_tpl ~player_id ~page_title ~token ~manifest ~assets id =
     let pid = match player_id with
     | Some pid -> string_of_int pid
     | None -> "" in
@@ -21,21 +21,25 @@ let page_tpl ~player_id id page_title token manifest =
                 meta ~name:"player_id" ~content:pid [];
                 link ~rel:"stylesheet" (Uri.of_string "https://fonts.googleapis.com/css?family=Roboto:300,400,500");
                 link ~rel:"stylesheet" (Uri.of_string "https://fonts.googleapis.com/icon?family=Material+Icons");
-                link ~rel:"stylesheet" (asset_path "style.css" manifest);
+                link ~rel:"stylesheet" (asset_path ~manifest "style.css" );
             ]);
 
-            body (list [
+            body (list (List.append [
                 div ~id:id empty;
-                script ~src:(asset_path "runtime.js" manifest) empty;
-                script ~src:(asset_path "vendors.js" manifest) empty;
-                script ~src:(asset_path "path_data.js" manifest) empty;
-                script ~src:(asset_path (id ^ ".js") manifest) empty;
-            ])
+                script ~src:(asset_path ~manifest "runtime.js") empty;
+                script ~src:(asset_path ~manifest "vendors.js") empty;
+            ] (List.map (fun asset ->
+                script ~src:(asset_path ~manifest asset) empty;
+            ) assets)))
         ])
     )
 
-let page ~player_id id title token manifest =
-    page_tpl ~player_id id title token manifest
+let index_page ~player_id ~title ~token ~manifest =
+    page_tpl ~player_id ~page_title:title ~token ~manifest ~assets:["index.js"] "index"
+    |> Html.to_string
+
+let game_page ~player_id ~title ~token ~manifest =
+    page_tpl ~player_id ~page_title:title ~token ~manifest ~assets:["path_data.js"; "game.js"] "game"
     |> Html.to_string
 
 let error_tpl msg =

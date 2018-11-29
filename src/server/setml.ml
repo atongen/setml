@@ -7,7 +7,7 @@ let render_index ~headers ~player_id token manifest =
   Cohttp_lwt_unix.Server.respond_string
     ~headers
     ~status:`OK
-    ~body:(Templates.page ~player_id "index" "SetML" token manifest)
+    ~body:(Templates.index_page ~player_id ~title:"SetML" ~token ~manifest)
     ()
 
 let render_game ~headers ~player_id game_id token manifest =
@@ -15,7 +15,7 @@ let render_game ~headers ~player_id game_id token manifest =
   Cohttp_lwt_unix.Server.respond_string
     ~headers
     ~status:`OK
-    ~body:(Templates.page ~player_id "game" ("SetML: " ^ game_id_str) token manifest)
+    ~body:(Templates.game_page ~player_id ~title:("SetML: " ^ game_id_str) ~token ~manifest)
     ()
 
 let render_error ?headers msg =
