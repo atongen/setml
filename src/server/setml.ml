@@ -3,19 +3,19 @@ open Websocket_cohttp_lwt
 
 open Lib
 
-let render_index ~headers ~player_id token manifest =
+let render_index ~headers ~player_id token manifest info =
   Cohttp_lwt_unix.Server.respond_string
     ~headers
     ~status:`OK
-    ~body:(Templates.index_page ~player_id ~title:"SetML" ~token ~manifest)
+    ~body:(Templates.index_page ~player_id ~title:"SetML" ~token ~manifest ~info)
     ()
 
-let render_game ~headers ~player_id game_id token manifest =
+let render_game ~headers ~player_id game_id token manifest info =
   let game_id_str = Route.string_of_game_id game_id in
   Cohttp_lwt_unix.Server.respond_string
     ~headers
     ~status:`OK
-    ~body:(Templates.game_page ~player_id ~title:("SetML: " ^ game_id_str) ~token ~manifest)
+    ~body:(Templates.game_page ~player_id ~title:("SetML: " ^ game_id_str) ~token ~manifest ~info)
     ()
 
 let render_error ?headers msg =
@@ -85,14 +85,18 @@ let handle_message pool game_id player_id player_token json =
         Lwt.return_unit
 
 let get_manifest docroot =
-    let open Yojson.Basic in
-    let json = from_file (docroot ^ "/assets/manifest.json") in
-    List.map (fun (key, json_value) ->
-        (key, Util.to_string json_value)
-    ) (Util.to_assoc json)
+    let f = docroot ^ "/assets/manifest.json" in
+    if Sys.file_exists f then
+        let open Yojson.Basic in
+        let json = from_file f in
+        List.map (fun (key, json_value) ->
+            (key, Util.to_string json_value)
+        ) (Util.to_assoc json)
+    else []
 
 let make_handler pool pubsub clients crypto docroot =
   let manifest = get_manifest docroot in
+  let info = Info.to_string (Info.get ()) in
   fun (conn : Conduit_lwt_unix.flow * Cohttp.Connection.t)
     (req  : Cohttp_lwt_unix.Request.t)
     (body : Cohttp_lwt.Body.t) ->
@@ -109,7 +113,7 @@ let make_handler pool pubsub clients crypto docroot =
     >>= fun _ ->
 
     match Route.of_req req with
-    | Route.Index -> render_index ~player_id:session.player_id ~headers session.token manifest
+    | Route.Index -> render_index ~player_id:session.player_id ~headers session.token manifest info
     | Route.Game_create -> (
         Cohttp_lwt.Body.to_string body >>= fun myBody ->
         match Server_util.form_value myBody "token" with
@@ -123,7 +127,7 @@ let make_handler pool pubsub clients crypto docroot =
         match session.player_id with
         | Some (player_id) ->
           Db.game_exists pool game_id >>=? (fun exists ->
-              if exists then (render_game ~player_id:(Some player_id) ~headers game_id session.token) manifest
+              if exists then (render_game ~player_id:(Some player_id) ~headers game_id session.token) manifest info
               else render_not_found
             )
         | None ->

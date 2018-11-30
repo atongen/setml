@@ -54,18 +54,20 @@ let pid = function
     | Some(id) -> Some(string_of_int id)
     | None -> None
 
-let index_page ~title ~player_id ~token ~manifest =
+let index_page ~title ~player_id ~token ~manifest ~info =
     let meta = [
         ("player_id", pid player_id);
-        ("token", Some(token));
+        ("token", Some token);
+        ("info", Some info);
     ] in
     page_tpl ~page_title:title ~manifest ~assets:["index.js"] ~meta "index"
     |> Html.to_string
 
-let game_page ~title ~player_id ~token ~manifest =
+let game_page ~title ~player_id ~token ~manifest ~info =
     let meta = [
         ("player_id", pid player_id);
-        ("token", Some(token));
+        ("token", Some token);
+        ("info", Some info);
     ] in
     page_tpl ~page_title:title ~manifest ~assets:["path_data.js"; "game.js"] ~meta "game"
     |> Html.to_string
