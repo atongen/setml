@@ -1,8 +1,11 @@
 # Backend
 FROM ocaml/opam2:alpine-3.8 as be_deps
 
+ARG modernity="true"
 RUN sudo apk update && \
     opam switch 4.06 && \
+    eval `opam config env` && \
+    opam config set "modernity" $modernity && \
     opam update && \
     opam install depext && \
     opam upgrade
@@ -15,8 +18,8 @@ RUN sudo chown -R opam:nogroup . && \
     opam install --deps-only setml && \
     opam depext -ln setml > depexts
 COPY . .
-RUN touch envfile && \
-    sudo chown -R opam:nogroup . && \
+RUN sudo chown -R opam:nogroup . && \
+    touch envfile && \
     opam config exec make
 
 # Front-end - ppx_withStyles doesn't work on alpine!
