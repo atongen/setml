@@ -1,11 +1,9 @@
 # Backend
 FROM ocaml/opam2:alpine-3.8 as be_deps
 
-ARG modernity="true"
 RUN sudo apk update && \
     opam switch 4.06 && \
     eval `opam config env` && \
-    opam config set "modernity" $modernity && \
     opam update && \
     opam install depext && \
     opam upgrade
