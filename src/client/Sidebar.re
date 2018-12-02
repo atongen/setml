@@ -1,20 +1,27 @@
 let component = ReasonReact.statelessComponent("Sidebar");
 
-let makeButton = (gameStatus, setsOnBoard, sendMessage, style) =>
+let buttonStyle = color =>
+  switch (color) {
+  | Some(backgroundColor) => ReactDOMRe.Style.make(~display="block", ~margin="1em", ~backgroundColor, ())
+  | None => ReactDOMRe.Style.make(~display="block", ~margin="1em", ())
+  };
+
+let makeButton = (gameStatus, setsOnBoard, sendMessage) =>
   switch (gameStatus) {
   | Game_status.New =>
     let startClick = _evt => sendMessage(ClientUtil.make_start_game_msg());
+    let style = buttonStyle(Some("green"));
     <MaterialUi.Button onClick=startClick variant=`Contained style>
       (ReasonReact.string("Start"))
       <MaterialUi.Icon> (ReasonReact.string("play_arrow")) </MaterialUi.Icon>
     </MaterialUi.Button>;
   | Game_status.Started =>
     let shuffleClick = _evt => sendMessage(ClientUtil.make_shuffle_msg());
-    let variant =
+    let (variant, style) =
       if (setsOnBoard == 0) {
-        `Contained;
+        (`Contained, buttonStyle(Some("yellow")));
       } else {
-        `Outlined;
+        (`Outlined, buttonStyle(None));
       };
     <MaterialUi.Button onClick=shuffleClick variant style>
       (ReasonReact.string("Shuffle"))
@@ -52,8 +59,7 @@ let menuItems = () =>
 let make = (_children, ~rect, ~boardCards, ~players, ~game: Messages.game_update_data, ~sendMessage) => {
   let setsOnBoard = Messages_util.board_cards_count_sets(boardCards);
   let cardsRemaining = 81 - game.card_idx + Messages_util.board_cards_count(boardCards);
-  let buttonStyle = ReactDOMRe.Style.make(~display="block", ~margin="1em", ());
-  let button = makeButton(game.status, setsOnBoard, sendMessage, buttonStyle);
+  let button = makeButton(game.status, setsOnBoard, sendMessage);
   let palette = Theme.palette(game.theme);
   let themeName = Theme.to_string(game.theme);
   let themeChange = (evt, _el) => {

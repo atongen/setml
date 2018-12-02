@@ -53,6 +53,8 @@ let shouldRedraw = (oldState: state, newState: state) =>
     (true, true);
   } else if (oldState.game.theme != newState.game.theme) {
     (true, true);
+  } else if (oldState.game.status != newState.game.status) {
+    (true, true);
   } else if (oldState.boardGrid.values != newState.boardGrid.values) {
     (false, true);
   } else if (Selected.is_symmetric_diff(oldState.selected, newState.selected)) {
@@ -148,6 +150,7 @@ let make = (_children, ~rect, ~columns, ~rows, ~boardCards, ~game, ~sendMessage)
                    dstCtx,
                    newSelf.state.boardGrid,
                    newSelf.state.game.theme,
+                   newSelf.state.game.status,
                    newSelf.state.selected,
                    newSelf.state.hovered,
                  );
@@ -162,6 +165,7 @@ let make = (_children, ~rect, ~columns, ~rows, ~boardCards, ~game, ~sendMessage)
             dstCtx,
             newSelf.state.boardGrid,
             newSelf.state.game.theme,
+            newSelf.state.game.status,
             newSelf.state.selected,
             newSelf.state.hovered,
           );

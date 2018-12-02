@@ -116,11 +116,14 @@ let make_svg ~width ~height ~vx ~vy ~vw ~vh content =
     width height vx vy vw vh content
 
 module type CARD_SVG_THEME = sig
-    val make_card_svgs : width:float -> height:float -> Card.t -> string list
+    val make_card_svg : Card.t -> string
+    val logo_svg : string
 end
 
 module Card_svg_classic : CARD_SVG_THEME = struct
-    let make_shape_svg card =
+    let logo_svg = Path_data.classic_logo
+
+    let make_card_svg card =
         let color = match Card.color card with
         | ColorZero -> "red"
         | ColorOne -> "purple"
@@ -178,15 +181,12 @@ module Card_svg_classic : CARD_SVG_THEME = struct
             in
             make_classic_path data
         )
-
-    let make_card_svgs ~width ~height card =
-        let (vw, vh) = default_card_size in
-        let content = make_shape_svg card in
-        [make_svg ~width ~height ~vx:0.0 ~vy:0.0 ~vw ~vh content]
 end
 
 module Card_svg_open_source : CARD_SVG_THEME = struct
-    let make_shape_svg card =
+    let logo_svg = Path_data.classic_logo
+
+    let make_card_svg card =
         let color = match Card.color card with
         | ColorZero -> "#000000" (* black *)
         | ColorOne -> "#336791" (* blue *)
@@ -242,15 +242,18 @@ module Card_svg_open_source : CARD_SVG_THEME = struct
             in
             make_open_source_group content
         )
-
-    let make_card_svgs ~width ~height card =
-        let (vw, vh) = default_card_size in
-        let content = make_shape_svg card in
-        [make_svg ~width ~height ~vx:0.0 ~vy:0.0 ~vw ~vh content]
 end
 
-let make_card_svgs ~width ~height ~theme card =
-    let f = match theme with
-    | Classic -> Card_svg_classic.make_card_svgs
-    | Open_source -> Card_svg_open_source.make_card_svgs
-    in f ~width ~height card
+let make_card_svgs ~width ~height ~theme maybeCard =
+    let (vw, vh) = default_card_size in
+    let content = match theme with
+    | Classic -> (
+        match maybeCard with
+        | Some card -> Card_svg_classic.make_card_svg card
+        | None -> Card_svg_classic.logo_svg)
+    | Open_source -> (
+        match maybeCard with
+        | Some card -> Card_svg_open_source.make_card_svg card
+        | None -> Card_svg_open_source.logo_svg)
+    in
+    [make_svg ~width ~height ~vx:0.0 ~vy:0.0 ~vw ~vh content]

@@ -11,8 +11,8 @@ let to_string i = Printf.sprintf "setml %s %s %s ocaml %s"
 
 let get () = {
     version = "0.1.0";
-    build_time = "2018-11-30 22:27:18";
-    build_hash = "7b2df5c";
+    build_time = "2018-12-02 18:53:01";
+    build_hash = "3d27495";
     ocaml_version = "4.06.1";
     bug_reports = "https://github.com/atongen/setml";
 }

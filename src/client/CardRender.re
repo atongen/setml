@@ -4,22 +4,23 @@ let rows = 10;
 
 let columns = 9;
 
+let cards = Card.deck();
+
 let makeGrid = blockSize => {
   let width = blockSize *. float_of_int(columns);
   let height = blockSize *. float_of_int(rows);
-  Grid.make(~width, ~height, ~columns, ~rows, Card.deck());
+  Grid.make(~width, ~height, ~columns, ~rows, cards);
 };
 
 /* render non-visible grid of all set game cards */
 let render = (ctx, grid, theme) => {
   CanvasUtils.clear(ctx);
-  Grid.flatMap(grid, (rect, maybeCard) =>
-    switch (maybeCard) {
-    | Some(card) =>
+  Grid.flatMap(
+    grid,
+    (rect, card) => {
       let svgs = Theme.make_card_svgs(~width=rect.Rect.w, ~height=rect.h, ~theme, card);
       List.map(svgs, svg => CanvasUtils.drawSvgImagePromise(svg, ctx, rect));
-    | None => []
-    }
+    },
   )
   |> List.toArray;
 };
@@ -55,9 +56,10 @@ let renderOuterBoard = (ctx, rect, theme, border) =>
   | Open_source => CanvasUtils.drawRoundRect(ctx, rect, border, Theme.palette(theme).primary, None)
   };
 
-let renderBoard = (srcCtx, srcGrid, dstCtx, dstGrid, theme, selected, hovered) => {
+let renderBoard = (srcCtx, srcGrid, dstCtx, dstGrid, theme, status, selected, hovered) => {
   CanvasUtils.reset(dstCtx, "white");
   let outerRect = Grid.paddedRect(dstGrid);
+  let noneCardIdx = Card.to_int_opt(None);
   renderOuterBoard(dstCtx, outerRect, theme, dstGrid.border);
   Grid.forEachWithIndex(
     dstGrid,
@@ -72,8 +74,12 @@ let renderBoard = (srcCtx, srcGrid, dstCtx, dstGrid, theme, selected, hovered) =
             | Some(h) => h == bcd
             | None => false
             };
-          (Card.to_int_opt(bcd.card), isSelected, isHovered);
-        | None => (Card.to_int_opt(None), false, false)
+          switch (status) {
+          | Game_status.New => (noneCardIdx, isSelected, isHovered)
+          | Started
+          | Complete => (Card.to_int_opt(bcd.card), isSelected, isHovered)
+          };
+        | None => (noneCardIdx, false, false)
         };
       switch (Grid.findKeyByIdx(srcGrid, cardIdx)) {
       | Some(srcRect) =>

@@ -12,7 +12,7 @@ module.exports = {
         new CompressionPlugin(),
         new ManifestPlugin({
             seed: {
-                "style.css": "style.2c283251f812d1a9317208150a62c433.css"
+                "style.css": "style.3d4db83fc7b7b47641b5f1530d4a0825.css"
             }
         })
     ],

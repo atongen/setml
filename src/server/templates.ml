@@ -40,7 +40,7 @@ let page_tpl ~page_title ~manifest ~assets ~meta id =
                 link ~rel:"stylesheet" (asset_path ~manifest "style.css" );
             ] meta_list));
 
-            body (list (List.append [
+            body ~cls:"mat-typography" (list (List.append [
                 div ~id:id empty;
                 script ~src:(asset_path ~manifest "runtime.js") empty;
                 script ~src:(asset_path ~manifest "vendors.js") empty;
@@ -81,7 +81,7 @@ let error_tpl msg =
                 meta ~charset:"UTF-8" [];
             ]);
 
-            body (list [
+            body ~cls:"mat-typography" (list [
                 h1 (string ("Error!"));
                 p (string msg)
             ])
