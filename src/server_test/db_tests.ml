@@ -211,8 +211,14 @@ let create_failed_move_test db =
 let game_status_test db =
     fun () ->
         Db.create_game db (3, 4) >>=? fun game_id ->
+        Db.find_game_data db game_id >>=? fun game_data0 ->
+        assert_equal Game_status.New game_data0.status;
         Db.start_game db game_id >>=? fun () ->
+        Db.find_game_data db game_id >>=? fun game_data1 ->
+        assert_equal Game_status.Started game_data1.status;
         Db.end_game db game_id >>=? fun () ->
+        Db.find_game_data db game_id >>=? fun game_data2 ->
+        assert_equal Game_status.Complete game_data2.status;
         Lwt.return_unit
 
 let update_player_name_test db =
@@ -242,6 +248,51 @@ let update_game_theme_test db =
 
         Lwt.return_unit
 
+let player_games_test db =
+    let assert_pg_equal game_data_list player_games_list =
+        assert_equal ~msg:"player_games length" ~printer:string_of_int (List.length game_data_list) (List.length player_games_list);
+        List.iter2 (fun (game_id, (game_data: Messages.game_update_data)) (player_game: Api_messages.player_game) ->
+            assert_equal ~msg:"player_games game_id" game_id player_game.id;
+            assert_equal ~msg:"player_games status" game_data.status player_game.status;
+            assert_equal ~msg:"player_games card_idx" game_data.card_idx player_game.card_idx;
+        ) game_data_list player_games_list;
+    in
+    fun () ->
+        Db.create_player db () >>=? fun player_id ->
+        Db.find_player_games db player_id >>=? fun player_games0 ->
+        assert_equal ~msg:"empty player games up" 0 (List.length player_games0);
+
+        Db.create_game db (3, 4) >>=? fun game1_id ->
+        Db.find_game_data db game1_id >>=? fun game_data1 ->
+        Db.set_game_player_presence db (game1_id, player_id, true) >>=? fun () ->
+        Db.find_player_games db player_id >>=? fun player_games1 ->
+        assert_pg_equal [(game1_id, game_data1)] player_games1;
+
+        Db.create_game db (3, 4) >>=? fun game2_id ->
+        Db.start_game db game2_id >>=? fun () ->
+        Db.find_game_data db game2_id >>=? fun game_data2 ->
+        Db.set_game_player_presence db (game2_id, player_id, true) >>=? fun () ->
+        Db.find_player_games db player_id >>=? fun player_games2 ->
+        assert_pg_equal [
+            (game2_id, game_data2);
+            (game1_id, game_data1);
+        ] player_games2;
+
+        Db.create_game db (3, 4) >>=? fun game3_id ->
+        Db.start_game db game3_id >>=? fun () ->
+        Db.end_game db game3_id >>=? fun () ->
+        Db.find_game_data db game3_id >>=? fun game_data3 ->
+        Db.set_game_player_presence db (game3_id, player_id, true) >>=? fun () ->
+        Db.find_player_games db player_id >>=? fun player_games3 ->
+        assert_pg_equal [
+            (game3_id, game_data3);
+            (game2_id, game_data2);
+            (game1_id, game_data1);
+        ] player_games3;
+
+        Lwt.return_unit
+
+(* don't run this every time *)
 let create_many_games_test db =
     fun () ->
         let rec aux i n r =
