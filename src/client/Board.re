@@ -72,22 +72,26 @@ let make = (_children, ~rect, ~columns, ~rows, ~boardCards, ~game, ~sendMessage)
     | Click((x, y)) =>
       switch (Grid.findByPoint(state.boardGrid, (x, y))) {
       | Some(bcd) =>
-        if (Selected.has(state.selected, bcd)) {
-          let newSelected = Selected.remove(state.selected, bcd);
-          ReasonReact.Update({...state, selected: newSelected});
-        } else {
-          let newSelected = Selected.add(state.selected, bcd);
-          let l = Selected.size(newSelected);
-          if (l < 3) {
+        switch (bcd.card) {
+        | Some(_card) =>
+          if (Selected.has(state.selected, bcd)) {
+            let newSelected = Selected.remove(state.selected, bcd);
             ReasonReact.Update({...state, selected: newSelected});
           } else {
-            let l = Selected.to_list(newSelected);
-            switch (Messages_util.board_cards_list_is_set(l)) {
-            | Some((cd0, cd1, cd2)) => sendMessage(ClientUtil.make_move_msg(cd0, cd1, cd2))
-            | None => ()
+            let newSelected = Selected.add(state.selected, bcd);
+            let l = Selected.size(newSelected);
+            if (l < 3) {
+              ReasonReact.Update({...state, selected: newSelected});
+            } else {
+              let l = Selected.to_list(newSelected);
+              switch (Messages_util.board_cards_list_is_set(l)) {
+              | Some((cd0, cd1, cd2)) => sendMessage(ClientUtil.make_move_msg(cd0, cd1, cd2))
+              | None => ()
+              };
+              ReasonReact.Update({...state, selected: Selected.empty});
             };
-            ReasonReact.Update({...state, selected: Selected.empty});
-          };
+          }
+        | None => ReasonReact.NoUpdate
         }
       | None => ReasonReact.NoUpdate
       }
@@ -98,10 +102,17 @@ let make = (_children, ~rect, ~columns, ~rows, ~boardCards, ~game, ~sendMessage)
         if (oldHovered == newHovered) {
           ReasonReact.NoUpdate;
         } else {
-          ReasonReact.Update({...state, hovered: Some(newHovered)});
+          switch (newHovered.card) {
+          | Some(_card) => ReasonReact.Update({...state, hovered: Some(newHovered)})
+          | None => ReasonReact.Update({...state, hovered: None})
+          };
         }
       | (Some(_oldHovered), None) => ReasonReact.Update({...state, hovered: None})
-      | (None, Some(newHovered)) => ReasonReact.Update({...state, hovered: Some(newHovered)})
+      | (None, Some(newHovered)) =>
+        switch (newHovered.card) {
+        | Some(_card) => ReasonReact.Update({...state, hovered: Some(newHovered)})
+        | None => ReasonReact.Update({...state, hovered: None})
+        }
       | (None, None) => ReasonReact.NoUpdate
       };
     },

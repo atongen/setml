@@ -15,6 +15,7 @@ let suite =
       "base_conv" >::: Base_conv_tests.suite;
     ];
     "messages" >::: Messages_tests.suite;
+    "api_messages" >::: Api_messages_tests.suite;
   ]
 
 let _ = OUnit2.run_test_tt_main suite

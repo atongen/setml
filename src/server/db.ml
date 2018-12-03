@@ -306,6 +306,21 @@ module Q = struct
             from games
             where id = ?
         |eos}
+
+    let find_player_games_query =
+        Caqti_request.collect Caqti_type.int Caqti_type.(tup4 int string int ptime)
+        {eos|
+            select
+                g.id,
+                g.status,
+                g.card_idx,
+                gp.created_at
+            from games g
+            inner join games_players gp
+            on g.id = gp.game_id
+            where gp.player_id = ?
+            order by gp.created_at desc;
+        |eos}
 end
 
 
@@ -534,6 +549,15 @@ module I = struct
         C.find Q.find_game_data_query game_id >>=? fun (card_idx, status, theme, (dim0, dim1)) ->
         let open Messages in
         Lwt.return_ok (make_game_update_data card_idx status theme dim0 dim1)
+
+    let find_player_games (module C : Caqti_lwt.CONNECTION) player_id =
+        C.collect_list Q.find_player_games_query player_id >>=? fun player_games_list ->
+        let open Api_messages in
+        Lwt.return_ok (List.map (fun (id, game_status, card_idx, joined_at_ptime) ->
+            let status = Game_status.of_string game_status in
+            let joined_at = Ptime.to_float_s joined_at_ptime in
+            make_player_game id status card_idx joined_at
+        ) player_games_list)
 end
 
 let with_transaction ?(mode=ReadCommitted) (module C : Caqti_lwt.CONNECTION) f arg =
@@ -602,3 +626,5 @@ let find_player_data p arg = with_pool p I.find_player_data arg
 let delete_all p arg = with_pool p I.delete_all arg
 
 let find_game_data p arg = with_pool p I.find_game_data arg
+
+let find_player_games p arg = with_pool p I.find_player_games arg

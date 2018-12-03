@@ -9,6 +9,7 @@
   pubsub
   route
   server_messages
+  server_api_messages
   session
   templates
   server_util)

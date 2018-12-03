@@ -1,6 +1,7 @@
 (library
  (name shared)
  (modules
+  api_messages
   base_conv
   card
   combinatorics
