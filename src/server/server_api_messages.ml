@@ -14,7 +14,7 @@ module Server_api_message_converter : CONVERT = struct
             ]
         ) player_games) |> to_string
 
-    let player_data_of_json json =
+    let player_game_of_json json =
         make_player_game
         (json |> Util.member id_key |> Util.to_int)
         (json |> Util.member status_key |> Util.to_string |> Game_status.of_string)
@@ -24,5 +24,5 @@ module Server_api_message_converter : CONVERT = struct
     let player_games_of_json str =
         str |> from_string
             |> Util.to_list
-            |> List.map player_data_of_json
+            |> List.map player_game_of_json
 end
