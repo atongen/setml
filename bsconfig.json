@@ -13,7 +13,8 @@
         "bs-webapi",
         "@glennsl/bs-json",
         "@jsiebern/bs-material-ui",
-        "@glennsl/bs-jest"
+        "@glennsl/bs-jest",
+        "bs-fetch"
     ],
     "bs-dev-dependencies": [],
     "sources": [
