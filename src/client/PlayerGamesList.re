@@ -26,6 +26,23 @@ type action =
 
 let component = ReasonReact.reducerComponent("PlayerGamesList");
 
+let renderPlayerGame = player_game => {
+    let game_id_str = Base_conv.base36_of_int(player_game.id);
+    let joinedAt = Js.Date.fromFloat(player_game.joined_at *. 1000.0);
+    <div>
+        <a href=("/games/" ++ game_id_str)> (ReasonReact.string(game_id_str)) </a>
+        <span>
+            (ReasonReact.string(Game_status.to_string(player_game.status)))
+        </span>
+        <span>
+            (ReasonReact.string(string_of_int(81 - player_game.card_idx) ++ " cards remaining"))
+        </span>
+        <span>
+            (ReasonReact.string("Joined at: " ++ Js.Date.toLocaleString(joinedAt)))
+        </span>
+    </div>
+};
+
 let make = _children => {
   ...component,
   initialState: () => NotAsked,
@@ -59,7 +76,7 @@ let make = _children => {
         | None => ()
         };
         ReasonReact.null
-    | Loading => <div> (ReasonReact.string("Loading...")) </div>
+    | Loading => <div> (ReasonReact.string("Loading player games...")) </div>
     | Failure => <div> (ReasonReact.string("Something went wrong!")) </div>
     | Success(player_games) =>
         if (List.length(player_games) > 0) {
@@ -68,7 +85,7 @@ let make = _children => {
                 <ul>
                 (
                     player_games
-                    |> List.map(player_game => <li key=(string_of_int(player_game.id))> (ReasonReact.string(player_game_to_string(player_game))) </li>)
+                    |> List.map(player_game => <li key=(string_of_int(player_game.id))> (renderPlayerGame(player_game)) </li>)
                     |> Array.of_list
                     |> ReasonReact.array
                 )
