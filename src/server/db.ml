@@ -308,18 +308,19 @@ module Q = struct
         |eos}
 
     let find_player_games_query =
-        Caqti_request.collect Caqti_type.int Caqti_type.(tup4 int string int ptime)
+        Caqti_request.collect Caqti_type.(tup2 int int) Caqti_type.(tup4 int string int ptime)
         {eos|
             select
                 g.id,
                 g.status,
                 g.card_idx,
-                gp.created_at
+                gp.updated_at
             from games g
             inner join games_players gp
             on g.id = gp.game_id
             where gp.player_id = ?
-            order by gp.created_at desc;
+            order by gp.updated_at desc
+            limit ?;
         |eos}
 end
 
@@ -550,13 +551,13 @@ module I = struct
         let open Messages in
         Lwt.return_ok (make_game_update_data card_idx status theme dim0 dim1)
 
-    let find_player_games (module C : Caqti_lwt.CONNECTION) player_id =
-        C.collect_list Q.find_player_games_query player_id >>=? fun player_games_list ->
+    let find_player_games (module C : Caqti_lwt.CONNECTION) (player_id, limit) =
+        C.collect_list Q.find_player_games_query (player_id, limit) >>=? fun player_games_list ->
         let open Api_messages in
-        Lwt.return_ok (List.map (fun (id, game_status, card_idx, joined_at_ptime) ->
+        Lwt.return_ok (List.map (fun (id, game_status, card_idx, updated_at_ptime) ->
             let status = Game_status.of_string game_status in
-            let joined_at = Ptime.to_float_s joined_at_ptime in
-            make_player_game id status card_idx joined_at
+            let updated_at = (Ptime.to_float_s updated_at_ptime) *. 1000.0 in
+            make_player_game id status card_idx updated_at
         ) player_games_list)
 end
 
