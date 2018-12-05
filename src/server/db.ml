@@ -628,4 +628,4 @@ let delete_all p arg = with_pool p I.delete_all arg
 
 let find_game_data p arg = with_pool p I.find_game_data arg
 
-let find_player_games p arg = with_pool p I.find_player_games arg
+let find_player_games p ?(limit=10) player_id = with_pool p I.find_player_games (player_id, limit)

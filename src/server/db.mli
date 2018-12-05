@@ -27,4 +27,4 @@ val find_game_cards : t -> (int * int) -> (Shared.Messages.card_data list, Caqti
 val find_player_data : t -> int -> (Shared.Messages.player_data list, Caqti_error.t) result Lwt.t
 val delete_all : t -> unit -> (unit, Caqti_error.t) result Lwt.t
 val find_game_data : t -> int -> (Shared.Messages.game_update_data, Caqti_error.t) result Lwt.t
-val find_player_games : t -> (int * int) -> (Shared.Api_messages.player_game list, Caqti_error.t) result Lwt.t
+val find_player_games : t -> ?limit:int -> int -> (Shared.Api_messages.player_game list, Caqti_error.t) result Lwt.t

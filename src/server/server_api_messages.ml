@@ -10,7 +10,7 @@ module Server_api_message_converter : CONVERT = struct
                 (id_key, `Int player_game.id);
                 (status_key, `String (Game_status.to_string player_game.status));
                 (card_idx_key, `Int player_game.card_idx);
-                (joined_at_key, `Float player_game.joined_at);
+                (updated_at_key, `Float player_game.updated_at);
             ]
         ) player_games) |> to_string
 
@@ -19,7 +19,7 @@ module Server_api_message_converter : CONVERT = struct
         (json |> Util.member id_key |> Util.to_int)
         (json |> Util.member status_key |> Util.to_string |> Game_status.of_string)
         (json |> Util.member card_idx_key |> Util.to_int)
-        (json |> Util.member joined_at_key |> Util.to_float)
+        (json |> Util.member updated_at_key |> Util.to_float)
 
     let player_games_of_json str =
         str |> from_string

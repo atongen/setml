@@ -259,20 +259,20 @@ let player_games_test db =
     in
     fun () ->
         Db.create_player db () >>=? fun player_id ->
-        Db.find_player_games db (player_id, 10) >>=? fun player_games0 ->
+        Db.find_player_games db player_id >>=? fun player_games0 ->
         assert_equal ~msg:"empty player games up" 0 (List.length player_games0);
 
         Db.create_game db (3, 4) >>=? fun game1_id ->
         Db.find_game_data db game1_id >>=? fun game_data1 ->
         Db.set_game_player_presence db (game1_id, player_id, true) >>=? fun () ->
-        Db.find_player_games db (player_id, 10) >>=? fun player_games1 ->
+        Db.find_player_games db player_id >>=? fun player_games1 ->
         assert_pg_equal [(game1_id, game_data1)] player_games1;
 
         Db.create_game db (3, 4) >>=? fun game2_id ->
         Db.start_game db game2_id >>=? fun () ->
         Db.find_game_data db game2_id >>=? fun game_data2 ->
         Db.set_game_player_presence db (game2_id, player_id, true) >>=? fun () ->
-        Db.find_player_games db (player_id, 10) >>=? fun player_games2 ->
+        Db.find_player_games db player_id >>=? fun player_games2 ->
         assert_pg_equal [
             (game2_id, game_data2);
             (game1_id, game_data1);
@@ -283,7 +283,7 @@ let player_games_test db =
         Db.end_game db game3_id >>=? fun () ->
         Db.find_game_data db game3_id >>=? fun game_data3 ->
         Db.set_game_player_presence db (game3_id, player_id, true) >>=? fun () ->
-        Db.find_player_games db (player_id, 10) >>=? fun player_games3 ->
+        Db.find_player_games db player_id >>=? fun player_games3 ->
         assert_pg_equal [
             (game3_id, game_data3);
             (game2_id, game_data2);

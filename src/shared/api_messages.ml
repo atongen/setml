@@ -1,25 +1,25 @@
 let id_key = "id"
 let status_key = "status"
 let card_idx_key = "card_idx"
-let joined_at_key = "joined_at"
+let updated_at_key = "updated_at"
 
 type player_game = {
     id: int;
     status: Game_status.t;
     card_idx: int;
-    joined_at: float;
+    updated_at: float;
 }
 
-let make_player_game id status card_idx joined_at = {
-    id; status; card_idx; joined_at
+let make_player_game id status card_idx updated_at = {
+    id; status; card_idx; updated_at
 }
 
 let player_game_to_string player_game =
-    Printf.sprintf "<Player_game game_id=%d status=%s card_idx=%d joined_at=%f>"
+    Printf.sprintf "<Player_game game_id=%d status=%s card_idx=%d updated_at=%f>"
         player_game.id
         (Game_status.to_string player_game.status)
         player_game.card_idx
-        player_game.joined_at
+        player_game.updated_at
 
 
 module type CONVERT = sig

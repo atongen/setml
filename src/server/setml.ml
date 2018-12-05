@@ -183,7 +183,7 @@ let make_handler pool pubsub clients crypto docroot =
         match session.player_id with
         | Some (player_id) ->
             let open Server_api_messages.Server_api_message_converter in
-            Db.find_player_games pool (player_id, 10) >>=? fun player_games ->
+            Db.find_player_games pool player_id >>=? fun player_games ->
             let content = player_games_to_json player_games in
             render_json content
         | None -> render_json "[]"
