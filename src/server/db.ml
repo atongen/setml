@@ -556,7 +556,7 @@ module I = struct
         let open Api_messages in
         Lwt.return_ok (List.map (fun (id, game_status, card_idx, updated_at_ptime) ->
             let status = Game_status.of_string game_status in
-            let updated_at = (Ptime.to_float_s updated_at_ptime) *. 1000.0 in
+            let updated_at = (Ptime.to_float_s updated_at_ptime) in
             make_player_game id status card_idx updated_at
         ) player_games_list)
 end

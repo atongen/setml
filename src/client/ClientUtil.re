@@ -194,3 +194,60 @@ let rectToStyle = rect =>
     ~width=Shared_util.roundis(rect.w) ++ "px",
     ~height=Shared_util.roundis(rect.h) ++ "px",
   );
+
+let distanceOfTimeInWords = (fromTime, toTime) => {
+  Js.log(Printf.sprintf("fromTime: %f, toTime: %f", fromTime, toTime));
+  let distanceInSeconds = toTime -. fromTime;
+  let rel =
+    if (distanceInSeconds > 0.0) {
+      "from now";
+    } else {
+      "ago";
+    };
+  let dis = abs_float(distanceInSeconds);
+  let dim = dis /. 60.0;
+  let r = Shared_util.roundi;
+  let s = Printf.sprintf;
+
+  let dot =
+    if (dim < 1.0) {
+      if (dis < 5.0) {
+        "less than 5 seconds";
+      } else if (5.0 <= dis && dis < 10.0) {
+        "less than 10 seconds";
+      } else if (10.0 <= dis && dis < 20.0) {
+        "less than 20 seconds";
+      } else if (20.0 <= dis && dis < 40.0) {
+        "half a minute";
+      } else {
+        "less than a minute";
+      };
+    } else if (2.0 <= dim && dim < 45.0) {
+      s("%d minutes", r(dim));
+    } else if (45.0 <= dim && dim < 90.0) {
+      "about 1 hour";
+    } else if (90.0 <= dim && dim < 1440.0) {
+      s("about %d hours", r(dim /. 60.0));
+    } else if (1440.0 <= dim && dim < 2520.0) {
+      "about 1 day";
+    } else if (2520.0 <= dim && dim < 43200.0) {
+      s("about %d days", r(dim /. 1440.0));
+    } else if (43200.0 <= dim && dim < 86400.0) {
+      s("about %d months", r(dim /. 43200.0));
+    } else if (86400.0 <= dim && dim < 525600.0) {
+      s("%d months", r(dim /. 43200.0));
+    } else {
+      let diy = dim /. 525949.2;
+      let rounded = Shared_util.roundi(diy);
+      let rem = diy -. float_of_int(rounded);
+      if (rem < 0.25) {
+        s("over %d years", rounded);
+      } else if (0.25 <= rem && rem < 0.75) {
+        s("about %d and one half years", rounded);
+      } else {
+        s("under %d years", rounded);
+      };
+    };
+
+  s("%s %s", dot, rel);
+};
