@@ -4,10 +4,17 @@ module NewGameForm = {
     ...component,
     render: _ =>
       <section>
-        <h1> (ReasonReact.string("SetML")) </h1>
+        <MaterialUi.Typography variant=`H1> (ReasonReact.string("SetML")) </MaterialUi.Typography>
         <form action="/games" method="POST" encType="application/x-www-form-urlencoded">
           <input hidden=true name="token" value=token readOnly=true />
-          <div> <button> (ReasonReact.string("Start a new game!")) </button> </div>
+          <div>
+            MaterialUi.(
+              <Button variant=`Contained color=`Primary type_="submit">
+                (ReasonReact.string("New Game"))
+                <Icon> (ReasonReact.string("group_add")) </Icon>
+              </Button>
+            )
+          </div>
         </form>
         <PlayerGamesList />
       </section>,

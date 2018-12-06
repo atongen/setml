@@ -196,7 +196,6 @@ let rectToStyle = rect =>
   );
 
 let distanceOfTimeInWords = (fromTime, toTime) => {
-  Js.log(Printf.sprintf("fromTime: %f, toTime: %f", fromTime, toTime));
   let distanceInSeconds = toTime -. fromTime;
   let rel =
     if (distanceInSeconds > 0.0) {

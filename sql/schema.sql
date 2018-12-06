@@ -10,7 +10,7 @@ drop table if exists players cascade;
 create table players (
     id bigserial not null primary key,
     name character varying(16) not null default '',
-    created_at timestamp without time zone default now()
+    created_at timestamp without time zone default (now() at time zone 'utc')
 );
 
 insert into players (name) values ('andrew');
@@ -52,7 +52,7 @@ create table games (
     theme game_theme_enum not null default 'classic',
     dim0 smallint not null default 3,
     dim1 smallint not null default 4,
-    created_at timestamp without time zone default now(),
+    created_at timestamp without time zone default (now() at time zone 'utc'),
     check (id <= 2176782335),
     check (dim0 >= 3 and dim0 <= 4),
     check (dim1 >= 3 and dim1 <= 4)
@@ -71,8 +71,8 @@ create table games_players (
     player_id bigint not null references players (id)
         on delete cascade,
     presence boolean default true,
-    created_at timestamp without time zone not null default now(),
-    updated_at timestamp without time zone not null default now(),
+    created_at timestamp without time zone not null default (now() at time zone 'utc'),
+    updated_at timestamp without time zone not null default (now() at time zone 'utc'),
     primary key (game_id, player_id)
 );
 
@@ -133,7 +133,7 @@ create table moves (
     card1_id int not null,
     idx2 int not null,
     card2_id int not null,
-    created_at timestamp without time zone not null default now()
+    created_at timestamp without time zone not null default (now() at time zone 'utc')
 );
 
 create index idx_0007 on moves using btree (game_id,player_id);
@@ -150,7 +150,7 @@ create table shuffles (
     player_id bigint not null references players (id)
         on delete cascade,
     sets_on_board int not null default 0,
-    created_at timestamp without time zone not null default now()
+    created_at timestamp without time zone not null default (now() at time zone 'utc')
 );
 
 create index idx_0009 on shuffles using btree (game_id,player_id);

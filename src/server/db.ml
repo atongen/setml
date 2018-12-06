@@ -107,7 +107,7 @@ module Q = struct
         Caqti_request.exec Caqti_type.(tup3 int int bool)
         {eos|
             insert into games_players (game_id, player_id, presence, updated_at)
-            values (?, ?, ?, now())
+            values (?, ?, ?, (now() at time zone 'utc'))
             on conflict (game_id, player_id)
             do update set presence = excluded.presence,
             updated_at = excluded.updated_at;

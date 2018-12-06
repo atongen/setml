@@ -27,14 +27,24 @@ type action =
 
 let component = ReasonReact.reducerComponent("PlayerGamesList");
 
-let renderPlayerGame = (player_game, now) => {
+let renderPlayerGameLi = (player_game, now) => {
   let game_id_str = Base_conv.base36_of_int(player_game.id);
-  let status = Game_status.to_string(player_game.status);
   let dtw = ClientUtil.distanceOfTimeInWords(now, player_game.updated_at);
-  <div>
-    <a href=("/games/" ++ game_id_str)> (ReasonReact.string(game_id_str)) </a>
-    <span> (ReasonReact.string(Printf.sprintf("%s - %s", status, dtw))) </span>
-  </div>;
+  let icon = switch(player_game.status) {
+  | New => "add"
+  | Started => "forward"
+  | Complete => "done"
+  };
+  let s = ReasonReact.string;
+  let link = <a href=("/games/" ++ game_id_str)> (s(game_id_str)) </a>;
+  MaterialUi.(
+  <ListItem key=string_of_int(player_game.id)>
+    <Avatar>
+      <Icon> (s(icon)) </Icon>
+    </Avatar>
+    <ListItemText primary=link secondary=s(dtw) />
+  </ListItem>
+  )
 };
 
 let make = _children => {
@@ -76,17 +86,15 @@ let make = _children => {
       if (List.length(player_games) > 0) {
         let now = Js.Date.now() /. 1000.0;
         <div>
-          <h2> (ReasonReact.string("Recent Games")) </h2>
-          <ul>
+          <MaterialUi.Typography variant=`H2> (ReasonReact.string("Recent Games")) </MaterialUi.Typography>
+          <MaterialUi.List>
             (
               player_games
-              |> List.map(player_game =>
-                   <li key=(string_of_int(player_game.id))> (renderPlayerGame(player_game, now)) </li>
-                 )
+              |> List.map(player_game => (renderPlayerGameLi(player_game, now)))
               |> Array.of_list
               |> ReasonReact.array
             )
-          </ul>
+          </MaterialUi.List>
         </div>;
       } else {
         ReasonReact.null;
