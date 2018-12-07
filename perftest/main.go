@@ -23,13 +23,16 @@ import (
 // cli flags
 var (
 	addrsFlag          = flag.String("addrs", "localhost:7777", "CSV of setml game addresses")
-	gamesPerServerFlag = flag.Int("games-per-server", 3, "Number of games per server")
+	gamesPerServerFlag = flag.Int("games-per-server", 5, "Number of games per server")
 	playersPerGameFlag = flag.Int("players-per-game", 5, "Number of players per game")
+	roundsFlag         = flag.Int("rounds", 3, "Number of rounds of games to simulate")
+	delayMsFlag        = flag.Int("delay-ms", 1000, "Number of ms to delay between adding players to game")
 )
 
 type Game struct {
 	Id       string
 	Complete bool
+	Wg       *sync.WaitGroup
 }
 
 type Player struct {
@@ -40,10 +43,10 @@ type Player struct {
 
 type PlayerGame struct {
 	Conn       *websocket.Conn
-	Player     Player
-	Game       Game
+	Player     *Player
+	Game       *Game
 	Board      []Card
-	NumUpdates int
+	NumUpdated int
 }
 
 type Card struct {
@@ -99,9 +102,9 @@ func FindFirstSet(cards []Card) []int {
 	if l < 3 {
 		return []int{}
 	}
-	for i := 0; i < l-3; i++ {
-		for j := i + 1; j < l-2; j++ {
-			for k := j + 1; k < l-1; k++ {
+	for i := 0; i < l-2; i++ {
+		for j := i + 1; j < l-1; j++ {
+			for k := j + 1; k < l; k++ {
 				if IsSet(cards[i], cards[j], cards[k]) {
 					return []int{
 						i, CardToInt(cards[i]),
@@ -225,6 +228,7 @@ func (pg *PlayerGame) HandleMessage(message []byte) (bool, error) {
 				return false, fmt.Errorf("Error getting board data: %s", err)
 			}
 			pg.Board = board
+
 			set := FindFirstSet(pg.Board)
 			if len(set) == 6 {
 				pg.MakeMove(set)
@@ -242,15 +246,16 @@ func (pg *PlayerGame) HandleMessage(message []byte) (bool, error) {
 			return false, fmt.Errorf("Update to update board: %s", err)
 		}
 		pg.Board = board
-		pg.NumUpdates += 1
-		if pg.NumUpdates >= 3 {
+		pg.NumUpdated += 1
+
+		if pg.NumUpdated >= 3 {
+			pg.NumUpdated = 0
 			set := FindFirstSet(pg.Board)
 			if len(set) == 6 {
 				pg.MakeMove(set)
 			} else {
 				pg.ShuffleBoard()
 			}
-			pg.NumUpdates = 0
 		}
 	case "server_game_update":
 		status, err := ServerGameUpdateStatus(data)
@@ -309,35 +314,49 @@ func (pg *PlayerGame) ShuffleBoard() error {
 	}`, pg.Player.Token)
 }
 
-func (pg *PlayerGame) ReadPump(wg *sync.WaitGroup) {
+func (pg *PlayerGame) ReadPump() {
 	defer pg.Conn.Close()
-	defer wg.Done()
+	defer pg.Game.Wg.Done()
+	pg.Game.Wg.Add(1)
 
-	wg.Add(1)
+	if pg.Game.Complete {
+		return
+	}
+
+	ch := make(chan []byte)
+	tickChan := time.NewTicker(time.Millisecond * 100).C
+
+	go func() {
+		for {
+			_, message, err := pg.Conn.ReadMessage()
+			if err != nil {
+				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+					log.Printf("error: %v", err)
+				}
+				break
+			}
+
+			ch <- bytes.TrimSpace(message)
+		}
+	}()
+
 	for {
 		if pg.Game.Complete {
-			log.Println("Cya!")
 			break
 		}
 
-		_, message, err := pg.Conn.ReadMessage()
-		if err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Printf("error: %v", err)
+		select {
+		case message := <-ch:
+			quit, err := pg.HandleMessage(message)
+			if err != nil {
+				log.Printf("Error handling message: %s", err)
 			}
-			break
-		}
 
-		quit, err := pg.HandleMessage(bytes.TrimSpace(message))
-		if err != nil {
-			log.Printf("Error handling message: %s", err)
-			break
-		}
-
-		if quit {
-			pg.Game.Complete = true
-			log.Println("Goodbye!")
-			break
+			if quit {
+				pg.Game.Complete = true
+			}
+		case <-tickChan:
+			// ignore
 		}
 	}
 }
@@ -355,17 +374,17 @@ func parseValue(re *regexp.Regexp, s string) (string, error) {
 	}
 }
 
-func createPlayerFromUrl(url string) (Player, error) {
+func createPlayerFromUrl(url string) (*Player, error) {
 	jar, err := cookiejar.New(&cookiejar.Options{})
 	if err != nil {
-		return Player{}, fmt.Errorf("Error building player cookie jar: %s", err)
+		return &Player{}, fmt.Errorf("Error building player cookie jar: %s", err)
 	}
 
 	client := &http.Client{
 		Jar: jar,
 	}
 
-	player := Player{Client: client}
+	player := &Player{Client: client}
 
 	// get a token and cookie
 	resp, err := player.Client.Get(url)
@@ -400,10 +419,12 @@ func createPlayerFromUrl(url string) (Player, error) {
 	return player, nil
 }
 
-func createPlayerAndGame(server string) (Player, Game, error) {
+func createPlayerAndGame(server string) (*Player, *Game, error) {
+	game := Game{Wg: &sync.WaitGroup{}}
+
 	player, err := createPlayerFromUrl(fmt.Sprintf("http://%s/", server))
 	if err != nil {
-		return Player{}, Game{}, fmt.Errorf("Error creating player: %s", err)
+		return &Player{}, &game, fmt.Errorf("Error creating player: %s", err)
 	}
 
 	data := url.Values{}
@@ -415,40 +436,40 @@ func createPlayerAndGame(server string) (Player, Game, error) {
 
 	resp, err := player.Client.Do(req)
 	if err != nil {
-		return player, Game{}, fmt.Errorf("Error posting game creation: %s", err)
+		return player, &game, fmt.Errorf("Error posting game creation: %s", err)
 	}
 
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return player, Game{}, fmt.Errorf("Error reading game body bytes: %s", err)
+		return player, &game, fmt.Errorf("Error reading game body bytes: %s", err)
 	}
 	resp.Body.Close()
 
 	bodyString := string(bodyBytes)
 	gameId, err := parseValue(gameIdRe, bodyString)
 	if err != nil {
-		return player, Game{}, fmt.Errorf("Error parsing gameId: %s", err)
+		return player, &game, fmt.Errorf("Error parsing gameId: %s", err)
 	}
+	game.Id = gameId
 
 	playerId, err := parseValue(playerIdRe, bodyString)
 	if err != nil {
-		return player, Game{}, fmt.Errorf("Error parsing playerId: %s", err)
+		return player, &game, fmt.Errorf("Error parsing playerId: %s", err)
 	}
 	player.Id = playerId
 
-	return player, Game{Id: gameId}, nil
+	return player, &game, nil
 }
 
-func createPlayer(server string, game Game) (Player, error) {
+func createPlayer(server string, game *Game) (*Player, error) {
 	player, err := createPlayerFromUrl(fmt.Sprintf("http://%s/games/%s", server, game.Id))
 	if err != nil {
-		return Player{}, fmt.Errorf("Error creating player: %s", err)
+		return &Player{}, fmt.Errorf("Error creating player: %s", err)
 	}
 	return player, nil
 }
 
-func joinGame(wg *sync.WaitGroup, server string, game Game, player Player) (*PlayerGame, error) {
-	log.Printf("Server: %s, Player: %s, Game: %s", server, player.Id, game.Id)
+func joinGame(server string, game *Game, player *Player) (*PlayerGame, error) {
 	u := url.URL{Scheme: "ws", Host: server, Path: fmt.Sprintf("/games/%s/ws", game.Id)}
 
 	dialer := &websocket.Dialer{
@@ -461,8 +482,6 @@ func joinGame(wg *sync.WaitGroup, server string, game Game, player Player) (*Pla
 	if err != nil {
 		return &PlayerGame{}, err
 	}
-	// ugh
-	time.Sleep(500 * time.Millisecond)
 
 	pg := &PlayerGame{
 		Conn:   c,
@@ -471,7 +490,7 @@ func joinGame(wg *sync.WaitGroup, server string, game Game, player Player) (*Pla
 		Board:  make([]Card, 12),
 	}
 
-	go pg.ReadPump(wg)
+	go pg.ReadPump()
 	return pg, nil
 }
 
@@ -479,44 +498,59 @@ func main() {
 	flag.Parse()
 	log.SetFlags(0)
 
-	var wg sync.WaitGroup
-	games := []Game{}
-	playerGames := []*PlayerGame{}
 	servers := strings.Split(*addrsFlag, ",")
 
-	for g := 0; g < *gamesPerServerFlag; g++ {
-		for _, server := range servers {
-			player, game, err := createPlayerAndGame(server)
-			if err != nil {
-				log.Fatalf("Error creating player and game: %s", err)
-			}
-			games = append(games, game)
+	for round := 1; round <= *roundsFlag; round++ {
+		log.Printf("Starting round %d of %d", round, *roundsFlag)
 
-			playerGame, err := joinGame(&wg, server, game, player)
-			if err != nil {
-				log.Fatalf("Unable to join inital game: %s", err)
-			}
-			playerGames = append(playerGames, playerGame)
-		}
-	}
+		games := []*Game{}
 
-	for g := 0; g < *gamesPerServerFlag; g++ {
-		game := games[g]
-		for p := 0; p < *playersPerGameFlag-1; p++ {
+		for g := 0; g < *gamesPerServerFlag; g++ {
 			for _, server := range servers {
-				player, err := createPlayer(server, game)
+				player, game, err := createPlayerAndGame(server)
 				if err != nil {
-					log.Fatalf("Error creating player: %s", err)
+					log.Fatalf("Error creating player and game: %s", err)
 				}
+				games = append(games, game)
 
-				playerGame, err := joinGame(&wg, server, game, player)
+				log.Printf("Starting game %s", game.Id)
+				_, err = joinGame(server, game, player)
 				if err != nil {
-					log.Fatalf("Unable to join existing game: %s", err)
+					log.Fatalf("Unable to join inital game: %s", err)
 				}
-				playerGames = append(playerGames, playerGame)
 			}
 		}
-	}
 
-	wg.Wait()
+		n := len(games)
+		i := 0
+
+		for p := 0; p < *playersPerGameFlag-1; p++ {
+			for g := 0; g < *gamesPerServerFlag; g++ {
+				for _, server := range servers {
+					gameIdx := i % n
+					i += 1
+					game := games[gameIdx]
+
+					if !game.Complete {
+						player, err := createPlayer(server, game)
+						if err != nil {
+							log.Fatalf("Error creating player: %s", err)
+						}
+
+						log.Printf("Player joining game %s (%d/%d)", game.Id, gameIdx+1, len(games))
+						_, err = joinGame(server, game, player)
+						if err != nil {
+							log.Fatalf("Unable to join existing game: %s", err)
+						}
+
+						time.Sleep(time.Duration(*delayMsFlag) * time.Millisecond)
+					}
+				}
+			}
+		}
+
+		for _, game := range games {
+			game.Wg.Wait()
+		}
+	}
 }
