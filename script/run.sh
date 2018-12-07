@@ -8,4 +8,5 @@ DB_PASS="$DB_PASS" \
     --db-host "$DB_HOST" \
     --db-port "$DB_PORT" \
     --db-user "$DB_USER" \
-    --db-pool "$DB_POOL"
+    --db-pool "$DB_POOL" \
+    "$@"

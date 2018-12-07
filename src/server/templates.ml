@@ -27,7 +27,7 @@ let build_meta_list ~seed content =
 
 let page_tpl ~page_title ~manifest ~assets ~meta id =
     let meta_list = build_meta_list ~seed:[
-        ("viewport", Some("width=device-width, initial-scale=1, user-scalable=0, maximum-scale=1, minimum-scale=1"));
+        ("viewport", Some("width=device-width, initial-scale=1, user-scalable=0, maximum-scale=1, minimum-scale=1, shrink-to-fit=no"));
         ("charset", Some("UTF-8"));
     ] meta
     in

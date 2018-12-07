@@ -165,7 +165,7 @@ let make_handler pool pubsub clients crypto docroot =
                     | _ ->
                       (* websocket onmessage *)
                       ignore (
-                        handle_message pool game_id player_id session.token f.content >>= fun _ ->
+                        handle_message pool game_id player_id session.token f.content >>= fun () ->
                         Lwt.return_unit
                       )
                 )
