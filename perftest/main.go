@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
@@ -25,14 +26,19 @@ var (
 	addrsFlag          = flag.String("addrs", "localhost:7777", "CSV of setml game addresses")
 	gamesPerServerFlag = flag.Int("games-per-server", 5, "Number of games per server")
 	playersPerGameFlag = flag.Int("players-per-game", 5, "Number of players per game")
-	roundsFlag         = flag.Int("rounds", 3, "Number of rounds of games to simulate")
-	delayMsFlag        = flag.Int("delay-ms", 1000, "Number of ms to delay between adding players to game")
+	roundsFlag         = flag.Int("rounds", 1, "Number of rounds of games to simulate")
 )
 
+type Server struct {
+	Name     string
+	NumGames int
+}
+
 type Game struct {
-	Id       string
-	Complete bool
-	Wg       *sync.WaitGroup
+	Id         string
+	Complete   bool
+	NumPlayers int
+	Wg         *sync.WaitGroup
 }
 
 type Player struct {
@@ -96,15 +102,52 @@ func IsSet(card0, card1, card2 Card) bool {
 	return attrSet[0] && attrSet[1] && attrSet[2] && attrSet[3]
 }
 
+func randRange(min, max int) []int {
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	l := max - min + 1
+	a := make([]int, l)
+	p := r.Perm(l)
+	for i, rIdx := range p {
+		a[i] = rIdx + min
+	}
+	return a
+}
+
+func FindSet(cards []Card) []int {
+	return FindRandSet(cards)
+}
+
+func FindRandSet(cards []Card) []int {
+	l := len(cards)
+	if l < 3 {
+		return []int{}
+	}
+	r := randRange(0, l-1)
+	for i := 0; i < l-2; i++ { // 0 -  9
+		for j := i + 1; j < l-1; j++ { // 1 - 10
+			for k := j + 1; k < l; k++ { // 2 - 11
+				if IsSet(cards[r[i]], cards[r[j]], cards[r[k]]) {
+					return []int{
+						r[i], CardToInt(cards[r[i]]),
+						r[j], CardToInt(cards[r[j]]),
+						r[k], CardToInt(cards[r[k]]),
+					}
+				}
+			}
+		}
+	}
+	return []int{}
+}
+
 // returns slice of alternating board idx, card_id x 3
 func FindFirstSet(cards []Card) []int {
 	l := len(cards)
 	if l < 3 {
 		return []int{}
 	}
-	for i := 0; i < l-2; i++ {
-		for j := i + 1; j < l-1; j++ {
-			for k := j + 1; k < l; k++ {
+	for i := 0; i < l-2; i++ { // 0 -  9
+		for j := i + 1; j < l-1; j++ { // 1 - 10
+			for k := j + 1; k < l; k++ { // 2 - 11
 				if IsSet(cards[i], cards[j], cards[k]) {
 					return []int{
 						i, CardToInt(cards[i]),
@@ -198,6 +241,17 @@ func ServerBoardCard(data map[string]interface{}, board []Card) ([]Card, error) 
 	return board, nil
 }
 
+func shouldShuffle() bool {
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	return r.Float64() >= 0.333
+}
+
+func randSleep(minMs, maxMs int) {
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	n := r.Int31n(int32(maxMs)) + int32(minMs)
+	time.Sleep(time.Duration(n) * time.Millisecond)
+}
+
 func (pg *PlayerGame) HandleMessage(message []byte) (bool, error) {
 	data := make(map[string]interface{})
 	err := json.Unmarshal(message, &data)
@@ -229,10 +283,11 @@ func (pg *PlayerGame) HandleMessage(message []byte) (bool, error) {
 			}
 			pg.Board = board
 
-			set := FindFirstSet(pg.Board)
+			set := FindSet(pg.Board)
+			randSleep(250, 500)
 			if len(set) == 6 {
 				pg.MakeMove(set)
-			} else {
+			} else if shouldShuffle() {
 				pg.ShuffleBoard()
 			}
 		case "complete":
@@ -250,10 +305,11 @@ func (pg *PlayerGame) HandleMessage(message []byte) (bool, error) {
 
 		if pg.NumUpdated >= 3 {
 			pg.NumUpdated = 0
-			set := FindFirstSet(pg.Board)
+			set := FindSet(pg.Board)
+			randSleep(250, 500)
 			if len(set) == 6 {
 				pg.MakeMove(set)
-			} else {
+			} else if shouldShuffle() {
 				pg.ShuffleBoard()
 			}
 		}
@@ -419,10 +475,10 @@ func createPlayerFromUrl(url string) (*Player, error) {
 	return player, nil
 }
 
-func createPlayerAndGame(server string) (*Player, *Game, error) {
+func createPlayerAndGame(server *Server) (*Player, *Game, error) {
 	game := Game{Wg: &sync.WaitGroup{}}
 
-	player, err := createPlayerFromUrl(fmt.Sprintf("http://%s/", server))
+	player, err := createPlayerFromUrl(fmt.Sprintf("http://%s/", server.Name))
 	if err != nil {
 		return &Player{}, &game, fmt.Errorf("Error creating player: %s", err)
 	}
@@ -430,7 +486,7 @@ func createPlayerAndGame(server string) (*Player, *Game, error) {
 	data := url.Values{}
 	data.Set("token", player.Token)
 
-	req, _ := http.NewRequest("POST", fmt.Sprintf("http://%s/games", server), strings.NewReader(data.Encode())) // URL-encoded payload
+	req, _ := http.NewRequest("POST", fmt.Sprintf("http://%s/games", server.Name), strings.NewReader(data.Encode())) // URL-encoded payload
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
 
@@ -461,16 +517,16 @@ func createPlayerAndGame(server string) (*Player, *Game, error) {
 	return player, &game, nil
 }
 
-func createPlayer(server string, game *Game) (*Player, error) {
-	player, err := createPlayerFromUrl(fmt.Sprintf("http://%s/games/%s", server, game.Id))
+func createPlayer(server *Server, game *Game) (*Player, error) {
+	player, err := createPlayerFromUrl(fmt.Sprintf("http://%s/games/%s", server.Name, game.Id))
 	if err != nil {
 		return &Player{}, fmt.Errorf("Error creating player: %s", err)
 	}
 	return player, nil
 }
 
-func joinGame(server string, game *Game, player *Player) (*PlayerGame, error) {
-	u := url.URL{Scheme: "ws", Host: server, Path: fmt.Sprintf("/games/%s/ws", game.Id)}
+func joinGame(server *Server, game *Game, player *Player) (*PlayerGame, error) {
+	u := url.URL{Scheme: "ws", Host: server.Name, Path: fmt.Sprintf("/games/%s/ws", game.Id)}
 
 	dialer := &websocket.Dialer{
 		Proxy:            http.ProxyFromEnvironment,
@@ -498,58 +554,69 @@ func main() {
 	flag.Parse()
 	log.SetFlags(0)
 
-	servers := strings.Split(*addrsFlag, ",")
+	serverNames := strings.Split(*addrsFlag, ",")
+	servers := make([]*Server, len(serverNames))
+	for i, sn := range serverNames {
+		servers[i] = &Server{Name: sn}
+	}
 
 	for round := 1; round <= *roundsFlag; round++ {
 		log.Printf("Starting round %d of %d", round, *roundsFlag)
+		roundGames := []*Game{}
 
-		games := []*Game{}
+		for _, s := range servers {
+			go func(server *Server) {
+				serverGames := []*Game{}
+				for g := 0; g < *gamesPerServerFlag; g++ {
+					player, game, err := createPlayerAndGame(server)
+					if err != nil {
+						log.Fatalf("Error creating player and game: %s", err)
+					}
+					serverGames = append(serverGames, game)
+					roundGames = append(roundGames, game)
 
-		for g := 0; g < *gamesPerServerFlag; g++ {
-			for _, server := range servers {
-				player, game, err := createPlayerAndGame(server)
-				if err != nil {
-					log.Fatalf("Error creating player and game: %s", err)
+					log.Printf("%d/%d: Starting game %s (%d) on server %s", round, *roundsFlag, game.Id, server.NumGames+1, server.Name)
+					_, err = joinGame(server, game, player)
+					if err != nil {
+						log.Fatalf("Unable to join inital game: %s", err)
+					}
+					server.NumGames += 1
+					game.NumPlayers += 1
 				}
-				games = append(games, game)
 
-				log.Printf("Starting game %s", game.Id)
-				_, err = joinGame(server, game, player)
-				if err != nil {
-					log.Fatalf("Unable to join inital game: %s", err)
-				}
-			}
-		}
+				n := len(serverGames)
+				i := 0
 
-		n := len(games)
-		i := 0
+				for p := 0; p < *playersPerGameFlag-1; p++ {
+					for g := 0; g < *gamesPerServerFlag; g++ {
+						gameIdx := i % n
+						game := serverGames[gameIdx]
 
-		for p := 0; p < *playersPerGameFlag-1; p++ {
-			for g := 0; g < *gamesPerServerFlag; g++ {
-				for _, server := range servers {
-					gameIdx := i % n
-					i += 1
-					game := games[gameIdx]
+						if !game.Complete {
+							player, err := createPlayer(server, game)
+							if err != nil {
+								log.Fatalf("Error creating player: %s", err)
+							}
 
-					if !game.Complete {
-						player, err := createPlayer(server, game)
-						if err != nil {
-							log.Fatalf("Error creating player: %s", err)
+							log.Printf("%d/%d: Player %d joining game %s (%d/%d) on server %s", round, *roundsFlag, game.NumPlayers+1, game.Id, gameIdx+1, len(serverGames), server.Name)
+							_, err = joinGame(server, game, player)
+							if err != nil {
+								log.Fatalf("Unable to join existing game: %s", err)
+							}
+							game.NumPlayers += 1
+
+							randSleep(1000, 2000)
 						}
-
-						log.Printf("Player joining game %s (%d/%d)", game.Id, gameIdx+1, len(games))
-						_, err = joinGame(server, game, player)
-						if err != nil {
-							log.Fatalf("Unable to join existing game: %s", err)
-						}
-
-						time.Sleep(time.Duration(*delayMsFlag) * time.Millisecond)
+						i += 1
 					}
 				}
-			}
+			}(s)
 		}
 
-		for _, game := range games {
+		// wait for games to start
+		time.Sleep(1 * time.Second)
+
+		for _, game := range roundGames {
 			game.Wg.Wait()
 		}
 	}
