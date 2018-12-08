@@ -31,7 +31,7 @@ let string_of_mode = function
 
 module Q = struct
     let set_transaction_mode_query mode =
-        Caqti_request.exec ~oneshot:true Caqti_type.unit (Printf.sprintf "set transaction isolation level %s;" mode)
+        Caqti_request.exec ~oneshot:true Caqti_type.unit (Printf.sprintf "set transaction isolation level %s;" (string_of_mode mode))
 
     let make_insert_cards_query_str table_name game_id card_list =
         let rows = List.map (fun (idx, card_id) ->
@@ -364,7 +364,6 @@ module I = struct
     let create_move (module C : Caqti_lwt.CONNECTION) (game_id, player_id, ((cd0: Messages.card_data), (cd1: Messages.card_data), (cd2: Messages.card_data))) =
         if Card.is_set cd0.card cd1.card cd2.card then (
             let (idx0, card0_id, idx1, card1_id, idx2, card2_id) = (cd0.idx, Card.to_int cd0.card, cd1.idx, Card.to_int cd1.card, cd2.idx, Card.to_int cd2.card) in
-            C.exec (Q.set_transaction_mode_query "serializable") () >>=? fun () ->
             C.exec Q.create_move_query (game_id, player_id, ((idx0, card0_id), (idx1, card1_id), (idx2, card2_id))) >>=? fun () ->
             C.find Q.find_game_card_idx_query game_id >>=? fun deck_card_idx ->
             C.collect_list Q.find_game_cards_query (game_id, deck_card_idx, 3) >>=? fun cards_list ->
@@ -383,7 +382,6 @@ module I = struct
         ) else Lwt.return_error (Client_error "board cards are not a set")
 
     let create_shuffle (module C : Caqti_lwt.CONNECTION) (game_id, player_id) =
-        C.exec (Q.set_transaction_mode_query "serializable") () >>=? fun () ->
         C.find Q.find_game_data_query game_id >>=? fun (deck_card_idx, _, _, (dim0, dim1)) ->
         let num_board_cards = dim0 * dim1 in
         (* include board in deck *)
@@ -563,7 +561,7 @@ end
 
 let with_transaction ?(mode=ReadCommitted) (module C : Caqti_lwt.CONNECTION) f arg =
     C.start () >>=* fun () ->
-    C.exec (Q.set_transaction_mode_query (string_of_mode mode)) () >>=* fun () ->
+    C.exec (Q.set_transaction_mode_query mode) () >>=* fun () ->
     f (module C : Caqti_lwt.CONNECTION) arg >>= function
     | Ok a ->
         C.commit () >>=* fun () ->

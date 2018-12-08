@@ -23,10 +23,9 @@ import (
 
 // cli flags
 var (
-	addrsFlag          = flag.String("addrs", "localhost:7777", "CSV of setml game addresses")
-	gamesPerServerFlag = flag.Int("games-per-server", 5, "Number of games per server")
-	playersPerGameFlag = flag.Int("players-per-game", 5, "Number of players per game")
-	roundsFlag         = flag.Int("rounds", 1, "Number of rounds of games to simulate")
+	addrsFlag  = flag.String("addrs", "localhost:7777", "CSV of setml game addresses")
+	gamesFlag  = flag.Int("games", 5, "Number of games per server")
+	roundsFlag = flag.Int("rounds", 1, "Number of rounds of games to simulate")
 )
 
 type Server struct {
@@ -284,7 +283,7 @@ func (pg *PlayerGame) HandleMessage(message []byte) (bool, error) {
 			pg.Board = board
 
 			set := FindSet(pg.Board)
-			randSleep(250, 500)
+			randSleep(100, 200)
 			if len(set) == 6 {
 				pg.MakeMove(set)
 			} else if shouldShuffle() {
@@ -306,7 +305,7 @@ func (pg *PlayerGame) HandleMessage(message []byte) (bool, error) {
 		if pg.NumUpdated >= 3 {
 			pg.NumUpdated = 0
 			set := FindSet(pg.Board)
-			randSleep(250, 500)
+			randSleep(100, 200)
 			if len(set) == 6 {
 				pg.MakeMove(set)
 			} else if shouldShuffle() {
@@ -379,8 +378,9 @@ func (pg *PlayerGame) ReadPump() {
 		return
 	}
 
-	ch := make(chan []byte)
+	ch := make(chan []byte, 100) // buffer this
 	tickChan := time.NewTicker(time.Millisecond * 100).C
+	lastMessage := time.Now()
 
 	go func() {
 		for {
@@ -396,13 +396,15 @@ func (pg *PlayerGame) ReadPump() {
 		}
 	}()
 
+	shouldQuit := false
 	for {
-		if pg.Game.Complete {
+		if shouldQuit {
 			break
 		}
 
 		select {
 		case message := <-ch:
+			lastMessage = time.Now()
 			quit, err := pg.HandleMessage(message)
 			if err != nil {
 				log.Printf("Error handling message: %s", err)
@@ -411,8 +413,15 @@ func (pg *PlayerGame) ReadPump() {
 			if quit {
 				pg.Game.Complete = true
 			}
+
+			if pg.Game.Complete {
+				shouldQuit = true
+			}
 		case <-tickChan:
-			// ignore
+			if time.Since(lastMessage).Seconds() > 10.0 {
+				log.Printf("Last message was over 10 seconds ago!")
+				shouldQuit = true
+			}
 		}
 	}
 }
@@ -567,18 +576,33 @@ func main() {
 		for _, s := range servers {
 			go func(server *Server) {
 				serverGames := []*Game{}
-				for g := 0; g < *gamesPerServerFlag; g++ {
-					player, game, err := createPlayerAndGame(server)
-					if err != nil {
-						log.Fatalf("Error creating player and game: %s", err)
+				for g := 0; g < *gamesFlag; g++ {
+					var (
+						player *Player
+						game   *Game
+						err    error
+					)
+					for wait := 1; ; wait += 1 {
+						player, game, err = createPlayerAndGame(server)
+						if err == nil {
+							break
+						} else {
+							log.Printf("Error creating player and game: %s", err)
+						}
+						time.Sleep(time.Duration(wait) * time.Second)
 					}
 					serverGames = append(serverGames, game)
 					roundGames = append(roundGames, game)
 
 					log.Printf("%d/%d: Starting game %s (%d) on server %s", round, *roundsFlag, game.Id, server.NumGames+1, server.Name)
 					_, err = joinGame(server, game, player)
-					if err != nil {
-						log.Fatalf("Unable to join inital game: %s", err)
+					for wait := 1; ; wait += 1 {
+						if err == nil {
+							break
+						} else {
+							log.Printf("Unable to join inital game: %s", err)
+						}
+						time.Sleep(time.Duration(wait) * time.Second)
 					}
 					server.NumGames += 1
 					game.NumPlayers += 1
@@ -587,25 +611,42 @@ func main() {
 				n := len(serverGames)
 				i := 0
 
-				for p := 0; p < *playersPerGameFlag-1; p++ {
-					for g := 0; g < *gamesPerServerFlag; g++ {
+				for g := 0; g < *gamesFlag; g++ {
+					for {
 						gameIdx := i % n
 						game := serverGames[gameIdx]
 
-						if !game.Complete {
-							player, err := createPlayer(server, game)
-							if err != nil {
-								log.Fatalf("Error creating player: %s", err)
+						if game.Complete {
+							log.Printf("%d/%d: Game %s (%d/%d) on server %s is complete!", round, *roundsFlag, game.Id, gameIdx+1, len(serverGames), server.Name)
+							break
+						} else {
+							var (
+								player *Player
+								err    error
+							)
+							for wait := 1; ; wait += 1 {
+								player, err = createPlayer(server, game)
+								if err == nil {
+									break
+								} else {
+									log.Printf("Error creating player: %s", err)
+								}
+								time.Sleep(time.Duration(wait) * time.Second)
 							}
 
 							log.Printf("%d/%d: Player %d joining game %s (%d/%d) on server %s", round, *roundsFlag, game.NumPlayers+1, game.Id, gameIdx+1, len(serverGames), server.Name)
-							_, err = joinGame(server, game, player)
-							if err != nil {
-								log.Fatalf("Unable to join existing game: %s", err)
+							for wait := 1; ; wait += 1 {
+								_, err = joinGame(server, game, player)
+								if err == nil {
+									break
+								} else {
+									log.Printf("Unable to join existing game: %s", err)
+								}
+								time.Sleep(time.Duration(wait) * time.Second)
 							}
 							game.NumPlayers += 1
 
-							randSleep(1000, 2000)
+							randSleep(200, 400)
 						}
 						i += 1
 					}

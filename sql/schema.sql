@@ -97,6 +97,7 @@ create table game_cards (
 
 create unique index idx_game_cards_000 on game_cards using btree (game_id,idx);
 create unique index idx_game_cards_001 on game_cards using btree (game_id,card_id);
+create index idx_game_cards_002 on game_cards using btree (game_id,idx,card_id);
 
 
 -- board_cards table
@@ -116,6 +117,7 @@ create table board_cards (
 create unique index idx_board_cards_000 on board_cards using btree (game_id,idx);
 create unique index idx_board_cards_001 on board_cards using btree (game_id,card_id)
     where card_id < 81; -- card 81 is empty
+create index idx_board_cards_002 on board_cards using btree (game_id,idx,card_id);
 
 
 -- moves table
