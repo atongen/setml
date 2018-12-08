@@ -123,8 +123,8 @@ let make_handler pool pubsub clients crypto docroot =
     match Route.of_req req with
     | Route.Index -> render_index ~player_id:session.player_id ~headers session.token manifest info
     | Route.Game_create -> (
-        Cohttp_lwt.Body.to_string body >>= fun myBody ->
-        match Server_util.form_value myBody "token" with
+        Cohttp_lwt.Body.to_string body >>= fun my_body ->
+        match Server_util.form_value my_body "token" with
         | Some (token) ->
           if session.token = token then (
             Db.create_game pool (3, 4) >>=? fun game_id ->
@@ -132,16 +132,27 @@ let make_handler pool pubsub clients crypto docroot =
           ) else render_forbidden
         | None -> render_forbidden)
     | Route.Game_show (game_id) -> (
-        match session.player_id with
-        | Some (player_id) ->
-          Db.game_exists pool game_id >>=? (fun exists ->
-              if exists then (render_game ~player_id:(Some player_id) ~headers game_id session.token) manifest info
-              else render_not_found
-            )
-        | None ->
-          Db.create_player pool () >>=? (fun player_id ->
-              let headers = Session.set_player_id_headers session crypto player_id in
-              redirect ~headers (Route.game_show_uri game_id)))
+        Db.game_exists pool game_id >>=? (fun game_exists ->
+            if game_exists then (
+                match session.player_id with
+                | Some (player_id) -> (
+                        Db.player_exists pool player_id >>=? fun player_exists ->
+                            if player_exists then (
+                                render_game ~player_id:(Some player_id) ~headers game_id session.token manifest info
+                            ) else (
+                                Db.create_player pool () >>=? (fun player_id ->
+                                    let headers = Session.set_player_id_headers session crypto player_id in
+                                    redirect ~headers (Route.game_show_uri game_id))
+                            )
+                        )
+                | None -> (
+                    Db.create_player pool () >>=? (fun player_id ->
+                        let headers = Session.set_player_id_headers session crypto player_id in
+                        redirect ~headers (Route.game_show_uri game_id))
+                )
+            ) else render_not_found
+        )
+    )
     | Route.Ws_show (game_id) -> (
         Db.game_exists pool game_id >>=? fun game_exists ->
         if game_exists then (
