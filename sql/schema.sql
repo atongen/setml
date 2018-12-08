@@ -58,7 +58,7 @@ create table games (
     check (dim1 >= 3 and dim1 <= 4)
 );
 
-create unique index idx_0000 on games using btree (id_counter);
+create unique index idx_games_000 on games using btree (id_counter);
 
 
 -- games_players tabe
@@ -76,8 +76,9 @@ create table games_players (
     primary key (game_id, player_id)
 );
 
-create index idx_0001 on games_players using btree (game_id);
-create index idx_0002 on games_players using btree (player_id);
+create index idx_games_players_000 on games_players using btree (game_id);
+create index idx_games_players_001 on games_players using btree (player_id);
+create index idx_games_players_002 on games_players using btree (game_id,player_id,updated_at);
 
 
 -- game_cards table
@@ -94,8 +95,8 @@ create table game_cards (
     check (card_id >= 0 and card_id < 81)
 );
 
-create unique index idx_0003 on game_cards using btree (game_id,idx);
-create unique index idx_0004 on game_cards using btree (game_id,card_id);
+create unique index idx_game_cards_000 on game_cards using btree (game_id,idx);
+create unique index idx_game_cards_001 on game_cards using btree (game_id,card_id);
 
 
 -- board_cards table
@@ -112,8 +113,8 @@ create table board_cards (
     check (card_id >= 0 and card_id <= 81)
 );
 
-create unique index idx_0005 on board_cards using btree (game_id,idx);
-create unique index idx_0006 on board_cards using btree (game_id,card_id)
+create unique index idx_board_cards_000 on board_cards using btree (game_id,idx);
+create unique index idx_board_cards_001 on board_cards using btree (game_id,card_id)
     where card_id < 81; -- card 81 is empty
 
 
@@ -136,8 +137,8 @@ create table moves (
     created_at timestamp without time zone not null default (now() at time zone 'utc')
 );
 
-create index idx_0007 on moves using btree (game_id,player_id);
-create index idx_0008 on moves using btree (game_id,created_at);
+create index idx_moves_000 on moves using btree (game_id,player_id);
+create index idx_moves_001 on moves using btree (game_id,created_at);
 
 -- shuffles table
 
@@ -153,7 +154,7 @@ create table shuffles (
     created_at timestamp without time zone not null default (now() at time zone 'utc')
 );
 
-create index idx_0009 on shuffles using btree (game_id,player_id);
+create index idx_shuffles_000 on shuffles using btree (game_id,player_id);
 
 --
 -- Setup data triggers
