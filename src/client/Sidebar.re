@@ -66,11 +66,6 @@ let make = (_children, ~rect, ~boardCards, ~players, ~game: Messages.game_update
     let s = ReactEvent.Form.target(evt)##value;
     sendMessage(ClientUtil.make_theme_msg(Theme.of_string(s)));
   };
-  let gameUrl =
-    switch (ClientUtil.game_url()) {
-    | Some(url) => url
-    | None => "http://www.example.com"
-    };
   {
     ...component,
     render: _self =>
@@ -81,8 +76,6 @@ let make = (_children, ~rect, ~boardCards, ~players, ~game: Messages.game_update
               MaterialUi.(
                 <div className=classes.root>
                   <Grid container=true>
-                    <Grid item=true> (ReasonReact.string("SetML")) </Grid>
-                    <Grid item=true> <a href=gameUrl> (ReasonReact.string(gameUrl)) </a> </Grid>
                     <Grid item=true> button </Grid>
                     <Grid item=true>
                       <ul className=classes.list>

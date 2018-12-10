@@ -50,19 +50,19 @@ let printSets = (boardCards: array(Messages.board_card_data), theme) => {
 
 let shouldRedraw = (oldState: state, newState: state) =>
   if (oldState.boardGrid.width != newState.boardGrid.width || oldState.boardGrid.height != newState.boardGrid.height) {
-    (true, true);
+    (true, true, false);
   } else if (oldState.game.theme != newState.game.theme) {
-    (true, true);
+    (true, true, false);
   } else if (oldState.game.status != newState.game.status) {
-    (true, true);
+    (true, true, false);
   } else if (oldState.boardGrid.values != newState.boardGrid.values) {
-    (false, true);
+    (false, true, false);
   } else if (Selected.is_symmetric_diff(oldState.selected, newState.selected)) {
-    (false, true);
+    (false, true, false);
   } else if (! Option.eq(oldState.hovered, newState.hovered, (a, b) => a == b)) {
-    (false, true);
+    (false, true, false);
   } else {
-    (false, false);
+    (false, false, false);
   };
 
 let make = (_children, ~rect, ~columns, ~rows, ~boardCards, ~game, ~sendMessage) => {
@@ -146,7 +146,7 @@ let make = (_children, ~rect, ~columns, ~rows, ~boardCards, ~game, ~sendMessage)
     ();
   },
   didUpdate: ({oldSelf, newSelf}) => {
-    let (redrawCards, redrawBoard) = shouldRedraw(oldSelf.state, newSelf.state);
+    let (redrawCards, redrawBoard, _resetSelected) = shouldRedraw(oldSelf.state, newSelf.state);
     if (redrawCards || redrawBoard) {
       switch (newSelf.state.context, newSelf.state.renderContext) {
       | ({contents: Some(dstCtx)}, {contents: Some(srcCtx)}) =>
