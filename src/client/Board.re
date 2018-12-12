@@ -65,6 +65,28 @@ let shouldRedraw = (oldState: state, newState: state) =>
     (false, false, false);
   };
 
+let renderBoard = (srcCtx, dstCtx, state) =>
+  CardRender.renderBoard(
+    srcCtx,
+    state.cardGrid,
+    dstCtx,
+    state.boardGrid,
+    state.game.theme,
+    state.game.status,
+    state.selected,
+    state.hovered,
+  );
+
+let renderCards = (srcCtx, dstCtx, state) =>
+  Js.Promise.(
+    all(CardRender.render(srcCtx, state.cardGrid, state.game.theme))
+    |> then_(_results => {
+         printSets(state.boardGrid.values, state.game.theme);
+         renderBoard(srcCtx, dstCtx, state);
+         resolve();
+       })
+  );
+
 let make = (_children, ~rect, ~columns, ~rows, ~boardCards, ~game, ~sendMessage) => {
   ...component,
   reducer: (action, state) =>
@@ -151,35 +173,9 @@ let make = (_children, ~rect, ~columns, ~rows, ~boardCards, ~game, ~sendMessage)
       switch (newSelf.state.context, newSelf.state.renderContext) {
       | ({contents: Some(dstCtx)}, {contents: Some(srcCtx)}) =>
         if (redrawCards) {
-          Js.Promise.(
-            all(CardRender.render(srcCtx, newSelf.state.cardGrid, newSelf.state.game.theme))
-            |> then_(_results => {
-                 /* printSets(newSelf.state.boardGrid.values, newSelf.state.game.theme); */
-                 CardRender.renderBoard(
-                   srcCtx,
-                   newSelf.state.cardGrid,
-                   dstCtx,
-                   newSelf.state.boardGrid,
-                   newSelf.state.game.theme,
-                   newSelf.state.game.status,
-                   newSelf.state.selected,
-                   newSelf.state.hovered,
-                 );
-                 resolve();
-               })
-          )
-          |> ignore;
+          renderCards(srcCtx, dstCtx, newSelf.state) |> ignore;
         } else if (redrawBoard) {
-          CardRender.renderBoard(
-            srcCtx,
-            newSelf.state.cardGrid,
-            dstCtx,
-            newSelf.state.boardGrid,
-            newSelf.state.game.theme,
-            newSelf.state.game.status,
-            newSelf.state.selected,
-            newSelf.state.hovered,
-          );
+          renderBoard(srcCtx, dstCtx, newSelf.state);
         }
       | _ => Js.log("Unable to redraw blocks: No context found!")
       };
