@@ -63,6 +63,10 @@ module Q = struct
         Caqti_request.find Caqti_type.(tup2 int int) Caqti_type.int
         "insert into games (dim0, dim1) values (?, ?) returning id"
 
+    let set_next_game_id_query =
+        Caqti_request.exec Caqti_type.(tup2 int int)
+        "update games set next_game_id = ? where id = ?"
+
     let create_board_cards_query =
         Caqti_request.exec Caqti_type.(tup2 int int)
         {eos|
@@ -333,6 +337,14 @@ module I = struct
         C.find Q.increment_game_card_idx_query (12, game_id) >>=? fun _ ->
         Lwt.return_ok game_id
 
+    let create_game_from_previous (module C : Caqti_lwt.CONNECTION) (dim0, dim1, previous_game_id) =
+        C.find Q.create_game_query (dim0, dim1) >>=? fun game_id ->
+        C.exec Q.set_next_game_id_query (game_id, previous_game_id) >>=? fun _ ->
+        C.find (Q.create_game_cards_query game_id) () >>=? fun _ ->
+        C.exec Q.create_board_cards_query (game_id, 12) >>=? fun () ->
+        C.find Q.increment_game_card_idx_query (12, game_id) >>=? fun _ ->
+        Lwt.return_ok game_id
+
     let game_exists (module C : Caqti_lwt.CONNECTION) game_id =
         C.find Q.game_exists_query game_id >>=? fun exists ->
         Lwt.return_ok exists
@@ -584,7 +596,9 @@ let with_pool ?(priority=0.0) ?(mode=ReadCommitted) (pool: t) f arg =
 let make ?(max_size=8) uri_str: (t, Caqti_error.t) result Lwt.t =
     Lwt.return (Caqti_lwt.connect_pool ~max_size (Uri.of_string uri_str))
 
-let create_game p arg = with_pool p I.create_game arg
+let create_game p ?(dim0=3) ?(dim1=4) () = with_pool p I.create_game (dim0, dim1)
+
+let create_game_from_previous p ?(dim0=3) ?(dim1=4) previous_game_id = with_pool p I.create_game_from_previous (dim0, dim1, previous_game_id)
 
 let game_exists p arg = with_pool p I.game_exists arg
 

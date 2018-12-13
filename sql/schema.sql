@@ -52,6 +52,8 @@ create table games (
     theme game_theme_enum not null default 'classic',
     dim0 smallint not null default 3,
     dim1 smallint not null default 4,
+    next_game_id bigint references games(id)
+        on delete set null,
     created_at timestamp without time zone default (now() at time zone 'utc'),
     check (id <= 2176782335),
     check (dim0 >= 3 and dim0 <= 4),
@@ -59,6 +61,8 @@ create table games (
 );
 
 create unique index idx_games_000 on games using btree (id_counter);
+create unique index idx_games_001 on games using btree (next_game_id)
+    where next_game_id is not null;
 
 
 -- games_players tabe

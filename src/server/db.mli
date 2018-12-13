@@ -6,7 +6,8 @@ type mode =
 
 type t
 val make : ?max_size:int -> string -> (t, Caqti_error.t) result Lwt.t
-val create_game : t -> (int * int) -> (int, Caqti_error.t) result Lwt.t
+val create_game : t -> ?dim0:int -> ?dim1:int -> unit -> (int, Caqti_error.t) result Lwt.t
+val create_game_from_previous : t -> ?dim0:int -> ?dim1:int -> int -> (int, Caqti_error.t) result Lwt.t
 val game_exists : t -> int -> (bool, Caqti_error.t) result Lwt.t
 val find_game_card_idx : t -> int -> (int, Caqti_error.t) result Lwt.t
 val create_player : t -> unit -> (int, Caqti_error.t) result Lwt.t

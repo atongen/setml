@@ -127,7 +127,7 @@ let make_handler pool pubsub clients crypto docroot =
         match Server_util.form_value my_body "token" with
         | Some (token) ->
           if session.token = token then (
-            Db.create_game pool (3, 4) >>=? fun game_id ->
+            Db.create_game pool () >>=? fun game_id ->
             redirect ~headers (Route.game_show_uri game_id)
           ) else render_forbidden
         | None -> render_forbidden)
