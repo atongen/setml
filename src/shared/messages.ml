@@ -1,6 +1,7 @@
 let type_key = "type"
 let token_key = "token"
 let game_id_key = "game_id"
+let next_game_id_key = "next_game_id"
 let player_id_key = "player_id"
 let name_key = "name"
 let name_data_key = "name_data"
@@ -152,14 +153,16 @@ type game_update_data = {
     theme: Theme.t;
     dim0: int;
     dim1: int;
+    next_game_id: int option;
 }
 
-let make_game_update_data card_idx status theme dim0 dim1 = {
+let make_game_update_data card_idx status theme dim0 dim1 next_game_id = {
     card_idx;
     status = Game_status.of_string status;
     theme = Theme.of_string theme;
     dim0;
     dim1;
+    next_game_id;
 }
 
 type game_data = {
@@ -252,8 +255,8 @@ let make_server_card idx card_id =
 let make_server_board_card idx card_id =
     Server_board_card (make_board_card_data idx card_id)
 
-let make_server_game_update card_idx status theme dim0 dim1 =
-    Server_game_update (make_game_update_data card_idx status theme dim0 dim1)
+let make_server_game_update card_idx status theme dim0 dim1 next_game_id =
+    Server_game_update (make_game_update_data card_idx status theme dim0 dim1 next_game_id)
 
 let make_server_score player_id score =
     Server_score (make_score_data player_id score)
@@ -307,8 +310,12 @@ let rec to_string = function
         Printf.sprintf "<message (%s) idx=%d board_card=%s>"
             (message_type_to_string Server_board_card_type) d.idx (card_opt_to_string d.card)
     | Server_game_update d ->
-        Printf.sprintf "<message (%s) card_idx=%d status=%s theme=%s dim0=%d dim1=%d>"
-            (message_type_to_string Server_game_update_type) d.card_idx (Game_status.to_string d.status) (Theme.to_string d.theme) d.dim0 d.dim1
+        let next_game_id = match d.next_game_id with
+        | Some(gid) -> string_of_int gid
+        | None -> "0"
+        in
+        Printf.sprintf "<message (%s) card_idx=%d status=%s theme=%s dim0=%d dim1=%d next_game_id=%s>"
+            (message_type_to_string Server_game_update_type) d.card_idx (Game_status.to_string d.status) (Theme.to_string d.theme) d.dim0 d.dim1 next_game_id
     | Server_score d ->
         Printf.sprintf "<message (%s) player_id=%d score=%d>"
             (message_type_to_string Server_score_type) d.player_id d.score
