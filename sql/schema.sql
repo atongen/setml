@@ -254,7 +254,8 @@ begin
         'status', NEW.status,
         'theme', NEW.theme,
         'dim0', NEW.dim0,
-        'dim1', NEW.dim1
+        'dim1', NEW.dim1,
+        'next_game_id', NEW.next_game_id
     )::text);
     return NEW;
 end;
@@ -323,7 +324,8 @@ begin
                     'status', status,
                     'theme', theme,
                     'dim0', dim0,
-                    'dim1', dim1
+                    'dim1', dim1,
+                    'next_game_id', next_game_id
                 )
                 from games
                 where id = NEW.game_id

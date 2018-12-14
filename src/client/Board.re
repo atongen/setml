@@ -152,22 +152,43 @@ let make = (_children, ~rect, ~columns, ~rows, ~boardCards, ~game, ~sendMessage)
     };
   },
   willReceiveProps: self => {
+    Js.log("willReceiveProps");
     let boardGrid = makeBoardGrid(rect.Rect.w, rect.h, columns, rows, boardCards);
     {...self.state, boardGrid, cardGrid: CardRender.makeGrid(boardGrid.blockSize), game};
   },
   didMount: self => {
+    Js.log("didMount");
+    /* board canvas */
     let boardCanvas = CanvasUtils.getCanvas("board");
-    let boardOffset = CanvasUtils.offset(boardCanvas);
     let boardContext = CanvasUtils.getContext(boardCanvas, "2d");
+    self.state.context := Some(boardContext);
+    /* card render canvas */
     let renderCanvas = CanvasUtils.getCanvas("card-render");
     let renderContext = CanvasUtils.getContext(renderCanvas, "2d");
-    self.state.context := Some(boardContext);
     self.state.renderContext := Some(renderContext);
+    /* board offset for click/hover location */
+    let boardOffset = CanvasUtils.offset(boardCanvas);
     self.state.boardOffset := Some(boardOffset);
+    /* render card canvas */
     CardRender.render(renderContext, self.state.cardGrid, self.state.game.theme) |> ignore;
     ();
   },
+  shouldUpdate: ({oldSelf, newSelf}) => {
+    Js.log("shouldUpdate");
+    true;
+  },
+  willUpdate: ({oldSelf, newSelf}) => {
+    Js.log("willUpdate");
+    ();
+  },
+  /*
+   willUnmount: self => {
+     Js.log("willUnmount");
+     ();
+   },
+   */
   didUpdate: ({oldSelf, newSelf}) => {
+    Js.log("didUpdate");
     let (redrawCards, redrawBoard, _resetSelected) = shouldRedraw(oldSelf.state, newSelf.state);
     if (redrawCards || redrawBoard) {
       switch (newSelf.state.context, newSelf.state.renderContext) {
@@ -182,6 +203,7 @@ let make = (_children, ~rect, ~columns, ~rows, ~boardCards, ~game, ~sendMessage)
     };
   },
   render: ({state, send}) => {
+    Js.log("render");
     let renderRect = Grid.outerRect(state.cardGrid);
     <div>
       <canvas

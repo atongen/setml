@@ -299,12 +299,13 @@ module Q = struct
     let delete_players_query = Caqti_request.exec Caqti_type.unit "delete from players;"
 
     let find_game_data_query =
-        Caqti_request.find Caqti_type.int Caqti_type.(tup4 int string string (tup2 int int))
+        Caqti_request.find Caqti_type.int Caqti_type.(tup2 (tup4 int string string (option int)) (tup2 int int))
         {eos|
             select
                 card_idx,
                 status,
                 theme,
+                next_game_id,
                 dim0,
                 dim1
             from games
@@ -394,7 +395,7 @@ module I = struct
         ) else Lwt.return_error (Client_error "board cards are not a set")
 
     let create_shuffle (module C : Caqti_lwt.CONNECTION) (game_id, player_id) =
-        C.find Q.find_game_data_query game_id >>=? fun (deck_card_idx, _, _, (dim0, dim1)) ->
+        C.find Q.find_game_data_query game_id >>=? fun ((deck_card_idx, _, _, _), (dim0, dim1)) ->
         let num_board_cards = dim0 * dim1 in
         (* include board in deck *)
         let card_idx = deck_card_idx - num_board_cards in
@@ -557,9 +558,9 @@ module I = struct
         Lwt.return_ok ()
 
     let find_game_data (module C : Caqti_lwt.CONNECTION) game_id =
-        C.find Q.find_game_data_query game_id >>=? fun (card_idx, status, theme, (dim0, dim1)) ->
+        C.find Q.find_game_data_query game_id >>=? fun ((card_idx, status, theme, next_game_id), (dim0, dim1)) ->
         let open Messages in
-        Lwt.return_ok (make_game_update_data card_idx status theme dim0 dim1)
+        Lwt.return_ok (make_game_update_data card_idx status theme dim0 dim1 next_game_id)
 
     let find_player_games (module C : Caqti_lwt.CONNECTION) (player_id, limit) =
         C.collect_list Q.find_player_games_query (player_id, limit) >>=? fun player_games_list ->

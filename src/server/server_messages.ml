@@ -47,8 +47,8 @@ module Server_message_converter : Messages.CONVERT = struct
                 ]
             | Server_game_update d ->
                 let next_game_id = match d.next_game_id with
-                | Some(gid) -> gid
-                | None -> 0
+                | Some(gid) -> `Int gid
+                | None -> `Null
                 in
                 `Assoc [
                     (type_key, `String (message_type_to_string Server_game_update_type));
@@ -57,7 +57,7 @@ module Server_message_converter : Messages.CONVERT = struct
                     (theme_key, `String (Theme.to_string d.theme));
                     (dim0_key, `Int d.dim0);
                     (dim1_key, `Int d.dim1);
-                    (next_game_id_key, `Int next_game_id);
+                    (next_game_id_key, next_game_id);
                 ]
             | Server_score d ->
                 `Assoc [
@@ -159,6 +159,7 @@ module Server_message_converter : Messages.CONVERT = struct
         (json |> Util.member theme_key |> Util.to_string)
         (json |> Util.member dim0_key |> Util.to_int)
         (json |> Util.member dim1_key |> Util.to_int)
+        (json |> Util.member next_game_id_key |> Util.to_int_option)
 
     let name_data_of_json json =
         make_name_data

@@ -46,15 +46,22 @@ module ClientMessageConverter: CONVERT = {
           (idx_key, int(d.idx)),
           (card_id_key, int(Card.to_int_opt(d.card))),
         ])
-      | Server_game_update(d) =>
-        object_([
-          (type_key, string(message_type_to_string(Server_game_update_type))),
-          (card_idx_key, int(d.card_idx)),
-          (status_key, string(Game_status.to_string(d.status))),
-          (theme_key, string(Theme.to_string(d.theme))),
-          (dim0_key, int(d.dim0)),
-          (dim1_key, int(d.dim1)),
-        ])
+      | Server_game_update(d) => {
+          let next_game_id =
+            switch (d.next_game_id) {
+            | Some(ngid) => int(ngid)
+            | None => null
+            };
+          object_([
+            (type_key, string(message_type_to_string(Server_game_update_type))),
+            (card_idx_key, int(d.card_idx)),
+            (status_key, string(Game_status.to_string(d.status))),
+            (theme_key, string(Theme.to_string(d.theme))),
+            (dim0_key, int(d.dim0)),
+            (dim1_key, int(d.dim1)),
+            (next_game_id_key, next_game_id),
+          ]);
+        }
       | Server_score(d) =>
         object_([
           (type_key, string(message_type_to_string(Server_score_type))),
@@ -156,6 +163,7 @@ module ClientMessageConverter: CONVERT = {
       json |> field(theme_key, string),
       json |> field(dim0_key, int),
       json |> field(dim1_key, int),
+      json |> field(next_game_id_key, optional(int)),
     );
   };
   let name_data_decoder = json => {

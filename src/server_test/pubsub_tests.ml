@@ -7,9 +7,13 @@ open Lib.Server_messages
 
 open Test_lib.Test_util
 
-let setup_game pubsub =
+let create_game pubsub =
     let game_id = Crypto.random_int 1_679_616 60_466_175 in
     Pubsub.empty_query pubsub ("insert into games (id) values (" ^ string_of_int game_id ^ ");");
+    game_id
+
+let setup_game pubsub =
+    let game_id = create_game pubsub in
     Pubsub.empty_query pubsub ("listen game_" ^ string_of_int game_id ^ ";");
     game_id
 
@@ -60,7 +64,7 @@ let presence_check pubsub =
                     let expMsg0 = (Messages.make_server_game [
                             Messages.make_player_data player_id player_name present 0 0;
                         ] (make_board_cards_data (0 --^ 12))
-                        (make_game_update_data 0 "new" "classic" 3 4)) in
+                        (make_game_update_data 0 "new" "classic" 3 4 None)) in
                     let expMsg1 = Messages.make_server_presence player_id true in
                     let json0 = msgs.(0).extra in
                     let json1 = msgs.(1).extra in
@@ -95,7 +99,7 @@ let presence_check_accum pubsub =
         let expMsg0 = (Messages.make_server_game [
             Messages.make_player_data player_id player_name true 0 0;
         ] (make_board_cards_data (0 --^ 12))
-        (make_game_update_data 0 "new" "classic" 3 4)) in
+        (make_game_update_data 0 "new" "classic" 3 4 None)) in
         let expMsg1 = Messages.make_server_presence player_id true in
         let expMsg2 = Messages.make_server_presence player_id false in
         let json0 = msgs_arr.(0).extra in
@@ -153,28 +157,42 @@ let board_card_check pubsub =
 
 let game_update_check pubsub =
     fun test_ctx ->
-        let game_id = setup_game pubsub in
-
-        let check (update, card_idx, status, theme, dim0, dim1) =
-            Pubsub.empty_query pubsub @@ Printf.sprintf "update games set %s where id = %d;" update game_id;
+        let check ?(card_idx=0) ?(status="new") ?(theme="classic") ?(dim0=3) ?(dim1=4) ?(next_game=false) update =
+            let game_id = setup_game pubsub in
+            let (my_update, next_game_id) = if next_game then
+                let ngid = create_game pubsub in
+                let u = Printf.sprintf "%s next_game_id = %d" update ngid in
+                (u, Some ngid)
+            else
+                (update, None)
+            in
+            Pubsub.empty_query pubsub @@ Printf.sprintf "update games set %s where id = %d;" my_update game_id;
             let msgs = Pubsub.get_notifications pubsub in
             assert_equal ~printer:string_of_int 1 (List.length msgs);
             let gotMsg = (List.hd msgs).extra |> Server_message_converter.of_json in
-            let expMsg = Messages.make_server_game_update card_idx status theme dim0 dim1 in
+            let expMsg = Messages.make_server_game_update card_idx status theme dim0 dim1 next_game_id in
             assert_equal ~ctxt:test_ctx expMsg gotMsg ~printer:Messages.to_string;
+            teardown_game pubsub game_id;
+            ()
         in
 
-        List.iter check [
-            ("card_idx = 13", 13, "new", "classic", 3, 4);
-            ("status = 'started'", 13, "started", "classic", 3, 4);
-            ("card_idx = 14, status = 'complete'", 14, "complete", "classic", 3, 4);
-            ("status = 'new', theme = 'open_source'", 14, "new", "open_source", 3, 4);
-            ("dim0 = 4", 14, "new", "open_source", 4, 4);
-            ("dim1 = 3", 14, "new", "open_source", 4, 3);
-        ];
+        check ~card_idx:13 "card_idx = 13";
+        check ~status:"started" "status = 'started'";
+        check ~status:"complete" "status = 'complete'";
+        check ~theme:"open_source" "theme = 'open_source'";
+        check ~dim0:4 "dim0 = 4";
+        check ~dim1:3 "dim1 = 3";
+        check ~next_game:true "";
 
-        teardown_game pubsub game_id
-
+        check ~card_idx:13 ~status:"started" "card_idx = 13, status = 'started'";
+        check ~status:"started" ~dim0:4 "status = 'started', dim0 = 4";
+        check ~status:"complete" ~dim1:3 "status = 'complete', dim1 = 3";
+        check ~theme:"open_source" ~status:"complete" "theme = 'open_source', status = 'complete'";
+        check ~theme:"open_source" ~dim0:4 "theme = 'open_source', dim0 = 4";
+        check ~theme:"open_source" ~dim1:3 "theme = 'open_source', dim1 = 3";
+        check ~dim0:4 ~dim1:3 "dim0 = 4, dim1 = 3";
+        check ~next_game:true ~card_idx:27 "card_idx = 27,";
+        check ~next_game:true ~card_idx:29 ~status:"started" ~theme:"open_source" "card_idx = 29, status = 'started', theme = 'open_source',"
 
 let moves_insert_check pubsub =
     fun test_ctx ->

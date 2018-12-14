@@ -181,18 +181,3 @@ let drawSvgImagePromise = (svg, ctx, rect) =>
     );
     setImageSrc(image, formatDataUrl("image/svg+xml", svg));
   });
-
-let drawSvgImagePromiseTmp = (svg, ctx, rect) => {
-  let image = HtmlImageElementRe.makeWithSize(int_of_float(rect.Rect.w), int_of_float(rect.h));
-  Js.Promise.(
-    setOnload(
-      image,
-      () => {
-        clearRect(rect, ctx);
-        drawImageSimple(ctx, ~image, ~dx=rect.Rect.x, ~dy=rect.y);
-        resolve() |> ignore;
-        ();
-      },
-    )
-  );
-};
