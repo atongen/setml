@@ -9,9 +9,6 @@ type t =
     | Static
     | Route_not_found
 
-let string_of_game_id id = Base_conv.base36_of_int id
-let game_id_string str = Base_conv.int_of_base36 str
-
 let path_parts path = Str.split (Str.regexp "\\/+") path |> Array.of_list
 
 let of_meth_and_path meth path =
@@ -24,11 +21,13 @@ let of_meth_and_path meth path =
     else if n == 1 && String.equal parts.(0) "games" && meth == `POST then
         Game_create
     else if n == 2 && String.equal parts.(0) "games" && meth == `GET then
-        let game_id = game_id_string parts.(1) in
-        Game_show game_id
+        match Base_conv.int_of_base36_opt parts.(1) with
+        | Some game_id -> Game_show game_id
+        | None -> Route_not_found
     else if n == 3 && String.equal parts.(0) "games" && String.equal parts.(2) "ws" && meth == `GET then
-        let game_id = game_id_string parts.(1) in
-        Ws_show game_id
+        match Base_conv.int_of_base36_opt parts.(1) with
+        | Some game_id -> Ws_show game_id
+        | None -> Route_not_found
     else if meth == `GET then
         Static
     else
@@ -42,12 +41,12 @@ let of_req req =
 
 let to_meth_and_path = function
     | Index -> (`GET, "/")
-    | Ws_show (game_id) ->
-        let game_id_str = string_of_game_id game_id in
+    | Ws_show game_id ->
+        let game_id_str = Base_conv.base36_of_int game_id in
         (`GET, "/games/" ^ game_id_str ^ "/ws")
     | Game_create -> (`POST, "/games")
-    | Game_show (game_id) ->
-        let game_id_str = string_of_game_id game_id in
+    | Game_show game_id ->
+        let game_id_str = Base_conv.base36_of_int game_id in
         (`GET, "/games/" ^ game_id_str)
     | Player_games -> (`GET, "/player_games")
     | Static -> failwith "Cannot build static route"

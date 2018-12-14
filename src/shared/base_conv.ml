@@ -60,6 +60,10 @@ let int_of_base s b =
 (* decode from base-36 positive string to base-10 integer *)
 let int_of_base36 s = int_of_base s 36
 
+let int_of_base36_opt s =
+    try Some (int_of_base36 s)
+    with Invalid_argument _e -> None
+
 let base_of_int n b =
     let my_chars = chars_of_base b in
     let rec aux n ac =

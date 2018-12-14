@@ -355,19 +355,24 @@ module I = struct
         Lwt.return_ok game_id
 
     let create_game_from_previous (module C : Caqti_lwt.CONNECTION) (dim0, dim1, previous_game_id) =
-        C.find Q.find_next_game_id_query previous_game_id >>=? function
-        | Some next_game_id ->
-            Lwt.return_ok next_game_id
-        | None ->
-            C.find Q.create_game_query (dim0, dim1) >>=? fun game_id ->
-            C.find Q.set_next_game_id_query (game_id, previous_game_id) >>=? fun num_updated ->
-            if num_updated < 1 then
-                Lwt.return_error (Client_error "Next game already created")
-            else
-                C.find (Q.create_game_cards_query game_id) () >>=? fun _c ->
-                C.exec Q.create_board_cards_query (game_id, 12) >>=? fun () ->
-                C.find Q.increment_game_card_idx_query (12, game_id) >>=? fun _c ->
-                Lwt.return_ok game_id
+        C.find Q.game_exists_query previous_game_id >>=? fun exists ->
+        if exists then (
+            C.find Q.find_next_game_id_query previous_game_id >>=? function
+            | Some next_game_id ->
+                Lwt.return_ok next_game_id
+            | None ->
+                C.find Q.create_game_query (dim0, dim1) >>=? fun game_id ->
+                C.find Q.set_next_game_id_query (game_id, previous_game_id) >>=? fun num_updated ->
+                if num_updated < 1 then
+                    Lwt.return_error (Client_error "Next game already created")
+                else
+                    C.find (Q.create_game_cards_query game_id) () >>=? fun _c ->
+                    C.exec Q.create_board_cards_query (game_id, 12) >>=? fun () ->
+                    C.find Q.increment_game_card_idx_query (12, game_id) >>=? fun _c ->
+                    Lwt.return_ok game_id
+        ) else (
+            Lwt.return_error (Client_error "Previous game does not exist")
+        )
 
     let game_exists (module C : Caqti_lwt.CONNECTION) game_id =
         C.find Q.game_exists_query game_id >>=? fun exists ->

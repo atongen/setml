@@ -1,5 +1,6 @@
 val int_of_base : string -> int -> int
 val int_of_base36 : string -> int
+val int_of_base36_opt : string -> int option
 val base_of_int : int -> int -> string
 val base36_of_int : int -> string
 val base_list_of_int : base:int -> size:int -> int -> int list

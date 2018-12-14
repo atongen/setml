@@ -11,7 +11,7 @@ let render_index ~headers ~player_id token manifest info =
     ()
 
 let render_game ~headers ~player_id game_id token manifest info =
-  let game_id_str = Route.string_of_game_id game_id in
+  let game_id_str = Shared.Base_conv.base36_of_int game_id in
   Cohttp_lwt_unix.Server.respond_string
     ~headers
     ~status:`OK
@@ -127,8 +127,13 @@ let make_handler pool pubsub clients crypto docroot =
         match Server_util.form_value my_body "token" with
         | Some (token) ->
           if session.token = token then (
-            Db.create_game pool () >>=? fun game_id ->
-            redirect ~headers (Route.game_show_uri game_id)
+            match Server_util.form_value_int_of_base36 my_body "previous_game_id" with
+            | Some previous_game_id ->
+                Db.create_game_from_previous pool previous_game_id >>=? fun game_id ->
+                redirect ~headers (Route.game_show_uri game_id)
+            | None ->
+                Db.create_game pool () >>=? fun game_id ->
+                redirect ~headers (Route.game_show_uri game_id)
           ) else render_forbidden
         | None -> render_forbidden)
     | Route.Game_show (game_id) -> (

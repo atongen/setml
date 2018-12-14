@@ -316,6 +316,11 @@ let create_game_from_previous_test db =
         assert_equal (Some game4_id) game1_data_after.next_game_id;
         assert_equal None game4_data.next_game_id;
 
+        (* invalid previous game *)
+        Db.create_game_from_previous db 1234567890 >>= function
+        | Ok _game_id -> assert_failure "Created game from invalid previous game"
+        | Error _e -> ();
+
         Lwt.return_unit
 
 (* don't run this every time *)
