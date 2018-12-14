@@ -291,14 +291,31 @@ let player_games_test db =
 let create_game_from_previous_test db =
     fun () ->
         Db.create_game db () >>=? fun game0_id ->
+
+        (* first in chain *)
         Db.create_game_from_previous db game0_id >>=? fun game1_id ->
+        Db.create_game_from_previous db game0_id >>=? fun game2_id ->
+        Db.create_game_from_previous db game0_id >>=? fun game3_id ->
+        assert_equal game1_id game2_id;
+        assert_equal game2_id game3_id;
+
         Db.find_game_data db game0_id >>=? fun game0_data ->
         Db.find_game_data db game1_id >>=? fun game1_data ->
         assert_equal (Some game1_id) game0_data.next_game_id;
         assert_equal None game1_data.next_game_id;
-        Db.create_game_from_previous db game0_id >>= function
-        | Ok _game2_id -> assert_failure "created duplicate game from previous"
-        | Error _e -> ();
+
+        (* second in chain *)
+        Db.create_game_from_previous db game1_id >>=? fun game4_id ->
+        Db.create_game_from_previous db game1_id >>=? fun game5_id ->
+        Db.create_game_from_previous db game1_id >>=? fun game6_id ->
+        assert_equal game4_id game5_id;
+        assert_equal game5_id game6_id;
+
+        Db.find_game_data db game1_id >>=? fun game1_data_after ->
+        Db.find_game_data db game4_id >>=? fun game4_data ->
+        assert_equal (Some game4_id) game1_data_after.next_game_id;
+        assert_equal None game4_data.next_game_id;
+
         Lwt.return_unit
 
 (* don't run this every time *)
