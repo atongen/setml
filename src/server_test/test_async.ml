@@ -21,6 +21,7 @@ let suite db =
         "update_player_name_test", Db_tests.update_player_name_test db;
         "update_game_theme_test", Db_tests.update_game_theme_test db;
         "player_games_test", Db_tests.player_games_test db;
+        "create_game_from_previous", Db_tests.create_game_from_previous_test db;
     ]
 
 let () =

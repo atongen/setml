@@ -312,7 +312,7 @@ let rec to_string = function
     | Server_game_update d ->
         let next_game_id = match d.next_game_id with
         | Some(gid) -> string_of_int gid
-        | None -> "0"
+        | None -> "NULL"
         in
         Printf.sprintf "<message (%s) card_idx=%d status=%s theme=%s dim0=%d dim1=%d next_game_id=%s>"
             (message_type_to_string Server_game_update_type) d.card_idx (Game_status.to_string d.status) (Theme.to_string d.theme) d.dim0 d.dim1 next_game_id

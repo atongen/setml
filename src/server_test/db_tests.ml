@@ -23,14 +23,10 @@ let create_game_test db =
         let dims = List.sort_uniq (fun (x0, x1) (y0, y1) ->
             let c0 = compare x0 y0 in
             let c1 = compare x1 y1 in
-            if c0 = c1 then
-                c0
-            else if c0 = 0 then
-                c1
-            else if c1 = 0 then
-                c0
-            else
-                c0
+            if c0 = c1 then c0
+            else if c0 = 0 then c1
+            else if c1 = 0 then c0
+            else c0
         ) allDims in
         List.iter (fun (dim0, dim1) ->
             if dim0 < 3 || dim0 > 4 || dim1 < 3 || dim1 > 4 then (
@@ -290,6 +286,19 @@ let player_games_test db =
             (game1_id, game_data1);
         ] player_games3;
 
+        Lwt.return_unit
+
+let create_game_from_previous_test db =
+    fun () ->
+        Db.create_game db () >>=? fun game0_id ->
+        Db.create_game_from_previous db game0_id >>=? fun game1_id ->
+        Db.find_game_data db game0_id >>=? fun game0_data ->
+        Db.find_game_data db game1_id >>=? fun game1_data ->
+        assert_equal (Some game1_id) game0_data.next_game_id;
+        assert_equal None game1_data.next_game_id;
+        Db.create_game_from_previous db game0_id >>= function
+        | Ok _game2_id -> assert_failure "created duplicate game from previous"
+        | Error _e -> ();
         Lwt.return_unit
 
 (* don't run this every time *)

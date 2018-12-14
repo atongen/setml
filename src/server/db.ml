@@ -64,8 +64,16 @@ module Q = struct
         "insert into games (dim0, dim1) values (?, ?) returning id"
 
     let set_next_game_id_query =
-        Caqti_request.exec Caqti_type.(tup2 int int)
-        "update games set next_game_id = ? where id = ?"
+        Caqti_request.find Caqti_type.(tup2 int int) Caqti_type.int
+        {eos|
+            with rows as (
+                update games
+                set next_game_id = ?
+                where id = ?
+                and next_game_id is null
+                returning id
+            ) select count(*) from rows;
+        |eos}
 
     let create_board_cards_query =
         Caqti_request.exec Caqti_type.(tup2 int int)
@@ -340,11 +348,14 @@ module I = struct
 
     let create_game_from_previous (module C : Caqti_lwt.CONNECTION) (dim0, dim1, previous_game_id) =
         C.find Q.create_game_query (dim0, dim1) >>=? fun game_id ->
-        C.exec Q.set_next_game_id_query (game_id, previous_game_id) >>=? fun _ ->
-        C.find (Q.create_game_cards_query game_id) () >>=? fun _ ->
-        C.exec Q.create_board_cards_query (game_id, 12) >>=? fun () ->
-        C.find Q.increment_game_card_idx_query (12, game_id) >>=? fun _ ->
-        Lwt.return_ok game_id
+        C.find Q.set_next_game_id_query (game_id, previous_game_id) >>=? fun num_updated ->
+        if num_updated < 1 then
+            Lwt.return_error (Client_error "Next game already created")
+        else
+            C.find (Q.create_game_cards_query game_id) () >>=? fun _c ->
+            C.exec Q.create_board_cards_query (game_id, 12) >>=? fun () ->
+            C.find Q.increment_game_card_idx_query (12, game_id) >>=? fun _c ->
+            Lwt.return_ok game_id
 
     let game_exists (module C : Caqti_lwt.CONNECTION) game_id =
         C.find Q.game_exists_query game_id >>=? fun exists ->
