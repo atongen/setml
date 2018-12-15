@@ -13,9 +13,9 @@ let titleAndMessage = maybeWinner =>
     let title = ClientUtil.get_player_name(winner) ++ " won!";
     let message =
       if (ClientUtil.is_current_player(winner.player_id)) {
-        "Congratulations! I bet you can't do that again!";
+        "Congratulations! Care for a rematch?";
       } else {
-        "Ooh, bummer. You better go for a rematch!";
+        "Ooh, bummer. Care for a rematch?";
       };
     (title, message);
   | None => ("Nobody won!?!", "Try again?")
