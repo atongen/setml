@@ -8,7 +8,7 @@ let buttonStyle = color =>
 
 let makeButton = (game: Messages.game_update_data, setsOnBoard, sendMessage) =>
   switch (game.status) {
-  | Game_status.New =>
+  | New =>
     let startClick = _evt => sendMessage(ClientUtil.make_start_game_msg());
     let style = buttonStyle(Some("green"));
     MaterialUi.(
@@ -17,7 +17,7 @@ let makeButton = (game: Messages.game_update_data, setsOnBoard, sendMessage) =>
         <Icon> (ReasonReact.string("play_arrow")) </Icon>
       </Button>
     );
-  | Game_status.Started =>
+  | Started =>
     let shuffleClick = _evt => sendMessage(ClientUtil.make_shuffle_msg());
     let (variant, style) =
       if (setsOnBoard == 0) {
@@ -31,38 +31,7 @@ let makeButton = (game: Messages.game_update_data, setsOnBoard, sendMessage) =>
         <Icon> (ReasonReact.string("shuffle")) </Icon>
       </Button>
     );
-  | Game_status.Complete =>
-    switch (game.next_game_id) {
-    | Some(gid) =>
-      let gameId = Base_conv.base36_of_int(gid);
-      MaterialUi.(
-        <Button variant=`Contained color=`Primary href=("/games/" ++ gameId)>
-          (ReasonReact.string("Play Again"))
-          <Icon> (ReasonReact.string("group_add")) </Icon>
-        </Button>
-      );
-    | None =>
-      let maybeToken = ClientUtil.meta_content_opt("token");
-      let maybeCurrentGameId = ClientUtil.game_id();
-      switch (maybeToken, maybeCurrentGameId) {
-      | (Some(token), Some(currentGameId)) =>
-        <form action="/games" method="POST" encType="application/x-www-form-urlencoded">
-          <input hidden=true name="token" value=token readOnly=true />
-          <input hidden=true name="previous_game_id" value=currentGameId readOnly=true />
-          <div>
-            MaterialUi.(
-              <Button variant=`Contained color=`Primary type_="submit">
-                (ReasonReact.string("Play Again"))
-                <Icon> (ReasonReact.string("group_add")) </Icon>
-              </Button>
-            )
-          </div>
-        </form>
-      | _o =>
-        Js.log("Unable to get token or current game id");
-        ReasonReact.null;
-      };
-    }
+  | Complete => <PlayAgainButton maybeGameId=game.next_game_id />
   };
 
 let simplePlural = (word, num) =>
@@ -101,6 +70,19 @@ let make = (_children, ~rect, ~boardCards, ~players, ~game: Messages.game_update
     let s = ReactEvent.Form.target(evt)##value;
     sendMessage(ClientUtil.make_theme_msg(Theme.of_string(s)));
   };
+  let sortedPlayers = ClientUtil.sortPlayers(players);
+  let winDialog =
+    switch (game.status) {
+    | Complete =>
+      let maybeWinner =
+        if (List.length(sortedPlayers) > 0) {
+          Some(List.hd(sortedPlayers));
+        } else {
+          None;
+        };
+      <WinDialog maybeGameId=game.next_game_id maybeWinner />;
+    | _ => ReasonReact.null
+    };
   {
     ...component,
     render: _self =>
@@ -125,7 +107,9 @@ let make = (_children, ~rect, ~boardCards, ~players, ~game: Messages.game_update
                       </ul>
                     </Grid>
                     <Grid item=true>
-                      <Paper className=classes.playerScores> <PlayerScores players palette sendMessage /> </Paper>
+                      <Paper className=classes.playerScores>
+                        <PlayerScores players=sortedPlayers palette sendMessage />
+                      </Paper>
                     </Grid>
                     <Grid item=true>
                       <form autoComplete="off">
@@ -140,6 +124,7 @@ let make = (_children, ~rect, ~boardCards, ~players, ~game: Messages.game_update
               )
           )
         />
+        winDialog
       </section>,
   };
 };

@@ -207,7 +207,6 @@ let distanceOfTimeInWords = (fromTime, toTime) => {
   let dim = dis /. 60.0;
   let r = Shared_util.roundi;
   let s = Printf.sprintf;
-
   let dot =
     if (dim < 1.0) {
       if (dis < 5.0) {
@@ -247,6 +246,15 @@ let distanceOfTimeInWords = (fromTime, toTime) => {
         s("under %d years", rounded);
       };
     };
-
   s("%s %s", dot, rel);
+};
+
+let sortPlayers = (players: list(Messages.player_data)) => {
+  let comparePlayers = (p0: Messages.player_data, p1: Messages.player_data) =>
+    if (p0.score == p1.score) {
+      compare(p0.shuffles, p1.shuffles);
+    } else {
+      compare(p1.score, p0.score);
+    };
+  List.sort(players, comparePlayers);
 };

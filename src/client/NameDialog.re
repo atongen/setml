@@ -14,9 +14,7 @@ let component = ReasonReact.reducerComponent("NameDialog");
 ];
 
 [@bs.deriving jsConverter]
-type inputProps = {
-  maxLength: int,
-};
+type inputProps = {maxLength: int};
 
 let make = (_children, ~open_, ~onCloseState, ~onCloseEvt, ~currentName, ~sendMessage) => {
   ...component,
@@ -58,14 +56,16 @@ let make = (_children, ~open_, ~onCloseState, ~onCloseEvt, ~currentName, ~sendMe
                   <Icon> (ReasonReact.string("close")) </Icon>
                 </IconButton>
               </DialogTitle>
-              <form className=classes.container noValidate=false autoComplete="off">
+              <form noValidate=false autoComplete="off">
                 <DialogContent>
                   <TextField
                     defaultValue=(`String(currentName))
                     onChange=handleChange
                     label=(ReasonReact.string("Name"))
                     required=true
-                    inputProps=inputPropsToJs({maxLength: 16})
+                    inputProps=(inputPropsToJs({maxLength: 16}))
+                    fullWidth=true
+                    autoFocus=true
                   />
                 </DialogContent>
                 <DialogActions>

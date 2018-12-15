@@ -46,13 +46,6 @@ let playerDataRow =
   );
 };
 
-let comparePlayers = (p0: Messages.player_data, p1: Messages.player_data) =>
-  if (p0.score == p1.score) {
-    compare(p0.shuffles, p1.shuffles);
-  } else {
-    compare(p1.score, p0.score);
-  };
-
 let make = (_children, ~players, ~palette, ~sendMessage) => {
   ...component,
   reducer: (action, state) =>
@@ -62,12 +55,8 @@ let make = (_children, ~players, ~palette, ~sendMessage) => {
   initialState: () => {dialogOpen: false},
   render: self => {
     let toggleDialogState = () => self.ReasonReact.send(ToggleDialog);
-    let sortedPlayers = List.sort(players, comparePlayers);
     let playerItems =
-      List.map(
-        sortedPlayers,
-        playerDataRow(~palette, ~open_=self.state.dialogOpen, ~toggleDialogState, ~sendMessage),
-      );
+      List.map(players, playerDataRow(~palette, ~open_=self.state.dialogOpen, ~toggleDialogState, ~sendMessage));
     <MaterialUi.List> (ReasonReact.array(List.toArray(playerItems))) </MaterialUi.List>;
   },
 };
