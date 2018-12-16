@@ -10,11 +10,7 @@ module.exports = {
     plugins: [
         new webpack.HashedModuleIdsPlugin(),
         new CompressionPlugin(),
-        new ManifestPlugin({
-            seed: {
-                "style.css": "style.3d4db83fc7b7b47641b5f1530d4a0825.css"
-            }
-        })
+        new ManifestPlugin({})
     ],
     entry: {
         index: "./lib/js/src/client/Index.js",

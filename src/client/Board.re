@@ -193,6 +193,7 @@ let make = (_children, ~rect, ~columns, ~rows, ~boardCards, ~game, ~sendMessage)
   },
   render: ({state, send}) => {
     let renderRect = Grid.outerRect(state.cardGrid);
+    let style = ClientUtil.rectToStyle(rect, ~padding="0", ~margin="0", ~display="block", ~backgroundColor="#fafafa", ~position="fixed", ());
     <div>
       <canvas
         id="card-render"
@@ -204,7 +205,7 @@ let make = (_children, ~rect, ~columns, ~rows, ~boardCards, ~game, ~sendMessage)
         id="board"
         width=(Shared_util.roundis(rect.w))
         height=(Shared_util.roundis(rect.h))
-        style=(ClientUtil.rectToStyle(rect, ()))
+        style
         onClick=(evt => send(getClick(evt, state.boardOffset)))
         onMouseMove=(evt => send(getHover(evt, state.boardOffset)))
       />

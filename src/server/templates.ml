@@ -37,10 +37,9 @@ let page_tpl ~page_title ~manifest ~assets ~meta id =
                 title (string page_title);
                 link ~rel:"stylesheet" (Uri.of_string "https://fonts.googleapis.com/css?family=Roboto:300,400,500");
                 link ~rel:"stylesheet" (Uri.of_string "https://fonts.googleapis.com/icon?family=Material+Icons");
-                link ~rel:"stylesheet" (asset_path ~manifest "style.css" );
             ] meta_list));
 
-            body ~cls:"mat-typography" (list (List.append [
+            body ~cls:"mat-typography" ~attrs:[("style", "padding: 0; margin: 0")] (list (List.append [
                 div ~id:id empty;
                 script ~src:(asset_path ~manifest "runtime.js") empty;
                 script ~src:(asset_path ~manifest "vendors.js") empty;

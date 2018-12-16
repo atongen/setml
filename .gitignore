@@ -11,4 +11,3 @@ setml.install
 /envfile
 /.vscode
 /public/assets/*
-!/public/assets/*.css

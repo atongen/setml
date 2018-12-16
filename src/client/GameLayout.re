@@ -79,11 +79,11 @@ let make = (_children, ~boardCards, ~players, ~game: Messages.game_update_data, 
         let board = height -. sidebar;
         (Rect.make(0.0, 0.0, width, board), Rect.make(0.0, board, width, height -. board));
       };
-    let boardBorder = ClientUtil.calculateBorder(boardRect.w, boardRect.h);
-    let br = Rect.shrink(~i=boardBorder, boardRect);
-    <div>
+    let br = Rect.shrink(~i=5.0, boardRect);
+    let sr = Rect.shrink(~i=5.0, sidebarRect);
+    <MaterialUi.CssBaseline>
       <Board rect=br columns rows boardCards game sendMessage />
-      <Sidebar rect=sidebarRect boardCards players game sendMessage />
-    </div>;
+      <Sidebar rect=sr boardCards players game sendMessage />
+    </MaterialUi.CssBaseline>;
   },
 };

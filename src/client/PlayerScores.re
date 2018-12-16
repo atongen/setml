@@ -17,12 +17,11 @@ let playerDataRow =
       if (isCurrentPlayer) {
         ReactDOMRe.Style.make(~fontWeight="bold", ~color=palette.primary, ());
       } else {
-        ReactDOMRe.Style.make(~fontWeight="bold", ());
+        ReactDOMRe.Style.make();
       };
     } else {
       ReactDOMRe.Style.make(~color="gray", ());
     };
-  let scoreStyle = ReactDOMRe.Style.make(~width="100%", ~textAlign="right", ());
   let toggleDialogEvt = evt => {
     ReactEvent.Synthetic.preventDefault(evt);
     toggleDialogState();
@@ -37,12 +36,11 @@ let playerDataRow =
       ReasonReact.string(name);
     };
   MaterialUi.(
-    <ListItem key=pid>
-      <ListItemText>
-        <span style=scoreStyle> (ReasonReact.string(string_of_int(player_data.score))) </span>
-      </ListItemText>
-      <ListItemText> <span style=nameStyle> nameContent </span> </ListItemText>
-    </ListItem>
+    <TableRow key=pid>
+      <TableCell padding=`Dense style=nameStyle> nameContent </TableCell>
+      <TableCell numeric=true> (ReasonReact.string(string_of_int(player_data.score))) </TableCell>
+      <TableCell numeric=true> (ReasonReact.string(string_of_int(player_data.shuffles))) </TableCell>
+    </TableRow>
   );
 };
 
@@ -56,7 +54,22 @@ let make = (_children, ~players, ~palette, ~sendMessage) => {
   render: self => {
     let toggleDialogState = () => self.ReasonReact.send(ToggleDialog);
     let playerItems =
-      List.map(players, playerDataRow(~palette, ~open_=self.state.dialogOpen, ~toggleDialogState, ~sendMessage));
-    <MaterialUi.List> (ReasonReact.array(List.toArray(playerItems))) </MaterialUi.List>;
+      List.toArray(
+        List.map(players, playerDataRow(~palette, ~open_=self.state.dialogOpen, ~toggleDialogState, ~sendMessage)),
+      );
+    MaterialUi.(
+      <Paper>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell> (ReasonReact.string("Name")) </TableCell>
+              <TableCell> (ReasonReact.string("Score")) </TableCell>
+              <TableCell> (ReasonReact.string("Shuffles")) </TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody> (ReasonReact.array(playerItems)) </TableBody>
+        </Table>
+      </Paper>
+    );
   },
 };

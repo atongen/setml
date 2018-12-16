@@ -57,7 +57,7 @@ let renderOuterBoard = (ctx, rect, theme, border) =>
   };
 
 let renderBoard = (srcCtx, srcGrid, dstCtx, dstGrid, theme, status, selected, hovered) => {
-  CanvasUtils.reset(dstCtx, "white");
+  CanvasUtils.reset(dstCtx, "#fafafa");
   let outerRect = Grid.paddedRect(dstGrid);
   let noneCardIdx = Card.to_int_opt(None);
   renderOuterBoard(dstCtx, outerRect, theme, dstGrid.border);
@@ -67,7 +67,7 @@ let renderBoard = (srcCtx, srcGrid, dstCtx, dstGrid, theme, status, selected, ho
       let (cardIdx, isSelected, isHovered) =
         switch (maybeBcd) {
         | Some((bcd: Messages.board_card_data)) =>
-          assert(bcd.idx == idx);
+          assert (bcd.idx == idx);
           let isSelected = Selected.has(selected, bcd);
           let isHovered =
             switch (hovered) {
