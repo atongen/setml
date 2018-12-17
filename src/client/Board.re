@@ -154,8 +154,7 @@ let make = (_children, ~rect, ~columns, ~rows, ~boardCards, ~game, ~sendMessage)
     let selected =
       if (List.toArray(boardCards) == self.state.boardGrid.values) {
         /* board has not changed, keep selected the same */
-        self.state.
-          selected;
+        self.state.selected;
       } else {
         /* board has changed, reset selected */
         Selected.empty;
