@@ -6,6 +6,8 @@ let columns = 9;
 
 let cards = Card.deck();
 
+let backgroundColor = "#fafafa";
+
 let makeGrid = blockSize => {
   let width = blockSize *. float_of_int(columns);
   let height = blockSize *. float_of_int(rows);
@@ -25,27 +27,35 @@ let render = (ctx, grid, theme) => {
   |> List.toArray;
 };
 
-let boardCardBorderColor = (theme, selected, hovered) =>
+let boardCardBorderColor = (theme, selected, hovered, numSelected) =>
   switch (theme) {
   | Theme.Classic
   | Open_source =>
     if (selected && hovered) {
-      "#900c3f";
+      if (numSelected == 3) {
+        "#72c362"; /* bright green */
+      } else {
+        "#fce33b"; /* bright yellow */
+      };
     } else if (selected) {
-      "#c70039";
+      if (numSelected == 3) {
+        "#80db6e"; /* green */
+      } else {
+        "#e3cc35"; /* yellow */
+      };
     } else if (hovered) {
       "#d6d4cb";
     } else {
-      "white";
+      backgroundColor;
     }
   };
 
-let renderBoardCard = (srcCtx, srcRect, dstCtx, dstRect, theme, border, selected, hovered) => {
-  let boarderColor = boardCardBorderColor(theme, selected, hovered);
+let renderBoardCard = (srcCtx, srcRect, dstCtx, dstRect, theme, border, selected, hovered, numSelected) => {
+  let borderColor = boardCardBorderColor(theme, selected, hovered, numSelected);
   switch (theme) {
   | Theme.Classic
   | Open_source =>
-    CanvasUtils.drawRoundRect(dstCtx, dstRect, border, boarderColor, None);
+    CanvasUtils.drawRoundRect(dstCtx, dstRect, border, borderColor, None);
     CanvasUtils.drawCanvas(srcCtx, srcRect, dstCtx, dstRect);
   };
 };
@@ -57,9 +67,10 @@ let renderOuterBoard = (ctx, rect, theme, border) =>
   };
 
 let renderBoard = (srcCtx, srcGrid, dstCtx, dstGrid, theme, status, selected, hovered) => {
-  CanvasUtils.reset(dstCtx, "#fafafa");
+  CanvasUtils.reset(dstCtx, backgroundColor);
   let outerRect = Grid.paddedRect(dstGrid);
   let noneCardIdx = Card.to_int_opt(None);
+  let numSelected = Set.size(selected);
   renderOuterBoard(dstCtx, outerRect, theme, dstGrid.border);
   Grid.forEachWithIndex(
     dstGrid,
@@ -83,7 +94,7 @@ let renderBoard = (srcCtx, srcGrid, dstCtx, dstGrid, theme, status, selected, ho
         };
       switch (Grid.findKeyByIdx(srcGrid, cardIdx)) {
       | Some(srcRect) =>
-        renderBoardCard(srcCtx, srcRect, dstCtx, dstRect, theme, dstGrid.border, isSelected, isHovered)
+        renderBoardCard(srcCtx, srcRect, dstCtx, dstRect, theme, dstGrid.border, isSelected, isHovered, numSelected)
       | None => ()
       };
     },

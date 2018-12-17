@@ -6,13 +6,6 @@ type state = {name: string};
 
 let component = ReasonReact.reducerComponent("NameDialog");
 
-[%mui.withStyles
-  "StyledDialog"({
-    root: ReactDOMRe.Style.make(~color="red", ()),
-    container: ReactDOMRe.Style.make(~display="flex", ~flexWrap="wrap", ()),
-  })
-];
-
 [@bs.deriving jsConverter]
 type inputProps = {maxLength: int};
 
@@ -46,36 +39,31 @@ let make = (_children, ~open_, ~onCloseState, ~onCloseEvt, ~currentName, ~sendMe
     let submitClick = _evt => self.send(Submit);
     let handleChange = evt => self.send(Change(ReactEvent.Form.target(evt)##value));
     MaterialUi.(
-      <StyledDialog
-        render=(
-          classes =>
-            <Dialog open_ onClose=onCloseEvt>
-              <DialogTitle>
-                (ReasonReact.string("Set Your Name"))
-                <IconButton key="close" color=`Inherit onClick=(_evt => onCloseState())>
-                  <Icon> (ReasonReact.string("close")) </Icon>
-                </IconButton>
-              </DialogTitle>
-              <form noValidate=false autoComplete="off">
-                <DialogContent>
-                  <TextField
-                    defaultValue=(`String(currentName))
-                    onChange=handleChange
-                    label=(ReasonReact.string("Name"))
-                    required=true
-                    inputProps=(inputPropsToJs({maxLength: 16}))
-                    fullWidth=true
-                    autoFocus=true
-                  />
-                </DialogContent>
-                <DialogActions>
-                  <Button color=`Primary onClick=(_evt => onCloseState())> (ReasonReact.string("Cancel")) </Button>
-                  <Button color=`Primary onClick=submitClick> (ReasonReact.string("Ok")) </Button>
-                </DialogActions>
-              </form>
-            </Dialog>
-        )
-      />
+      <Dialog open_ onClose=onCloseEvt>
+        <DialogTitle>
+          (ReasonReact.string("Set Your Name"))
+          <IconButton key="close" color=`Inherit onClick=(_evt => onCloseState())>
+            <Icon> (ReasonReact.string("close")) </Icon>
+          </IconButton>
+        </DialogTitle>
+        <form noValidate=false autoComplete="off">
+          <DialogContent>
+            <TextField
+              defaultValue=(`String(currentName))
+              onChange=handleChange
+              label=(ReasonReact.string("Name"))
+              required=true
+              inputProps=(inputPropsToJs({maxLength: 16}))
+              fullWidth=true
+              autoFocus=true
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button color=`Primary onClick=(_evt => onCloseState())> (ReasonReact.string("Cancel")) </Button>
+            <Button color=`Primary onClick=submitClick> (ReasonReact.string("Ok")) </Button>
+          </DialogActions>
+        </form>
+      </Dialog>
     );
   },
 };

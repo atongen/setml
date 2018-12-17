@@ -17,12 +17,10 @@ type state = {
 
 let component = ReasonReact.reducerComponent("Board");
 
-let evtPoint = (evt, {contents: (offsetX, offsetY)}) => {
-  (
-    float_of_int(ReactEvent.Mouse.clientX(evt)) -. offsetX,
-    float_of_int(ReactEvent.Mouse.clientY(evt)) -. offsetY,
-  );
-};
+let evtPoint = (evt, {contents: (offsetX, offsetY)}) => (
+  float_of_int(ReactEvent.Mouse.clientX(evt)) -. offsetX,
+  float_of_int(ReactEvent.Mouse.clientY(evt)) -. offsetY,
+);
 
 let getClick = (evt, offset) => Click(evtPoint(evt, offset));
 
@@ -60,7 +58,7 @@ let shouldRedraw = (oldState: state, newState: state) =>
     (false, false);
   };
 
-let renderBoard = (srcCtx, dstCtx, state) => {
+let renderBoard = (srcCtx, dstCtx, state) =>
   CardRender.renderBoard(
     srcCtx,
     state.cardGrid,
@@ -71,9 +69,8 @@ let renderBoard = (srcCtx, dstCtx, state) => {
     state.selected,
     state.hovered,
   );
-};
 
-let renderCards = (srcCtx, dstCtx, state) => {
+let renderCards = (srcCtx, dstCtx, state) =>
   Js.Promise.(
     all(CardRender.render(srcCtx, state.cardGrid, state.game.theme))
     |> then_(_results => {
@@ -82,7 +79,6 @@ let renderCards = (srcCtx, dstCtx, state) => {
          resolve();
        })
   );
-};
 
 let make = (_children, ~rect, ~columns, ~rows, ~boardCards, ~game, ~sendMessage) => {
   ...component,
@@ -99,19 +95,21 @@ let make = (_children, ~rect, ~columns, ~rows, ~boardCards, ~game, ~sendMessage)
           } else {
             let newSelected = Selected.add(state.selected, bcd);
             let len = Selected.size(newSelected);
-            if (len == 3) {
-              let l = Selected.to_list(newSelected);
-              switch (Messages_util.board_cards_list_is_set(l)) {
-              | Some((cd0, cd1, cd2)) =>
-                sendMessage(ClientUtil.make_move_msg(cd0, cd1, cd2))
-                ReasonReact.NoUpdate
-              | None => ReasonReact.Update({...state, selected: Selected.empty})
+            let ns =
+              if (len == 3) {
+                let l = Selected.to_list(newSelected);
+                switch (Messages_util.board_cards_list_is_set(l)) {
+                | Some((cd0, cd1, cd2)) =>
+                  sendMessage(ClientUtil.make_move_msg(cd0, cd1, cd2));
+                  newSelected;
+                | None => Selected.empty
+                };
+              } else if (len > 3) {
+                Selected.empty;
+              } else {
+                newSelected;
               };
-            } else if (len > 3) {
-              ReasonReact.Update({...state, selected: Selected.empty});
-            } else {
-              ReasonReact.Update({...state, selected: newSelected});
-            };
+            ReasonReact.Update({...state, selected: ns});
           }
         | None => ReasonReact.NoUpdate
         }
@@ -153,13 +151,15 @@ let make = (_children, ~rect, ~columns, ~rows, ~boardCards, ~game, ~sendMessage)
   },
   willReceiveProps: self => {
     let boardGrid = makeBoardGrid(rect.Rect.w, rect.h, columns, rows, boardCards);
-    let selected = if (List.toArray(boardCards) == self.state.boardGrid.values) {
-      /* board has not changed, keep selected the same */
-      self.state.selected
-    } else {
-      /* board has changed, reset selected */
-      Selected.empty
-    };
+    let selected =
+      if (List.toArray(boardCards) == self.state.boardGrid.values) {
+        /* board has not changed, keep selected the same */
+        self.state.
+          selected;
+      } else {
+        /* board has changed, reset selected */
+        Selected.empty;
+      };
     {...self.state, boardGrid, cardGrid: CardRender.makeGrid(boardGrid.blockSize), selected, game};
   },
   didMount: self => {
@@ -174,8 +174,7 @@ let make = (_children, ~rect, ~columns, ~rows, ~boardCards, ~game, ~sendMessage)
     /* board offset for click/hover location */
     self.state.boardOffset := CanvasUtils.offset(boardCanvas);
     /* render card canvas */
-    renderCards(renderContext, boardContext, self.state);
-    ();
+    renderCards(renderContext, boardContext, self.state) |> ignore;
   },
   didUpdate: ({oldSelf, newSelf}) => {
     let (redrawCards, redrawBoard) = shouldRedraw(oldSelf.state, newSelf.state);
@@ -193,7 +192,16 @@ let make = (_children, ~rect, ~columns, ~rows, ~boardCards, ~game, ~sendMessage)
   },
   render: ({state, send}) => {
     let renderRect = Grid.outerRect(state.cardGrid);
-    let style = ClientUtil.rectToStyle(rect, ~padding="0", ~margin="0", ~display="block", ~backgroundColor="#fafafa", ~position="fixed", ());
+    let style =
+      ClientUtil.rectToStyle(
+        rect,
+        ~padding="0",
+        ~margin="0",
+        ~display="block",
+        ~backgroundColor="#fafafa",
+        ~position="fixed",
+        (),
+      );
     <div>
       <canvas
         id="card-render"
