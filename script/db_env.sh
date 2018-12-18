@@ -10,7 +10,8 @@ DB_USER=${DB_USER:-`whoami`}
 DB_PASS=${DB_PASS:-abcd1234}
 DB_POOL=${DB_POOL:-`cat /proc/cpuinfo | grep processor | wc -l`}
 
-[[ -f envfile ]] && source envfile
+ENVFILE=${ENVFILE:-envfile}
+[[ -f "$ENVFILE" ]] && source "${ENVFILE}"
 
 echo "SETML_ENV=$SETML_ENV \
 DB_NAME=$DB_NAME \
