@@ -30,21 +30,20 @@ let component = ReasonReact.reducerComponent("PlayerGamesList");
 let renderPlayerGameLi = (player_game, now) => {
   let game_id_str = Base_conv.base36_of_int(player_game.id);
   let dtw = ClientUtil.distanceOfTimeInWords(now, player_game.updated_at);
-  let icon = switch(player_game.status) {
-  | New => "add"
-  | Started => "forward"
-  | Complete => "done"
-  };
+  let icon =
+    switch (player_game.status) {
+    | New => "add"
+    | Started => "forward"
+    | Complete => "done"
+    };
   let s = ReasonReact.string;
   let link = <a href=("/games/" ++ game_id_str)> (s(game_id_str)) </a>;
   MaterialUi.(
-  <ListItem key=string_of_int(player_game.id)>
-    <Avatar>
-      <Icon> (s(icon)) </Icon>
-    </Avatar>
-    <ListItemText primary=link secondary=s(dtw) />
-  </ListItem>
-  )
+    <ListItem key=(string_of_int(player_game.id))>
+      <Avatar> <Icon> (s(icon)) </Icon> </Avatar>
+      <ListItemText primary=link secondary=(s(dtw)) />
+    </ListItem>
+  );
 };
 
 let make = _children => {
@@ -90,7 +89,7 @@ let make = _children => {
           <MaterialUi.List>
             (
               player_games
-              |> List.map(player_game => (renderPlayerGameLi(player_game, now)))
+              |> List.map(player_game => renderPlayerGameLi(player_game, now))
               |> Array.of_list
               |> ReasonReact.array
             )
