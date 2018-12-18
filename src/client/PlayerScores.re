@@ -37,9 +37,8 @@ let playerDataRow =
     };
   MaterialUi.(
     <TableRow key=pid>
-      <TableCell padding=`Dense style=nameStyle> nameContent </TableCell>
+      <TableCell style=nameStyle> nameContent </TableCell>
       <TableCell numeric=true> (ReasonReact.string(string_of_int(player_data.score))) </TableCell>
-      <TableCell numeric=true> (ReasonReact.string(string_of_int(player_data.shuffles))) </TableCell>
     </TableRow>
   );
 };
@@ -59,12 +58,11 @@ let make = (_children, ~players, ~palette, ~sendMessage) => {
       );
     MaterialUi.(
       <Paper>
-        <Table>
+        <Table padding=`Dense>
           <TableHead>
             <TableRow>
               <TableCell> (ReasonReact.string("Name")) </TableCell>
               <TableCell> (ReasonReact.string("Score")) </TableCell>
-              <TableCell> (ReasonReact.string("Shuffles")) </TableCell>
             </TableRow>
           </TableHead>
           <TableBody> (ReasonReact.array(playerItems)) </TableBody>
