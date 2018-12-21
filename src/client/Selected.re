@@ -18,6 +18,8 @@ let of_list = l => Set.fromArray(List.toArray(l), ~id=(module BoardCardDataCompa
 
 let to_list = s => Set.toList(s);
 
+let of_array = a => Set.fromArray(a, ~id=(module BoardCardDataComparator));
+
 let merge_many = (s, a) => Set.mergeMany(s, a);
 
 let intersect = (s0, s1) => Set.intersect(s0, s1);
@@ -44,3 +46,6 @@ let add = (selected, bcd) => Set.add(selected, bcd);
 let remove = (selected, bcd) => Set.remove(selected, bcd);
 
 let size = selected => Set.size(selected);
+
+let indexes = selected =>
+  Set.reduce(selected, Set.Int.empty, (s, bcd: Messages.board_card_data) => Set.Int.add(s, bcd.idx));

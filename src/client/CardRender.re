@@ -66,15 +66,11 @@ let renderOuterBoard = (ctx, rect, theme, border) =>
   | Open_source => CanvasUtils.drawRoundRect(ctx, rect, border, Theme.palette(theme).primary, None)
   };
 
-let renderBoard = (srcCtx, srcGrid, dstCtx, dstGrid, theme, status, selected, hovered) => {
-  CanvasUtils.reset(dstCtx, backgroundColor);
-  let outerRect = Grid.paddedRect(dstGrid);
+let renderSomeBoard = (~cardIdxs=Set.Int.empty, srcCtx, srcGrid, dstCtx, dstGrid, theme, status, selected, hovered) => {
   let noneCardIdx = Card.to_int_opt(None);
   let numSelected = Set.size(selected);
-  renderOuterBoard(dstCtx, outerRect, theme, dstGrid.border);
-  Grid.forEachWithIndex(
-    dstGrid,
-    (dstRect, maybeBcd, idx) => {
+  Grid.forEachWithIndex(dstGrid, (dstRect, maybeBcd, idx) =>
+    if (Set.Int.isEmpty(cardIdxs) || Set.Int.has(cardIdxs, idx)) {
       let (cardIdx, isSelected, isHovered) =
         switch (maybeBcd) {
         | Some((bcd: Messages.board_card_data)) =>
@@ -97,6 +93,15 @@ let renderBoard = (srcCtx, srcGrid, dstCtx, dstGrid, theme, status, selected, ho
         renderBoardCard(srcCtx, srcRect, dstCtx, dstRect, theme, dstGrid.border, isSelected, isHovered, numSelected)
       | None => ()
       };
-    },
+    } else {
+      ();
+    }
   );
+};
+
+let renderAllBoard = (srcCtx, srcGrid, dstCtx, dstGrid, theme, status, selected, hovered) => {
+  CanvasUtils.reset(dstCtx, backgroundColor);
+  let outerRect = Grid.paddedRect(dstGrid);
+  renderOuterBoard(dstCtx, outerRect, theme, dstGrid.border);
+  renderSomeBoard(srcCtx, srcGrid, dstCtx, dstGrid, theme, status, selected, hovered);
 };

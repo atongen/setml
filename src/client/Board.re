@@ -41,25 +41,54 @@ let printSets = (boardCards: array(Messages.board_card_data), theme) => {
   );
 };
 
+type redraw =
+  | Cards
+  | Board(Set.Int.t)
+  | NoChange;
+
 let shouldRedraw = (oldState: state, newState: state) =>
   if (oldState.boardGrid.width != newState.boardGrid.width || oldState.boardGrid.height != newState.boardGrid.height) {
-    (true, true);
+    Cards;
   } else if (oldState.game.theme != newState.game.theme) {
-    (true, true);
+    Cards;
   } else if (oldState.game.status != newState.game.status) {
-    (true, true);
+    Cards;
   } else if (oldState.boardGrid.values != newState.boardGrid.values) {
-    (false, true);
+    let oldValues = Selected.of_array(oldState.boardGrid.values);
+    let newValues = Selected.of_array(newState.boardGrid.values);
+    let diff = Selected.symmetric_diff(oldValues, newValues);
+    Board(Selected.indexes(diff));
   } else if (Selected.is_symmetric_diff(oldState.selected, newState.selected)) {
-    (false, true);
+    let idxs = Selected.union(oldState.selected, newState.selected) |> Selected.indexes;
+    Board(idxs);
   } else if (! Option.eq(oldState.hovered, newState.hovered, (a, b) => a == b)) {
-    (false, true);
+    let idxs =
+      List.reduce([oldState.hovered, newState.hovered], Set.Int.empty, (s, o) =>
+        switch (o) {
+        | Some(bcd) => Set.Int.add(s, bcd.idx)
+        | None => s
+        }
+      );
+    Board(idxs);
   } else {
-    (false, false);
+    NoChange;
   };
 
-let renderBoard = (srcCtx, dstCtx, state) =>
-  CardRender.renderBoard(
+let renderAllBoard = (srcCtx, dstCtx, state) =>
+  CardRender.renderAllBoard(
+    srcCtx,
+    state.cardGrid,
+    dstCtx,
+    state.boardGrid,
+    state.game.theme,
+    state.game.status,
+    state.selected,
+    state.hovered,
+  );
+
+let renderSomeBoard = (srcCtx, dstCtx, state, cardIdxs) =>
+  CardRender.renderSomeBoard(
+    ~cardIdxs,
     srcCtx,
     state.cardGrid,
     dstCtx,
@@ -75,7 +104,7 @@ let renderCards = (srcCtx, dstCtx, state) =>
     all(CardRender.render(srcCtx, state.cardGrid, state.game.theme))
     |> then_(_results => {
          /* printSets(state.boardGrid.values, state.game.theme); */
-         renderBoard(srcCtx, dstCtx, state);
+         renderAllBoard(srcCtx, dstCtx, state);
          resolve();
        })
   );
@@ -154,7 +183,8 @@ let make = (_children, ~rect, ~columns, ~rows, ~boardCards, ~game, ~sendMessage)
     let selected =
       if (List.toArray(boardCards) == self.state.boardGrid.values) {
         /* board has not changed, keep selected the same */
-        self.state.selected;
+        self.state.
+          selected;
       } else {
         /* board has changed, reset selected */
         Selected.empty;
@@ -175,20 +205,22 @@ let make = (_children, ~rect, ~columns, ~rows, ~boardCards, ~game, ~sendMessage)
     /* render card canvas */
     renderCards(renderContext, boardContext, self.state) |> ignore;
   },
-  didUpdate: ({oldSelf, newSelf}) => {
-    let (redrawCards, redrawBoard) = shouldRedraw(oldSelf.state, newSelf.state);
-    if (redrawCards || redrawBoard) {
+  didUpdate: ({oldSelf, newSelf}) =>
+    switch (shouldRedraw(oldSelf.state, newSelf.state)) {
+    | Cards =>
       switch (newSelf.state.context, newSelf.state.renderContext) {
       | ({contents: Some(dstCtx)}, {contents: Some(srcCtx)}) =>
-        if (redrawCards) {
-          renderCards(srcCtx, dstCtx, newSelf.state) |> ignore;
-        } else if (redrawBoard) {
-          renderBoard(srcCtx, dstCtx, newSelf.state);
-        }
-      | _ => Js.log("Unable to redraw blocks: No context found!")
-      };
-    };
-  },
+        renderCards(srcCtx, dstCtx, newSelf.state) |> ignore
+      | _ => Js.log("Unable to render cards: No context found!")
+      }
+    | Board(cardIdxs) =>
+      switch (newSelf.state.context, newSelf.state.renderContext) {
+      | ({contents: Some(dstCtx)}, {contents: Some(srcCtx)}) =>
+        renderSomeBoard(srcCtx, dstCtx, newSelf.state, cardIdxs) |> ignore
+      | _ => Js.log("Unable to render some board: No context found!")
+      }
+    | NoChange => ()
+    },
   render: ({state, send}) => {
     let renderRect = Grid.outerRect(state.cardGrid);
     let style =
