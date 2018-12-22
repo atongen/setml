@@ -290,36 +290,63 @@ let player_games_test db =
 
 let create_game_from_previous_test db =
     fun () ->
-        Db.create_game db () >>=? fun game0_id ->
+        let t (dim0, dim1) theme =
+            Db.create_game db ~dim0 ~dim1 () >>=? fun game0_id ->
+            Db.update_game_theme db (game0_id, theme) >>=? fun () ->
 
-        (* first in chain *)
-        Db.create_game_from_previous db game0_id >>=? fun game1_id ->
-        Db.create_game_from_previous db game0_id >>=? fun game2_id ->
-        Db.create_game_from_previous db game0_id >>=? fun game3_id ->
-        assert_equal game1_id game2_id;
-        assert_equal game2_id game3_id;
+            (* first in chain *)
+            Db.create_game_from_previous db game0_id >>=? fun game1_id ->
+            Db.create_game_from_previous db game0_id >>=? fun game2_id ->
+            Db.create_game_from_previous db game0_id >>=? fun game3_id ->
+            assert_equal game1_id game2_id;
+            assert_equal game2_id game3_id;
 
-        Db.find_game_data db game0_id >>=? fun game0_data ->
-        Db.find_game_data db game1_id >>=? fun game1_data ->
-        assert_equal (Some game1_id) game0_data.next_game_id;
-        assert_equal None game1_data.next_game_id;
+            Db.find_game_data db game0_id >>=? fun game0_data ->
+            Db.find_game_data db game1_id >>=? fun game1_data ->
 
-        (* second in chain *)
-        Db.create_game_from_previous db game1_id >>=? fun game4_id ->
-        Db.create_game_from_previous db game1_id >>=? fun game5_id ->
-        Db.create_game_from_previous db game1_id >>=? fun game6_id ->
-        assert_equal game4_id game5_id;
-        assert_equal game5_id game6_id;
+            assert_equal game0_data.dim0 dim0;
+            assert_equal game0_data.dim1 dim1;
+            assert_equal game0_data.theme theme;
 
-        Db.find_game_data db game1_id >>=? fun game1_data_after ->
-        Db.find_game_data db game4_id >>=? fun game4_data ->
-        assert_equal (Some game4_id) game1_data_after.next_game_id;
-        assert_equal None game4_data.next_game_id;
+            assert_equal game1_data.dim0 dim0;
+            assert_equal game1_data.dim1 dim1;
+            assert_equal game1_data.theme theme;
 
-        (* invalid previous game *)
-        Db.create_game_from_previous db 1234567890 >>= function
-        | Ok _game_id -> assert_failure "Created game from invalid previous game"
-        | Error _e -> ();
+            assert_equal (Some game1_id) game0_data.next_game_id;
+            assert_equal None game1_data.next_game_id;
+
+            (* second in chain *)
+            Db.create_game_from_previous db game1_id >>=? fun game4_id ->
+            Db.create_game_from_previous db game1_id >>=? fun game5_id ->
+            Db.create_game_from_previous db game1_id >>=? fun game6_id ->
+            assert_equal game4_id game5_id;
+            assert_equal game5_id game6_id;
+
+            Db.find_game_data db game1_id >>=? fun game1_data_after ->
+            Db.find_game_data db game4_id >>=? fun game4_data ->
+
+            assert_equal game1_data_after.dim0 dim0;
+            assert_equal game1_data_after.dim1 dim1;
+            assert_equal game1_data_after.theme theme;
+
+            assert_equal game4_data.dim0 dim0;
+            assert_equal game4_data.dim1 dim1;
+            assert_equal game4_data.theme theme;
+
+            assert_equal (Some game4_id) game1_data_after.next_game_id;
+            assert_equal None game4_data.next_game_id;
+
+            (* invalid previous game *)
+            Db.create_game_from_previous db 1234567890 >>= function
+            | Ok _game_id -> assert_failure "Created game from invalid previous game"
+            | Error _e -> Lwt.return_unit
+        in
+        List.iter (fun dims ->
+            List.iter (fun theme ->
+                ignore(t dims theme);
+                ()
+            ) [Theme.Classic; Theme.Open_source];
+        ) valid_board_dims;
 
         Lwt.return_unit
 

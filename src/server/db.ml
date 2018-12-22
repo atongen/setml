@@ -63,6 +63,16 @@ module Q = struct
         Caqti_request.find Caqti_type.(tup2 int int) Caqti_type.int
         "insert into games (dim0, dim1) values (?, ?) returning id"
 
+    let create_game_from_query =
+        Caqti_request.find Caqti_type.int Caqti_type.int
+        {eos|
+            insert into games (theme, dim0, dim1)
+            select o.theme, o.dim0, o.dim1
+            from games o
+            where o.id = ?
+            returning id
+        |eos}
+
     let set_next_game_id_query =
         Caqti_request.find Caqti_type.(tup2 int int) Caqti_type.int
         {eos|
@@ -71,7 +81,7 @@ module Q = struct
                 set next_game_id = ?
                 where id = ?
                 and next_game_id is null
-                returning id
+                returning 1
             ) select count(*) from rows;
         |eos}
 
@@ -354,14 +364,14 @@ module I = struct
         C.find Q.increment_game_card_idx_query (12, game_id) >>=? fun _ ->
         Lwt.return_ok game_id
 
-    let create_game_from_previous (module C : Caqti_lwt.CONNECTION) (dim0, dim1, previous_game_id) =
+    let create_game_from_previous (module C : Caqti_lwt.CONNECTION) previous_game_id =
         C.find Q.game_exists_query previous_game_id >>=? fun exists ->
         if exists then (
             C.find Q.find_next_game_id_query previous_game_id >>=? function
             | Some next_game_id ->
                 Lwt.return_ok next_game_id
             | None ->
-                C.find Q.create_game_query (dim0, dim1) >>=? fun game_id ->
+                C.find Q.create_game_from_query previous_game_id >>=? fun game_id ->
                 C.find Q.set_next_game_id_query (game_id, previous_game_id) >>=? fun num_updated ->
                 if num_updated < 1 then
                     Lwt.return_error (Client_error "Next game already created")
@@ -627,7 +637,7 @@ let make ?(max_size=8) uri_str: (t, Caqti_error.t) result Lwt.t =
 
 let create_game p ?(dim0=3) ?(dim1=4) () = with_pool p I.create_game (dim0, dim1)
 
-let create_game_from_previous p ?(dim0=3) ?(dim1=4) previous_game_id = with_pool p I.create_game_from_previous (dim0, dim1, previous_game_id)
+let create_game_from_previous p previous_game_id = with_pool p I.create_game_from_previous previous_game_id
 
 let game_exists p arg = with_pool p I.game_exists arg
 
