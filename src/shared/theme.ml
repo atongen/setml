@@ -21,6 +21,9 @@ let of_string = function
     | "open_source" -> Open_source
     | ts -> raise (Invalid_argument ("Unknown theme: " ^ ts))
 
+let of_string_opt s = try Some (of_string s)
+    with Invalid_argument _s -> None
+
 let num ~card = function
     | Classic | Open_source ->
         match Card.num card with
@@ -100,7 +103,7 @@ let attr_entries attrs =
 
 let make_path ?(attrs=[]) ?(header="") data =
     let attrs_str = attr_entries attrs in
-    Printf.sprintf "%s<path %s d='%s'/>" header attrs_str data
+    Printf.sprintf "%s<path %s d='%s'/>" header attrs_str (String.trim data)
 
 let make_group ?(attrs=[]) ?(header="") content =
     let attrs_str = attr_entries attrs in
@@ -184,7 +187,7 @@ module Card_svg_classic : CARD_SVG_THEME = struct
 end
 
 module Card_svg_open_source : CARD_SVG_THEME = struct
-    let logo_svg = Path_data.classic_logo
+    let logo_svg = Path_data.open_source_logo
 
     let make_card_svg card =
         let color = match Card.color card with
@@ -244,16 +247,18 @@ module Card_svg_open_source : CARD_SVG_THEME = struct
         )
 end
 
-let make_card_svgs ~width ~height ~theme maybeCard =
+let make_card_svg ~width ~height ~theme maybeCard =
     let (vw, vh) = default_card_size in
     let content = match theme with
     | Classic -> (
         match maybeCard with
         | Some card -> Card_svg_classic.make_card_svg card
-        | None -> Card_svg_classic.logo_svg)
+        | None -> Card_svg_classic.logo_svg
+    )
     | Open_source -> (
         match maybeCard with
         | Some card -> Card_svg_open_source.make_card_svg card
-        | None -> Card_svg_open_source.logo_svg)
+        | None -> Card_svg_open_source.logo_svg
+    )
     in
-    [make_svg ~width ~height ~vx:0.0 ~vy:0.0 ~vw ~vh content]
+    make_svg ~width ~height ~vx:0.0 ~vy:0.0 ~vw ~vh content

@@ -6,6 +6,7 @@ type t =
     | Game_create
     | Game_show of int
     | Player_games
+    | CardSvg of (Theme.t * Card.t option)
     | Static
     | Route_not_found
 
@@ -28,6 +29,17 @@ let of_meth_and_path meth path =
         match Base_conv.int_of_base36_opt parts.(1) with
         | Some game_id -> Ws_show game_id
         | None -> Route_not_found
+    else if n == 3 && String.equal parts.(0) "card" && meth == `GET then
+        match Theme.of_string_opt parts.(1) with
+        | Some theme -> (
+            match int_of_string_opt parts.(2) with
+            | Some card_id -> (
+                let card = Card.of_int_opt card_id in
+                CardSvg (theme, card)
+            )
+            | None -> Route_not_found
+        )
+        | None -> Route_not_found
     else if meth == `GET then
         Static
     else
@@ -49,6 +61,10 @@ let to_meth_and_path = function
         let game_id_str = Base_conv.base36_of_int game_id in
         (`GET, "/games/" ^ game_id_str)
     | Player_games -> (`GET, "/player_games")
+    | CardSvg (theme, card) ->
+        let theme_name = Theme.to_string theme in
+        let card_num = Card.to_int_opt card in
+        (`GET, Printf.sprintf "/card/%s/%d" theme_name card_num)
     | Static -> failwith "Cannot build static route"
     | Route_not_found -> failwith "Cannot build Route_not_found"
 

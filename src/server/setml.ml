@@ -18,8 +18,8 @@ let render_game ~headers ~player_id game_id token manifest info =
     ~body:(Templates.game_page ~player_id ~title:("SetML: " ^ game_id_str) ~token ~manifest ~info)
     ()
 
-let render_json content =
-  let headers = Cohttp.Header.init_with "Content-type" "application/json" in
+let render_content ~content_type content =
+  let headers = Cohttp.Header.init_with "Content-type" content_type in
   Cohttp_lwt_unix.Server.respond_string
     ~status:`OK
     ~headers
@@ -201,9 +201,12 @@ let make_handler pool pubsub clients crypto docroot =
             let open Server_api_messages.Server_api_message_converter in
             Db.find_player_games pool player_id >>=? fun player_games ->
             let content = player_games_to_json player_games in
-            render_json content
-        | None -> render_json "[]"
+            render_content ~content_type:"application/json" content
+        | None -> render_content ~content_type:"application/json" "[]"
     )
+    | Route.CardSvg (theme, card) ->
+        let content = Shared.Theme.make_card_svg ~width:1000.0 ~height:1000.0 ~theme card in
+        render_content ~content_type:"image/svg+xml" content
     | Route.Static ->
       File_server.serve ~info:"SetML File Server" ~docroot ~index:"index.html" uri path
     | Route.Route_not_found -> render_not_found

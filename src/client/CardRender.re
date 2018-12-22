@@ -17,11 +17,11 @@ let makeGrid = blockSize => {
 /* render non-visible grid of all set game cards */
 let render = (ctx, grid, theme) => {
   CanvasUtils.clear(ctx);
-  Grid.flatMap(
+  Grid.map(
     grid,
     (rect, card) => {
-      let svgs = Theme.make_card_svgs(~width=rect.Rect.w, ~height=rect.h, ~theme, card);
-      List.map(svgs, svg => CanvasUtils.drawSvgImagePromise(svg, ctx, rect));
+      let svg = Theme.make_card_svg(~width=rect.Rect.w, ~height=rect.h, ~theme, card);
+      CanvasUtils.drawSvgImagePromise(svg, ctx, rect);
     },
   )
   |> List.toArray;
@@ -74,7 +74,7 @@ let renderSomeBoard = (~cardIdxs=Set.Int.empty, srcCtx, srcGrid, dstCtx, dstGrid
       let (cardIdx, isSelected, isHovered) =
         switch (maybeBcd) {
         | Some((bcd: Messages.board_card_data)) =>
-          assert (bcd.idx == idx);
+          assert(bcd.idx == idx);
           let isSelected = Selected.has(selected, bcd);
           let isHovered =
             switch (hovered) {
