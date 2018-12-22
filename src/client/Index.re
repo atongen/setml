@@ -16,7 +16,7 @@ module NewGameForm = {
             </div>
           </form>
           <Typography>
-            (ReasonReact.string("Share your url once you've create a new game to invite other players."))
+            (ReasonReact.string("Once you've created a new game, you can share the URL to invite other players."))
           </Typography>
         </div>
       ),
@@ -40,7 +40,6 @@ let paperStyle =
     ~padding="6px 9px 9px",
     (),
   );
-let footerStyle = ReactDOMRe.Style.make(~marginTop="24px", ~textAlign="center", ());
 
 let content =
   <main style=mainStyle>
@@ -49,18 +48,12 @@ let content =
         <Paper style=paperStyle>
           <Typography variant=`H1> (ReasonReact.string("SetML")) </Typography>
           <Typography variant=`Subtitle1>
-            (ReasonReact.string("Online, realtime, multiplayer Set game."))
+            (ReasonReact.string("Online, realtime, multiplayer game of Set"))
           </Typography>
           form
           <PlayerGamesList />
         </Paper>
-        <footer style=footerStyle>
-          <Typography>
-            <a target="_blank" href="https://www.setgame.com/"> (ReasonReact.string("Set Game")) </a>
-            (ReasonReact.string(" | "))
-            <a target="_blank" href="https://github.com/atongen/setml"> (ReasonReact.string("Source Code")) </a>
-          </Typography>
-        </footer>
+        <Footer />
       </CssBaseline>
     )
   </main>;

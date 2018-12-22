@@ -25,7 +25,7 @@ let makeButton = (game: Messages.game_update_data, setsOnBoard, sendMessage) =>
         <Icon> (ReasonReact.string("shuffle")) </Icon>
       </Button>
     );
-  | Complete => <PlayAgainButton maybeGameId=game.next_game_id />
+  | Complete => ReasonReact.null
   };
 
 let simplePlural = (word, num) =>

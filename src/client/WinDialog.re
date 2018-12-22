@@ -9,13 +9,14 @@ let component = ReasonReact.statelessComponent("WinDialog");
 
 let titleAndMessage = maybeWinner =>
   switch (maybeWinner) {
-  | Some(winner) =>
-    let title = ClientUtil.get_player_name(winner) ++ " won!";
-    let message =
-      if (ClientUtil.is_current_player(winner.player_id)) {
-        "Congratulations! Care for a rematch?";
+  | Some((winner: Messages.player_data)) =>
+    let player_id = winner.player_id;
+    let (title, message) =
+      if (ClientUtil.is_current_player(player_id)) {
+        ("You won!", "Congratulations, want to play again?");
       } else {
-        "Ooh, bummer. Care for a rematch?";
+        let name = ClientUtil.get_player_name(winner);
+        (name ++ " won!", "Bummer, care for a rematch?");
       };
     (title, message);
   | None => ("Nobody won!?!", "Try again?")
@@ -35,7 +36,13 @@ let make = (_children, ~maybeGameId, ~maybeWinner) => {
                 <DialogContent>
                   <DialogContentText> (ReasonReact.string(message)) </DialogContentText>
                 </DialogContent>
-                <DialogActions> <PlayAgainButton maybeGameId /> </DialogActions>
+                <DialogActions>
+                  <Button variant=`Contained href="/">
+                    (ReasonReact.string("Home"))
+                    <Icon> (ReasonReact.string("home")) </Icon>
+                  </Button>
+                  <PlayAgainButton maybeGameId />
+                </DialogActions>
               </form>
             </Dialog>
         )
