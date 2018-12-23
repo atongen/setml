@@ -180,6 +180,7 @@ let game_update_check pubsub =
         check ~status:"started" "status = 'started'";
         check ~status:"complete" "status = 'complete'";
         check ~theme:"open_source" "theme = 'open_source'";
+        check ~theme:"hero" "theme = 'hero'";
         check ~dim0:4 "dim0 = 4";
         check ~dim1:3 "dim1 = 3";
         check ~next_game:true "";
@@ -190,9 +191,13 @@ let game_update_check pubsub =
         check ~theme:"open_source" ~status:"complete" "theme = 'open_source', status = 'complete'";
         check ~theme:"open_source" ~dim0:4 "theme = 'open_source', dim0 = 4";
         check ~theme:"open_source" ~dim1:3 "theme = 'open_source', dim1 = 3";
+        check ~theme:"hero" ~status:"complete" "theme = 'hero', status = 'complete'";
+        check ~theme:"hero" ~dim0:4 "theme = 'hero', dim0 = 4";
+        check ~theme:"hero" ~dim1:3 "theme = 'hero', dim1 = 3";
         check ~dim0:4 ~dim1:3 "dim0 = 4, dim1 = 3";
         check ~next_game:true ~card_idx:27 "card_idx = 27,";
-        check ~next_game:true ~card_idx:29 ~status:"started" ~theme:"open_source" "card_idx = 29, status = 'started', theme = 'open_source',"
+        check ~next_game:true ~card_idx:29 ~status:"started" ~theme:"open_source" "card_idx = 29, status = 'started', theme = 'open_source',";
+        check ~next_game:true ~card_idx:29 ~status:"started" ~theme:"hero" "card_idx = 29, status = 'started', theme = 'hero',"
 
 let moves_insert_check pubsub =
     fun test_ctx ->

@@ -45,6 +45,21 @@ let convert_tests =
     make_server_game_update 21 "new" "open_source" 4 2 (Some 49);
     make_server_game_update 23 "started" "open_source" 4 3 (Some 111);
     make_server_game_update 25 "complete" "open_source" 4 4 (Some 23423334678855333);
+    make_server_game_update 21 "new" "hero" 3 2 None;
+    make_server_game_update 23 "started" "hero" 3 3 None;
+    make_server_game_update 25 "complete" "hero" 3 4 None;
+    make_server_game_update 21 "new" "hero" 4 2 None;
+    make_server_game_update 23 "started" "hero" 4 3 None;
+    make_server_game_update 25 "complete" "hero" 4 4 None;
+    make_server_game_update 13 "new" "classic" 2 2 (Some 1);
+    make_server_game_update 17 "started" "classic" 2 3 (Some 7);
+    make_server_game_update 19 "complete" "classic" 2 4 (Some 9);
+    make_server_game_update 21 "new" "hero" 3 2 (Some 13);
+    make_server_game_update 23 "started" "hero" 3 3 (Some 17);
+    make_server_game_update 25 "complete" "hero" 3 4 (Some 23);
+    make_server_game_update 21 "new" "hero" 4 2 (Some 49);
+    make_server_game_update 23 "started" "hero" 4 3 (Some 111);
+    make_server_game_update 25 "complete" "hero" 4 4 (Some 23423334678855333);
     make_server_score 6 4;
     make_server_move (1, 10) (2, 20) (3, 30);
     make_server_move (4, 11) (5, 21) (6, 31);
@@ -60,6 +75,7 @@ let convert_tests =
     make_client_name "some weird token" "some weird name";
     make_client_theme "classic token" Theme.Classic;
     make_client_theme "open source token" Theme.Open_source;
+    make_client_theme "other token" Theme.Hero;
   ]
   in
   cases_of check messages

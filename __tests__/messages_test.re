@@ -55,6 +55,42 @@ open ClientMessages;
     test("Server_game_update complete next", () =>
       test_convert(make_server_game_update(7, "complete", "classic", 3, 4, Some(1)))
     );
+    test("Server_game_update new", () =>
+      test_convert(make_server_game_update(5, "new", "open_source", 4, 3, None))
+    );
+    test("Server_game_update started", () =>
+      test_convert(make_server_game_update(6, "started", "open_source", 3, 4, None))
+    );
+    test("Server_game_update complete", () =>
+      test_convert(make_server_game_update(7, "complete", "open_source", 3, 4, None))
+    );
+    test("Server_game_update new next", () =>
+      test_convert(make_server_game_update(5, "new", "open_source", 4, 3, Some(49)))
+    );
+    test("Server_game_update started next", () =>
+      test_convert(make_server_game_update(6, "started", "open_source", 3, 4, Some(13)))
+    );
+    test("Server_game_update complete next", () =>
+      test_convert(make_server_game_update(7, "complete", "open_source", 3, 4, Some(1)))
+    );
+    test("Server_game_update new", () =>
+      test_convert(make_server_game_update(5, "new", "hero", 4, 3, None))
+    );
+    test("Server_game_update started", () =>
+      test_convert(make_server_game_update(6, "started", "hero", 3, 4, None))
+    );
+    test("Server_game_update complete", () =>
+      test_convert(make_server_game_update(7, "complete", "hero", 3, 4, None))
+    );
+    test("Server_game_update new next", () =>
+      test_convert(make_server_game_update(5, "new", "hero", 4, 3, Some(49)))
+    );
+    test("Server_game_update started next", () =>
+      test_convert(make_server_game_update(6, "started", "hero", 3, 4, Some(13)))
+    );
+    test("Server_game_update complete next", () =>
+      test_convert(make_server_game_update(7, "complete", "hero", 3, 4, Some(1)))
+    );
     test("Server_score", () =>
       test_convert(make_server_score(5, 6))
     );
@@ -99,6 +135,9 @@ open ClientMessages;
     );
     test("Client_theme_open_source", () =>
       test_convert(make_client_theme("some other token yyy888", Theme.Open_source))
+    );
+    test("Client_theme_hero", () =>
+      test_convert(make_client_theme("some other hero token y8", Theme.Hero))
     );
   });
 };

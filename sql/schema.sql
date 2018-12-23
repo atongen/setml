@@ -39,7 +39,7 @@ drop type if exists game_theme_enum cascade;
 
 create type game_theme_enum as enum (
     'classic',
-    'open_source'
+    'open_source',
     'hero'
 );
 

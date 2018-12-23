@@ -242,6 +242,10 @@ let update_game_theme_test db =
         Db.find_game_data db game_id >>=? fun game_data_after2 ->
         assert_equal Theme.Classic game_data_after2.theme;
 
+        Db.update_game_theme db (game_id, Theme.Hero) >>=? fun () ->
+        Db.find_game_data db game_id >>=? fun game_data_after3 ->
+        assert_equal Theme.Hero game_data_after3.theme;
+
         Lwt.return_unit
 
 let player_games_test db =
@@ -345,7 +349,7 @@ let create_game_from_previous_test db =
             List.iter (fun theme ->
                 ignore(t dims theme);
                 ()
-            ) [Theme.Classic; Theme.Open_source];
+            ) [Theme.Classic; Theme.Open_source; Theme.Hero];
         ) valid_board_dims;
 
         Lwt.return_unit
