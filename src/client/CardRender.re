@@ -77,7 +77,6 @@ let renderSomeBoard = (~cardIdxs=Set.Int.empty, srcCtx, srcGrid, dstCtx, dstGrid
         switch (maybeBcd) {
         | Some((bcd: Messages.board_card_data)) =>
           assert(bcd.idx == idx);
-          Js.log(Printf.sprintf("idx: %d, card: %s", idx, Theme.card_opt_to_string(~theme, bcd.card)));
           let isSelected = Selected.has(selected, bcd);
           let isHovered =
             switch (hovered) {

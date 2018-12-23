@@ -95,7 +95,7 @@ let moveDataToString = (theme, move_data) => {
   let s0 = Theme.card_to_string(~theme, move_data.card0.card);
   let s1 = Theme.card_to_string(~theme, move_data.card1.card);
   let s2 = Theme.card_to_string(~theme, move_data.card2.card);
-  Printf.sprintf("Previous move: (%s, %s, %s)", s0, s1, s2);
+  Printf.sprintf("(%s, %s, %s)", s0, s1, s2);
 };
 
 let msgIfNotCurrentPlayer = (player_id, msg) =>
@@ -143,8 +143,9 @@ let handleReceiveMessage = (state, msg) =>
     let msgs = msgIfNotCurrentPlayer(d.player_id, ClientUtil.player_name(state.players, d.player_id) ++ " " ++ action ++ "!");
     ReasonReact.Update({...state, players: updatePlayerPresence(d, state.players), msgs});
   | Server_move_info(d) =>
-    /* Js.log(moveDataToString(state.game.theme, d.move_data)); */
-    let msgs = msgIfNotCurrentPlayer(d.score_data.player_id, ClientUtil.player_name(state.players, d.score_data.player_id) ++ " scored!");
+    let playerName = ClientUtil.player_name(state.players, d.score_data.player_id)
+    Js.log(playerName ++ ": " ++ moveDataToString(state.game.theme, d.move_data));
+    let msgs = msgIfNotCurrentPlayer(d.score_data.player_id, playerName ++ " scored!");
     ReasonReact.Update({
       ...state,
       players: updatePlayerScore(d.score_data, state.players),

@@ -44,9 +44,9 @@ let fill ~card = function
     )
     | Hero ->
         match Card.fill card with
-        | FillZero -> "0"
-        | FillOne -> "1"
-        | FillTwo -> "2"
+        | FillZero -> "bank note"
+        | FillOne -> "hexagon"
+        | FillTwo -> "bubble"
 
 let color ~card = function
     | Classic -> (
@@ -290,24 +290,24 @@ module Card_svg_hero : CARD_SVG_THEME = struct
         | ColorOne -> ("#9295ac", "#dbdce5") (* blue *)
         | ColorTwo -> ("#a1ac92", "#e1e5db") (* green *)
         in
-        let make_pattern ~forground_color path_data =
+        let make_pattern ~id ~forground_color ~width ~height ?(scale=1.0) path_data =
             let defs = Printf.sprintf
                 {eodefs|
                     <defs>
-                        <pattern id="a" height="200" width="200" patternUnits="userSpaceOnUse">
+                        <pattern id="%s" width="%f" height="%f" patternUnits="userSpaceOnUse" patternTransform="scale(%f %f)">
                             <path fill="%s" d="%s"/>
                         </pattern>
                     </defs>
                 |eodefs}
-                forground_color path_data
+                id width height scale scale forground_color path_data
             in
-            let fill = "url(#a)" in
+            let fill = Printf.sprintf "url(#%s)" id in
             (defs, fill)
         in
         let (pattern_defs, pattern_fill) = match Card.fill card with
-        | FillZero -> make_pattern ~forground_color Path_data.pattern_circuit_board
-        | FillOne -> make_pattern ~forground_color Path_data.pattern_circuit_board
-        | FillTwo -> make_pattern ~forground_color Path_data.pattern_circuit_board
+        | FillZero -> make_pattern ~id:"hero-bank-note" ~forground_color ~width:100.0 ~height:20.0 ~scale:4.0 Path_data.pattern_bank_note
+        | FillOne -> make_pattern ~id:"hero-hexagons" ~forground_color ~width:28.0 ~height:49.0 ~scale:4.0 Path_data.pattern_hexagons
+        | FillTwo -> make_pattern ~id:"hero-bubbles" ~forground_color ~width:100.0 ~height:100.0 ~scale:4.0 Path_data.pattern_bubbles
         in
         let make_hero_shape path_data =
             String.concat "" [
@@ -325,7 +325,6 @@ module Card_svg_hero : CARD_SVG_THEME = struct
                 ] ());
                 (make_path ~attrs:[ (* shape *)
                     ("fill", forground_color);
-                    ("fill-opacity", "0.7");
                     ("color", forground_color);
                     ("stroke", forground_color);
                     ("stroke-width", "5");
