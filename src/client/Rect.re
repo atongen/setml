@@ -59,6 +59,8 @@ let padNW = (~i, rect) => make(rect.x +. i, rect.y +. i, rect.w -. i, rect.h -. 
 
 let padSW = (~i, rect) => make(rect.x, rect.y, rect.w -. i, rect.h -. i);
 
+let crop = (~i, rect) => make(rect.x +. i, rect.y +. i, rect.w -. 2. *. i, rect.h -. 2. *. i);
+
 let eq = (r0, r1) => r0.x == r1.x && r0.y == r1.y && r0.w == r0.w && r0.h == r0.h;
 
 let area = r => r.w *. r.h;

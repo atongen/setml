@@ -55,17 +55,28 @@ let renderBoardCard = (srcCtx, srcRect, dstCtx, dstRect, theme, border, selected
   let borderColor = boardCardBorderColor(theme, selected, hovered, numSelected);
   switch (theme) {
   | Theme.Classic
-  | Open_source => CanvasUtils.drawRoundRect(dstCtx, dstRect, border, borderColor, None)
-  | Hero => CanvasUtils.drawRect(dstCtx, dstRect, borderColor)
+  | Open_source =>
+    CanvasUtils.drawRoundRect(dstCtx, dstRect, border, borderColor, None);
+    CanvasUtils.drawCanvas(srcCtx, srcRect, dstCtx, dstRect);
+  | Hero =>
+    CanvasUtils.drawRect(dstCtx, dstRect, borderColor);
+    let (uSrcRect, uDstRect) =
+      if (selected || hovered) {
+        let src = Rect.crop(~i=border, srcRect);
+        let dst = Rect.pad(~i=border, dstRect);
+        (src, dst);
+      } else {
+        (srcRect, dstRect);
+      };
+    CanvasUtils.drawCanvas(srcCtx, uSrcRect, dstCtx, uDstRect);
   };
-  CanvasUtils.drawCanvas(srcCtx, srcRect, dstCtx, dstRect);
 };
 
 let renderOuterBoard = (ctx, rect, theme, border) =>
   switch (theme) {
   | Theme.Classic
   | Open_source => CanvasUtils.drawRoundRect(ctx, rect, border, Theme.palette(theme).primary, None)
-  | Hero => CanvasUtils.drawRect(ctx, rect, "#404040")
+  | Hero => CanvasUtils.drawRect(ctx, rect, "#5e5e5e")
   };
 
 let renderSomeBoard = (~cardIdxs=Set.Int.empty, srcCtx, srcGrid, dstCtx, dstGrid, theme, status, selected, hovered) => {
