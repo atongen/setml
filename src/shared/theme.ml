@@ -1,6 +1,7 @@
 type t =
     | Classic
     | Open_source
+    | Hero
 
 type palette = {
     primary: string;
@@ -11,32 +12,41 @@ type palette = {
 let to_string = function
     | Classic -> "classic"
     | Open_source -> "open_source"
+    | Hero -> "hero"
 
 let to_human_string = function
     | Classic -> "Classic"
     | Open_source -> "Open Source"
+    | Hero -> "Hero"
 
 let of_string = function
     | "classic" -> Classic
     | "open_source" -> Open_source
+    | "hero" -> Hero
     | ts -> raise (Invalid_argument ("Unknown theme: " ^ ts))
 
 let of_string_opt s = try Some (of_string s)
     with Invalid_argument _s -> None
 
 let num ~card = function
-    | Classic | Open_source ->
+    | Classic | Open_source | Hero ->
         match Card.num card with
         | NumZero -> "one"
         | NumOne -> "two"
         | NumTwo -> "three"
 
 let fill ~card = function
-    | Classic | Open_source ->
+    | Classic | Open_source -> (
         match Card.fill card with
         | FillZero -> "open"
         | FillOne -> "shaded"
         | FillTwo -> "solid"
+    )
+    | Hero ->
+        match Card.fill card with
+        | FillZero -> "0"
+        | FillOne -> "1"
+        | FillTwo -> "2"
 
 let color ~card = function
     | Classic -> (
@@ -51,24 +61,38 @@ let color ~card = function
         | ColorOne -> "blue"
         | ColorTwo -> "orange"
     )
+    | Hero -> (
+        match Card.color card with
+        | ColorZero -> "red"
+        | ColorOne -> "blue"
+        | ColorTwo -> "green"
+    )
 
-let shape ?(plural=false) ~card = function
+
+let shape ?(plural=false) ~card theme =
+    let p ~plural word = if plural then (Printf.sprintf "%ss" word) else word in
+    match theme with
     | Classic -> (
-        match Card.shape card with
-        | ShapeZero ->
-            if plural then "ovals" else "oval"
-        | ShapeOne ->
-            if plural then "diamonds" else "diamond"
-        | ShapeTwo ->
-            if plural then "squiggles" else "squiggle")
+        let w = match Card.shape card with
+        | ShapeZero -> "oval"
+        | ShapeOne -> "diamond"
+        | ShapeTwo -> "squiggle" in
+        p ~plural w
+    )
     | Open_source -> (
-        match Card.shape card with
-        | ShapeZero ->
-            if plural then "penguins" else "penguin"
-        | ShapeOne ->
-            if plural then "elephants" else "elephant"
-        | ShapeTwo ->
-            if plural then "camels" else "camel")
+        let w = match Card.shape card with
+        | ShapeZero -> "penguin"
+        | ShapeOne -> "elephant"
+        | ShapeTwo -> "camel" in
+        p ~plural w
+    )
+    | Hero -> (
+        let w = match Card.shape card with
+        | ShapeZero -> "triangle"
+        | ShapeOne -> "circle"
+        | ShapeTwo -> "square" in
+        p ~plural w
+    )
 
 let palette = function
     | Classic -> {
@@ -81,6 +105,11 @@ let palette = function
         secondary = "#f44336";
         tertiary = "#899f51";
     }
+    | Hero -> {
+        primary = "#3f51b5";
+        secondary = "#f44336";
+        tertiary = "#899f51";
+    }
 
 let card_to_string ~theme card =
     let num_attr = num ~card theme in
@@ -89,6 +118,10 @@ let card_to_string ~theme card =
     let plural = card.num != NumZero in
     let shape_attr = shape ~plural ~card theme in
     Printf.sprintf "%s %s %s %s" num_attr fill_attr color_attr shape_attr
+
+let card_opt_to_string ~theme = function
+    | Some card -> card_to_string ~theme card
+    | None -> "[empty]"
 
 let default_card_size = (1000.0, 1000.0)
 
@@ -105,9 +138,14 @@ let make_path ?(attrs=[]) ?(header="") data =
     let attrs_str = attr_entries attrs in
     Printf.sprintf "%s<path %s d='%s'/>" header attrs_str (String.trim data)
 
-let make_group ?(attrs=[]) ?(header="") content =
+let make_rect ?(attrs=[]) () =
     let attrs_str = attr_entries attrs in
-    Printf.sprintf "%s<g %s>%s</g>" header attrs_str content
+    Printf.sprintf "<rect %s/>" attrs_str
+
+let make_group ?(attrs=[]) ?(header="") children =
+    let attrs_str = attr_entries attrs in
+    let contents = List.map String.trim children in
+    Printf.sprintf "%s<g %s>%s</g>" header attrs_str (String.concat "" contents)
 
 let make_svg ~width ~height ~vx ~vy ~vw ~vh content =
     Printf.sprintf
@@ -120,12 +158,9 @@ let make_svg ~width ~height ~vx ~vy ~vw ~vh content =
 
 module type CARD_SVG_THEME = sig
     val make_card_svg : Card.t -> string
-    val logo_svg : string
 end
 
 module Card_svg_classic : CARD_SVG_THEME = struct
-    let logo_svg = Path_data.classic_logo
-
     let make_card_svg card =
         let color = match Card.color card with
         | ColorZero -> "red"
@@ -187,8 +222,6 @@ module Card_svg_classic : CARD_SVG_THEME = struct
 end
 
 module Card_svg_open_source : CARD_SVG_THEME = struct
-    let logo_svg = Path_data.open_source_logo
-
     let make_card_svg card =
         let color = match Card.color card with
         | ColorZero -> "#000000" (* black *)
@@ -218,7 +251,7 @@ module Card_svg_open_source : CARD_SVG_THEME = struct
                 ("color", color);
                 ("stroke", color);
                 ("stroke-width", "5")
-            ] ~header:defs (make_path content)
+            ] ~header:defs [(make_path content)]
         in
         match Card.shape card with
         | ShapeZero -> ( (* penguin *)
@@ -247,18 +280,97 @@ module Card_svg_open_source : CARD_SVG_THEME = struct
         )
 end
 
+module Card_svg_hero : CARD_SVG_THEME = struct
+    let (width, height) = match default_card_size with
+        | (x, y) -> (string_of_float x, string_of_float y)
+
+    let make_card_svg card =
+        let (forground_color, background_color) = match Card.color card with
+        | ColorZero -> ("#ac929c", "#e5dbdf") (* red *)
+        | ColorOne -> ("#9295ac", "#dbdce5") (* blue *)
+        | ColorTwo -> ("#a1ac92", "#e1e5db") (* green *)
+        in
+        let make_pattern ~forground_color path_data =
+            let defs = Printf.sprintf
+                {eodefs|
+                    <defs>
+                        <pattern id="a" height="200" width="200" patternUnits="userSpaceOnUse">
+                            <path fill="%s" d="%s"/>
+                        </pattern>
+                    </defs>
+                |eodefs}
+                forground_color path_data
+            in
+            let fill = "url(#a)" in
+            (defs, fill)
+        in
+        let (pattern_defs, pattern_fill) = match Card.fill card with
+        | FillZero -> make_pattern ~forground_color Path_data.pattern_circuit_board
+        | FillOne -> make_pattern ~forground_color Path_data.pattern_circuit_board
+        | FillTwo -> make_pattern ~forground_color Path_data.pattern_circuit_board
+        in
+        let make_hero_shape path_data =
+            String.concat "" [
+                pattern_defs;
+                (make_rect ~attrs:[ (* solid fill background color *)
+                    ("fill", background_color);
+                    ("width", width);
+                    ("height", height)
+                ] ());
+                (make_rect ~attrs:[ (* pattern fill forground color *)
+                    ("width", width);
+                    ("height", height);
+                    ("fill", pattern_fill);
+                    ("color", forground_color);
+                ] ());
+                (make_path ~attrs:[ (* shape *)
+                    ("fill", forground_color);
+                    ("fill-opacity", "0.7");
+                    ("color", forground_color);
+                    ("stroke", forground_color);
+                    ("stroke-width", "5");
+                ] path_data)
+            ]
+        in
+        (match Card.shape card with
+        | ShapeZero -> ( (* triangle *)
+            match Card.num card with
+            | NumZero -> Path_data.hero_triangle_one
+            | NumOne -> Path_data.hero_triangle_two
+            | NumTwo -> Path_data.hero_triangle_three
+        )
+        | ShapeOne -> ( (* circle *)
+            match Card.num card with
+            | NumZero -> Path_data.hero_circle_one
+            | NumOne -> Path_data.hero_circle_two
+            | NumTwo -> Path_data.hero_circle_three
+        )
+        | ShapeTwo -> ( (* square *)
+            match Card.num card with
+            | NumZero -> Path_data.hero_square_one
+            | NumOne -> Path_data.hero_square_two
+            | NumTwo -> Path_data.hero_square_three
+        ))
+        |> make_hero_shape
+end
+
 let make_card_svg ~width ~height ~theme maybeCard =
     let (vw, vh) = default_card_size in
     let content = match theme with
     | Classic -> (
         match maybeCard with
         | Some card -> Card_svg_classic.make_card_svg card
-        | None -> Card_svg_classic.logo_svg
+        | None -> Path_data.logo_svg
     )
     | Open_source -> (
         match maybeCard with
         | Some card -> Card_svg_open_source.make_card_svg card
-        | None -> Card_svg_open_source.logo_svg
+        | None -> Path_data.logo_svg
+    )
+    | Hero -> (
+        match maybeCard with
+        | Some card -> Card_svg_hero.make_card_svg card
+        | None -> Path_data.logo_svg
     )
     in
     make_svg ~width ~height ~vx:0.0 ~vy:0.0 ~vw ~vh content

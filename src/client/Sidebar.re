@@ -43,7 +43,7 @@ let menuItems = () =>
         (ReasonReact.string(Theme.to_human_string(theme)))
       </MaterialUi.MenuItem>;
     },
-    [Theme.Classic, Theme.Open_source],
+    [Theme.Classic, Theme.Open_source, Theme.Hero],
   );
 
 let gridItemStyle = ReactDOMRe.Style.make(~margin="5px", ());

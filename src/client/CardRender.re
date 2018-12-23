@@ -30,7 +30,8 @@ let render = (ctx, grid, theme) => {
 let boardCardBorderColor = (theme, selected, hovered, numSelected) =>
   switch (theme) {
   | Theme.Classic
-  | Open_source =>
+  | Open_source
+  | Hero =>
     if (selected && hovered) {
       if (numSelected == 3) {
         "#72c362"; /* bright green */
@@ -54,16 +55,17 @@ let renderBoardCard = (srcCtx, srcRect, dstCtx, dstRect, theme, border, selected
   let borderColor = boardCardBorderColor(theme, selected, hovered, numSelected);
   switch (theme) {
   | Theme.Classic
-  | Open_source =>
-    CanvasUtils.drawRoundRect(dstCtx, dstRect, border, borderColor, None);
-    CanvasUtils.drawCanvas(srcCtx, srcRect, dstCtx, dstRect);
+  | Open_source => CanvasUtils.drawRoundRect(dstCtx, dstRect, border, borderColor, None)
+  | Hero => CanvasUtils.drawRect(dstCtx, dstRect, borderColor)
   };
+  CanvasUtils.drawCanvas(srcCtx, srcRect, dstCtx, dstRect);
 };
 
 let renderOuterBoard = (ctx, rect, theme, border) =>
   switch (theme) {
   | Theme.Classic
   | Open_source => CanvasUtils.drawRoundRect(ctx, rect, border, Theme.palette(theme).primary, None)
+  | Hero => CanvasUtils.drawRect(ctx, rect, "#404040")
   };
 
 let renderSomeBoard = (~cardIdxs=Set.Int.empty, srcCtx, srcGrid, dstCtx, dstGrid, theme, status, selected, hovered) => {
@@ -75,6 +77,7 @@ let renderSomeBoard = (~cardIdxs=Set.Int.empty, srcCtx, srcGrid, dstCtx, dstGrid
         switch (maybeBcd) {
         | Some((bcd: Messages.board_card_data)) =>
           assert(bcd.idx == idx);
+          Js.log(Printf.sprintf("idx: %d, card: %s", idx, Theme.card_opt_to_string(~theme, bcd.card)));
           let isSelected = Selected.has(selected, bcd);
           let isHovered =
             switch (hovered) {

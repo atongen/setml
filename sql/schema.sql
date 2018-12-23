@@ -40,6 +40,7 @@ drop type if exists game_theme_enum cascade;
 create type game_theme_enum as enum (
     'classic',
     'open_source'
+    'hero'
 );
 
 drop table if exists games cascade;
