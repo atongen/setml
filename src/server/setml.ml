@@ -137,8 +137,8 @@ let make_handler pool pubsub clients crypto docroot =
           ) else render_forbidden
         | None -> render_forbidden)
     | Route.Game_show (game_id) -> (
-        Db.game_exists pool game_id >>=? (fun game_exists ->
-            if game_exists then (
+        Db.is_game_active ~game_id pool >>=? (fun active ->
+            if active then (
                 match session.player_id with
                 | Some (player_id) -> (
                         Db.player_exists pool player_id >>=? fun player_exists ->
@@ -159,8 +159,8 @@ let make_handler pool pubsub clients crypto docroot =
         )
     )
     | Route.Ws_show (game_id) -> (
-        Db.game_exists pool game_id >>=? fun game_exists ->
-        if game_exists then (
+        Db.is_game_active ~game_id pool >>=? fun active ->
+        if active then (
           match session.player_id with
           | Some(player_id) -> (
               Db.player_exists pool player_id >>=? fun player_exists ->
@@ -175,7 +175,7 @@ let make_handler pool pubsub clients crypto docroot =
                       ignore (
                         Clients.remove clients game_id player_id;
                         if not (Clients.game_has_players clients game_id) then Pubsub.unsubscribe pubsub game_id;
-                        Db.set_game_player_presence pool (game_id, player_id, false) >>=* fun () ->
+                        Db.set_game_player_presence ~game_id ~player_id ~present:false pool >>=* fun () ->
                         log ("Player " ^ (string_of_int player_id) ^ " left game " ^ string_of_int game_id);
                       )
                     | _ ->
@@ -189,7 +189,7 @@ let make_handler pool pubsub clients crypto docroot =
                 (* websocket onopen *)
                 Pubsub.subscribe pubsub game_id;
                 Clients.add clients game_id player_id frames_out_fn;
-                Db.set_game_player_presence pool (game_id, player_id, true) >>=? fun () ->
+                Db.set_game_player_presence ~game_id ~player_id ~present:true pool >>=? fun () ->
                 ignore (log ("Player " ^ (string_of_int player_id) ^ " joined game " ^ string_of_int game_id));
                 Lwt.return (resp, (body :> Cohttp_lwt.Body.t))
               ) else render_not_found)

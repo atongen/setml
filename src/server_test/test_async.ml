@@ -18,6 +18,7 @@ let suite db =
         "complete_game_test", Db_tests.complete_game_test db;
         "create_failed_move_test", Db_tests.create_failed_move_test db;
         "game_status_test", Db_tests.game_status_test db;
+        "is_game_active_test", Db_tests.is_game_active_test db;
         "update_player_name_test", Db_tests.update_player_name_test db;
         "update_game_theme_test", Db_tests.update_game_theme_test db;
         "player_games_test", Db_tests.player_games_test db;

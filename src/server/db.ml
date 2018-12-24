@@ -117,6 +117,17 @@ module Q = struct
         Caqti_request.find Caqti_type.int Caqti_type.bool
         "select exists (select 1 from games where id = ?)"
 
+    let is_game_active_query =
+        Caqti_request.find Caqti_type.int Caqti_type.bool
+        {eos|
+        select exists (
+            select 1
+            from games
+            where id = ?
+            and status != 'complete'
+        )
+        |eos}
+
     let create_player_query =
         Caqti_request.find Caqti_type.unit Caqti_type.int
         "insert into players default values returning id"
@@ -388,6 +399,10 @@ module I = struct
         C.find Q.game_exists_query game_id >>=? fun exists ->
         Lwt.return_ok exists
 
+    let is_game_active (module C : Caqti_lwt.CONNECTION) game_id =
+        C.find Q.is_game_active_query game_id >>=? fun active ->
+        Lwt.return_ok active
+
     let find_game_card_idx (module C : Caqti_lwt.CONNECTION) game_id =
         C.find Q.find_game_card_idx_query game_id >>=? fun card_idx ->
         Lwt.return_ok card_idx
@@ -641,13 +656,15 @@ let create_game_from_previous p previous_game_id = with_pool p I.create_game_fro
 
 let game_exists p arg = with_pool p I.game_exists arg
 
+let is_game_active ~game_id p = with_pool p I.is_game_active game_id
+
 let find_game_card_idx p arg = with_pool p I.find_game_card_idx arg
 
 let create_player p arg = with_pool p I.create_player arg
 
 let player_exists p arg = with_pool p I.player_exists arg
 
-let set_game_player_presence p arg = with_pool p I.set_game_player_presence arg
+let set_game_player_presence ~game_id ~player_id ~present p = with_pool p I.set_game_player_presence (game_id, player_id, present)
 
 let find_game_player_presence p arg = with_pool p I.find_game_player_presence arg
 

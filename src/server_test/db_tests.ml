@@ -67,11 +67,11 @@ let game_player_presence_test db =
     Db.find_game_player_presence db (game_id, player_id) >>=? fun present_before ->
     refute_bool "no present before" present_before;
 
-    Db.set_game_player_presence db (game_id, player_id, true) >>=? fun () ->
+    Db.set_game_player_presence ~game_id ~player_id ~present:true db >>=? fun () ->
     Db.find_game_player_presence db (game_id, player_id) >>=? fun present_join ->
     assert_bool "yes present join" present_join;
 
-    Db.set_game_player_presence db (game_id, player_id, false) >>=? fun () ->
+    Db.set_game_player_presence ~game_id ~player_id ~present:false db >>=? fun () ->
     Db.find_game_player_presence db (game_id, player_id) >>=? fun present_leave ->
     refute_bool "no present leave" present_leave;
 
@@ -83,7 +83,7 @@ let create_move_test db =
         let board_size = dim0 * dim1 in
         Db.create_game db ~dim0 ~dim1 () >>=? fun game_id ->
         Db.create_player db () >>=? fun player_id ->
-        Db.set_game_player_presence db (game_id, player_id, true) >>=? fun () ->
+        Db.set_game_player_presence ~game_id ~player_id ~present:true db >>=? fun () ->
         Db.find_board_cards db game_id >>=? fun board_cards ->
         if Messages_util.board_cards_exists_set board_cards then (
             match Messages_util.board_cards_next_set board_cards with
@@ -121,7 +121,7 @@ let complete_game_test db =
             let board_size = dim0 * dim1 in
             Db.create_game db ~dim0 ~dim1 () >>=? fun game_id ->
             Db.create_player db () >>=? fun player_id ->
-            Db.set_game_player_presence db (game_id, player_id, true) >>=? fun () ->
+            Db.set_game_player_presence ~game_id ~player_id ~present:true db >>=? fun () ->
             let rec make_move i j shuffled =
                 Db.find_game_cards db (game_id, 0) >>=? fun cards_before ->
                 Db.find_board_cards db game_id >>=? fun board_cards ->
@@ -187,7 +187,7 @@ let create_failed_move_test db =
     fun () ->
         Db.create_game db () >>=? fun game_id ->
         Db.create_player db () >>=? fun player_id ->
-        Db.set_game_player_presence db (game_id, player_id, true) >>=? fun () ->
+        Db.set_game_player_presence ~game_id ~player_id ~present:true db >>=? fun () ->
         Db.find_board_cards db game_id >>=? fun old_board_idxs ->
         let cd0, cd1, cd2 = (Messages.make_card_data 1 2, Messages.make_card_data 3 4, Messages.make_card_data 5 6) in
         Db.create_move db (game_id, player_id, (cd0, cd1, cd2)) >>= function
@@ -215,6 +215,24 @@ let game_status_test db =
         Db.end_game db game_id >>=? fun () ->
         Db.find_game_data db game_id >>=? fun game_data2 ->
         assert_equal Game_status.Complete game_data2.status;
+        Lwt.return_unit
+
+let is_game_active_test db =
+    fun () ->
+        Db.is_game_active ~game_id:232424238948 db >>=? fun active ->
+        refute_bool "non-existing game is not active" active;
+
+        Db.create_game db () >>=? fun game_id ->
+        Db.is_game_active ~game_id db >>=? fun active ->
+        assert_bool "new game is active" active;
+
+        Db.start_game db game_id >>=? fun () ->
+        Db.is_game_active ~game_id db >>=? fun active ->
+        assert_bool "started game is active" active;
+
+        Db.end_game db game_id >>=? fun () ->
+        Db.is_game_active ~game_id db >>=? fun active ->
+        refute_bool "completed game is not active" active;
         Lwt.return_unit
 
 let update_player_name_test db =
@@ -264,14 +282,14 @@ let player_games_test db =
 
         Db.create_game db () >>=? fun game1_id ->
         Db.find_game_data db game1_id >>=? fun game_data1 ->
-        Db.set_game_player_presence db (game1_id, player_id, true) >>=? fun () ->
+        Db.set_game_player_presence ~game_id:game1_id ~player_id ~present:true db >>=? fun () ->
         Db.find_player_games db player_id >>=? fun player_games1 ->
         assert_pg_equal [(game1_id, game_data1)] player_games1;
 
         Db.create_game db () >>=? fun game2_id ->
         Db.start_game db game2_id >>=? fun () ->
         Db.find_game_data db game2_id >>=? fun game_data2 ->
-        Db.set_game_player_presence db (game2_id, player_id, true) >>=? fun () ->
+        Db.set_game_player_presence ~game_id:game2_id ~player_id ~present:true db >>=? fun () ->
         Db.find_player_games db player_id >>=? fun player_games2 ->
         assert_pg_equal [
             (game2_id, game_data2);
@@ -282,7 +300,7 @@ let player_games_test db =
         Db.start_game db game3_id >>=? fun () ->
         Db.end_game db game3_id >>=? fun () ->
         Db.find_game_data db game3_id >>=? fun game_data3 ->
-        Db.set_game_player_presence db (game3_id, player_id, true) >>=? fun () ->
+        Db.set_game_player_presence ~game_id:game3_id ~player_id ~present:true db >>=? fun () ->
         Db.find_player_games db player_id >>=? fun player_games3 ->
         assert_pg_equal [
             (game3_id, game_data3);
