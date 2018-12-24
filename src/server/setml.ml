@@ -176,7 +176,7 @@ let make_handler pool pubsub clients crypto docroot =
                         Clients.remove clients game_id player_id;
                         if not (Clients.game_has_players clients game_id) then Pubsub.unsubscribe pubsub game_id;
                         Db.set_game_player_presence ~game_id ~player_id ~present:false pool >>=* fun () ->
-                        log ("Player " ^ (string_of_int player_id) ^ " left game " ^ string_of_int game_id);
+                        Lwt.return_unit
                       )
                     | _ ->
                       (* websocket onmessage *)
@@ -190,7 +190,6 @@ let make_handler pool pubsub clients crypto docroot =
                 Pubsub.subscribe pubsub game_id;
                 Clients.add clients game_id player_id frames_out_fn;
                 Db.set_game_player_presence ~game_id ~player_id ~present:true pool >>=? fun () ->
-                ignore (log ("Player " ^ (string_of_int player_id) ^ " joined game " ^ string_of_int game_id));
                 Lwt.return (resp, (body :> Cohttp_lwt.Body.t))
               ) else render_not_found)
           | None -> render_error "Unable to get player id from session!"

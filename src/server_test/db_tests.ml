@@ -64,16 +64,22 @@ let game_player_presence_test db =
     Db.create_game db () >>=? fun game_id ->
     Db.create_player db () >>=? fun player_id ->
 
-    Db.find_game_player_presence db (game_id, player_id) >>=? fun present_before ->
+    Db.find_game_player_presence ~game_id ~player_id db >>=? fun present_before ->
     refute_bool "no present before" present_before;
+    Db.is_player_member ~game_id ~player_id db >>=? fun member_before ->
+    refute_bool "no membership before" member_before;
 
     Db.set_game_player_presence ~game_id ~player_id ~present:true db >>=? fun () ->
-    Db.find_game_player_presence db (game_id, player_id) >>=? fun present_join ->
+    Db.find_game_player_presence ~game_id ~player_id db >>=? fun present_join ->
     assert_bool "yes present join" present_join;
+    Db.is_player_member ~game_id ~player_id db >>=? fun member_after_join ->
+    assert_bool "yes membership after join" member_after_join;
 
     Db.set_game_player_presence ~game_id ~player_id ~present:false db >>=? fun () ->
-    Db.find_game_player_presence db (game_id, player_id) >>=? fun present_leave ->
+    Db.find_game_player_presence ~game_id ~player_id db >>=? fun present_leave ->
     refute_bool "no present leave" present_leave;
+    Db.is_player_member ~game_id ~player_id db >>=? fun member_after_leave ->
+    assert_bool "yes membership after leave" member_after_leave;
 
     Lwt.return_unit
 

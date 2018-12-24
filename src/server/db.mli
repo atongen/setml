@@ -14,7 +14,8 @@ val find_game_card_idx : t -> int -> (int, Caqti_error.t) result Lwt.t
 val create_player : t -> unit -> (int, Caqti_error.t) result Lwt.t
 val player_exists : t -> int -> (bool, Caqti_error.t) result Lwt.t
 val set_game_player_presence : game_id:int -> player_id:int -> present:bool -> t -> (unit, Caqti_error.t) result Lwt.t
-val find_game_player_presence : t -> (int * int) -> (bool, Caqti_error.t) result Lwt.t
+val find_game_player_presence : game_id:int -> player_id:int -> t -> (bool, Caqti_error.t) result Lwt.t
+val is_player_member : game_id:int -> player_id:int -> t -> (bool, Caqti_error.t) result Lwt.t
 val increment_game_card_idx : t -> (int * int) -> (int, Caqti_error.t) result Lwt.t
 val create_move : t -> (int * int * (Shared.Messages.card_data * Shared.Messages.card_data * Shared.Messages.card_data)) -> (int, Caqti_error.t) result Lwt.t
 val create_shuffle : t -> (int * int) -> (bool, Caqti_error.t) result Lwt.t

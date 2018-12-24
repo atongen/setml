@@ -149,12 +149,23 @@ module Q = struct
     let find_game_player_presence_query =
         Caqti_request.find Caqti_type.(tup2 int int) Caqti_type.bool
         {eos|
-            select exists(
+            select exists (
                 select 1
                 from games_players
                 where game_id = ?
                 and player_id = ?
                 and presence = true
+            )
+        |eos}
+
+    let is_player_member_query =
+        Caqti_request.find Caqti_type.(tup2 int int) Caqti_type.bool
+        {eos|
+            select exists (
+                select 1
+                from games_players
+                where game_id = ?
+                and player_id = ?
             )
         |eos}
 
@@ -423,6 +434,10 @@ module I = struct
         C.find Q.find_game_player_presence_query args >>=? fun result ->
         Lwt.return_ok result
 
+    let is_player_member (module C : Caqti_lwt.CONNECTION) args =
+        C.find Q.is_player_member_query args >>=? fun result ->
+        Lwt.return_ok result
+
     let increment_game_card_idx (module C : Caqti_lwt.CONNECTION) (game_id, offset) =
         C.find Q.increment_game_card_idx_query (offset, game_id) >>=? fun card_idx ->
         Lwt.return_ok card_idx
@@ -666,7 +681,9 @@ let player_exists p arg = with_pool p I.player_exists arg
 
 let set_game_player_presence ~game_id ~player_id ~present p = with_pool p I.set_game_player_presence (game_id, player_id, present)
 
-let find_game_player_presence p arg = with_pool p I.find_game_player_presence arg
+let find_game_player_presence ~game_id ~player_id p = with_pool p I.find_game_player_presence (game_id, player_id)
+
+let is_player_member ~game_id ~player_id p = with_pool p I.is_player_member (game_id, player_id)
 
 let increment_game_card_idx p arg = with_pool p I.increment_game_card_idx arg
 
