@@ -115,7 +115,7 @@ let card_to_string ~theme card =
     let num_attr = num ~card theme in
     let fill_attr = fill ~card theme in
     let color_attr = color ~card theme in
-    let plural = card.num != NumZero in
+    let plural = Card.num card != NumZero in
     let shape_attr = shape ~plural ~card theme in
     Printf.sprintf "%s %s %s %s" num_attr fill_attr color_attr shape_attr
 
@@ -158,9 +158,12 @@ let make_svg ~width ~height ~vx ~vy ~vw ~vh content =
 
 module type CARD_SVG_THEME = sig
     val make_card_svg : Card.t -> string
+    val logo_svg : string
 end
 
 module Card_svg_classic : CARD_SVG_THEME = struct
+    let logo_svg = Path_data.logo_svg
+
     let make_card_svg card =
         let color = match Card.color card with
         | ColorZero -> "red"
@@ -222,6 +225,8 @@ module Card_svg_classic : CARD_SVG_THEME = struct
 end
 
 module Card_svg_open_source : CARD_SVG_THEME = struct
+    let logo_svg = Path_data.logo_svg
+
     let make_card_svg card =
         let color = match Card.color card with
         | ColorZero -> "#000000" (* black *)
@@ -281,6 +286,8 @@ module Card_svg_open_source : CARD_SVG_THEME = struct
 end
 
 module Card_svg_hero : CARD_SVG_THEME = struct
+    let logo_svg = Path_data.logo_svg
+
     let (width, height) = match default_card_size with
         | (x, y) -> (string_of_float x, string_of_float y)
 
@@ -305,9 +312,9 @@ module Card_svg_hero : CARD_SVG_THEME = struct
             (defs, fill)
         in
         let (pattern_defs, pattern_fill) = match Card.fill card with
-        | FillZero -> make_pattern ~id:"hero-bank-note" ~forground_color ~width:100.0 ~height:20.0 ~scale:4.0 Path_data.pattern_bank_note
-        | FillOne -> make_pattern ~id:"hero-hexagons" ~forground_color ~width:28.0 ~height:49.0 ~scale:4.0 Path_data.pattern_hexagons
-        | FillTwo -> make_pattern ~id:"hero-bubbles" ~forground_color ~width:100.0 ~height:100.0 ~scale:4.0 Path_data.pattern_bubbles
+        | FillZero -> make_pattern ~id:"hero-bank-note" ~forground_color ~width:100.0 ~height:20.0 ~scale:5.0 Path_data.pattern_bank_note
+        | FillOne -> make_pattern ~id:"hero-hexagons" ~forground_color ~width:28.0 ~height:49.0 ~scale:5.0 Path_data.pattern_hexagons
+        | FillTwo -> make_pattern ~id:"hero-bubbles" ~forground_color ~width:100.0 ~height:100.0 ~scale:5.0 Path_data.pattern_bubbles
         in
         let make_hero_shape path_data =
             String.concat "" [
@@ -325,6 +332,7 @@ module Card_svg_hero : CARD_SVG_THEME = struct
                 ] ());
                 (make_path ~attrs:[ (* shape *)
                     ("fill", forground_color);
+                    ("fill-opacity", "0.75");
                     ("color", forground_color);
                     ("stroke", forground_color);
                     ("stroke-width", "5");
@@ -353,23 +361,15 @@ module Card_svg_hero : CARD_SVG_THEME = struct
         |> make_hero_shape
 end
 
-let make_card_svg ~width ~height ~theme maybeCard =
+let theme_module = function
+    | Classic -> (module Card_svg_classic : CARD_SVG_THEME)
+    | Open_source -> (module Card_svg_open_source)
+    | Hero -> (module Card_svg_hero)
+
+let make_card_svg ~width ~height ~theme maybe_card =
+    let (module My_mod : CARD_SVG_THEME) = theme_module theme in
+    let content = match maybe_card with
+    | Some card -> My_mod.make_card_svg card
+    | None -> My_mod.logo_svg in
     let (vw, vh) = default_card_size in
-    let content = match theme with
-    | Classic -> (
-        match maybeCard with
-        | Some card -> Card_svg_classic.make_card_svg card
-        | None -> Path_data.logo_svg
-    )
-    | Open_source -> (
-        match maybeCard with
-        | Some card -> Card_svg_open_source.make_card_svg card
-        | None -> Path_data.logo_svg
-    )
-    | Hero -> (
-        match maybeCard with
-        | Some card -> Card_svg_hero.make_card_svg card
-        | None -> Path_data.logo_svg
-    )
-    in
     make_svg ~width ~height ~vx:0.0 ~vy:0.0 ~vw ~vh content

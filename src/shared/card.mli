@@ -2,7 +2,7 @@ type num = NumZero | NumOne | NumTwo
 type fill = FillZero | FillOne | FillTwo
 type color = ColorZero | ColorOne | ColorTwo
 type shape = ShapeZero | ShapeOne | ShapeTwo
-type t = { num : num; fill : fill; color : color; shape : shape; }
+type t
 
 val num_to_int : num -> int
 val fill_to_int : fill -> int
