@@ -33,13 +33,13 @@ let render_error ?headers msg =
     ~body:(Templates.error msg)
     ()
 
-let render_forbidden =
+let render_forbidden () =
   Cohttp_lwt_unix.Server.respond_error
     ~status:`Forbidden
     ~body:(Templates.error "Forbidden!")
     ()
 
-let render_not_found = Cohttp_lwt_unix.Server.respond_not_found ()
+let render_not_found () = Cohttp_lwt_unix.Server.respond_not_found ()
 
 let redirect ?headers uri =
   Cohttp_lwt_unix.Server.respond_redirect ?headers ~uri ()
@@ -48,17 +48,17 @@ let log msg = Lwt_io.printlf "%s" msg
 
 (* render chain *)
 let (>>=?) m f =
-  m >>= function
-  | Ok x -> f x
-  | Error _ ->
-    render_error "Oh no!"
+    m >>= function
+    | Ok x -> f x
+    | Error _ ->
+        render_error "Oh no!"
 
 let (>>=*) m f =
-  m >>= function
-  | Ok x -> f x
-  | Error e ->
-    let msg = Caqti_error.show e in
-    log msg
+    m >>= function
+    | Ok x -> f x
+    | Error e ->
+        let msg = Caqti_error.show e in
+        log msg
 
 let handle_message pool game_id player_id player_token json =
     let msg = Server_messages.Server_message_converter.of_json json in
@@ -103,112 +103,113 @@ let get_manifest docroot =
     else []
 
 let make_handler pool pubsub clients crypto docroot =
-  let manifest = get_manifest docroot in
-  let info = Info.to_string (Info.get ()) in
-  fun (conn : Conduit_lwt_unix.flow * Cohttp.Connection.t)
-    (req  : Cohttp_lwt_unix.Request.t)
-    (body : Cohttp_lwt.Body.t) ->
-    let uri = Cohttp.Request.uri req in
-    let path = Uri.path uri in
-    let meth = Cohttp.Request.meth req in
-    let req_headers = Cohttp.Request.headers req in
-    let session = Session.of_header_or_new crypto req_headers in
-    let headers = Session.to_headers session crypto in
+    let manifest = get_manifest docroot in
+    let info = Info.to_string (Info.get ()) in
+    fun (conn : Conduit_lwt_unix.flow * Cohttp.Connection.t)
+        (req  : Cohttp_lwt_unix.Request.t)
+        (body : Cohttp_lwt.Body.t) ->
 
-    Lwt_io.eprintf "[CONN] %s\n%!" (Cohttp.Connection.to_string @@ snd conn)
-    >>= fun _ ->
-    Lwt_io.eprintf "[REQ] (%s,%s)\n%!" (Cohttp.Code.string_of_method meth) path
-    >>= fun _ ->
+        let uri = Cohttp.Request.uri req in
+        let path = Uri.path uri in
+        let meth = Cohttp.Request.meth req in
+        let req_headers = Cohttp.Request.headers req in
+        let session = Session.of_header_or_new crypto req_headers in
+        let headers = Session.to_headers session crypto in
 
-    match Route.of_req req with
-    | Route.Index -> render_index ~player_id:session.player_id ~headers session.token manifest info
-    | Route.Game_create -> (
-        Cohttp_lwt.Body.to_string body >>= fun my_body ->
-        match Server_util.form_value my_body "token" with
-        | Some (token) ->
-          if session.token = token then (
-            match Server_util.form_value_int_of_base36 my_body "previous_game_id" with
-            | Some previous_game_id ->
-                Db.create_game_from_previous pool previous_game_id >>=? fun game_id ->
-                redirect ~headers (Route.game_show_uri game_id)
-            | None ->
-                Db.create_game pool () >>=? fun game_id ->
-                redirect ~headers (Route.game_show_uri game_id)
-          ) else render_forbidden
-        | None -> render_forbidden)
-    | Route.Game_show (game_id) -> (
-        Db.is_game_active ~game_id pool >>=? (fun active ->
-            if active then (
-                match session.player_id with
-                | Some (player_id) -> (
-                        Db.player_exists pool player_id >>=? fun player_exists ->
-                            if player_exists then (
-                                render_game ~player_id:(Some player_id) ~headers game_id session.token manifest info
-                            ) else (
-                                Db.create_player pool () >>=? (fun player_id ->
-                                    let headers = Session.set_player_id_headers session crypto player_id in
-                                    redirect ~headers (Route.game_show_uri game_id))
-                            )
-                        )
-                | None -> (
-                    Db.create_player pool () >>=? (fun player_id ->
-                        let headers = Session.set_player_id_headers session crypto player_id in
-                        redirect ~headers (Route.game_show_uri game_id))
-                )
-            ) else render_not_found
+        Lwt_io.eprintf "[REQ] (%s,%s)\n%!" (Cohttp.Code.string_of_method meth) path
+        >>= fun _ ->
+
+        match Route.of_req req with
+        | Route.Index -> render_index ~player_id:session.player_id ~headers session.token manifest info
+        | Game_create -> (
+            Cohttp_lwt.Body.to_string body >>= fun my_body ->
+            match Server_util.form_value my_body "token" with
+            | Some (token) ->
+                if session.token = token then (
+                    match Server_util.form_value_int_of_base36 my_body "previous_game_id" with
+                    | Some previous_game_id ->
+                        Db.create_game_from_previous pool previous_game_id >>=? fun game_id ->
+                        redirect ~headers (Route.game_show_uri game_id)
+                    | None ->
+                        Db.create_game pool () >>=? fun game_id ->
+                        redirect ~headers (Route.game_show_uri game_id)
+                ) else render_forbidden ()
+            | None -> render_forbidden ()
         )
-    )
-    | Route.Ws_show (game_id) -> (
-        Db.is_game_active ~game_id pool >>=? fun active ->
-        if active then (
-          match session.player_id with
-          | Some(player_id) -> (
-              Db.player_exists pool player_id >>=? fun player_exists ->
-              if player_exists then (
-                Cohttp_lwt.Body.drain_body body
-                >>= fun () ->
-                Websocket_cohttp_lwt.upgrade_connection req (fst conn) (
-                  fun f ->
-                    match f.opcode with
-                    | Frame.Opcode.Close ->
-                      (* websocket onclose *)
-                      ignore (
-                        Clients.remove clients game_id player_id;
-                        if not (Clients.game_has_players clients game_id) then Pubsub.unsubscribe pubsub game_id;
-                        Db.set_game_player_presence ~game_id ~player_id ~present:false pool >>=* fun () ->
-                        Lwt.return_unit
-                      )
-                    | _ ->
-                      (* websocket onmessage *)
-                      ignore (
-                        handle_message pool game_id player_id session.token f.content >>= fun () ->
-                        Lwt.return_unit
-                      )
+        | Game_show game_id -> (
+            let create_player_and_redirect () =
+                Db.create_player pool () >>=? fun player_id ->
+                let headers = Session.set_player_id_headers session crypto player_id in
+                redirect ~headers (Route.game_show_uri game_id)
+            in
+            match session.player_id with
+            | Some player_id ->
+                Db.player_exists pool player_id >>=? fun player_exists ->
+                if player_exists then (
+                    Db.can_join ~game_id ~player_id pool >>=? fun can_join ->
+                    if can_join then (
+                        render_game ~player_id:(Some player_id) ~headers game_id session.token manifest info
+                    ) else (
+                        render_not_found ()
+                    )
+                ) else (
+                    create_player_and_redirect ()
                 )
-                >>= fun (resp, body, frames_out_fn) ->
-                (* websocket onopen *)
-                Pubsub.subscribe pubsub game_id;
-                Clients.add clients game_id player_id frames_out_fn;
-                Db.set_game_player_presence ~game_id ~player_id ~present:true pool >>=? fun () ->
-                Lwt.return (resp, (body :> Cohttp_lwt.Body.t))
-              ) else render_not_found)
-          | None -> render_error "Unable to get player id from session!"
-        ) else render_not_found)
-    | Route.Player_games -> (
-        match session.player_id with
-        | Some (player_id) ->
-            let open Server_api_messages.Server_api_message_converter in
-            Db.find_player_games pool player_id >>=? fun player_games ->
-            let content = player_games_to_json player_games in
-            render_content ~content_type:"application/json" content
-        | None -> render_content ~content_type:"application/json" "[]"
-    )
-    | Route.CardSvg (theme, card) ->
-        let content = Shared.Theme.make_card_svg ~width:1000.0 ~height:1000.0 ~theme card in
-        render_content ~content_type:"image/svg+xml" content
-    | Route.Static ->
-      File_server.serve ~info:"SetML File Server" ~docroot ~index:"index.html" uri path
-    | Route.Route_not_found -> render_not_found
+            | None -> create_player_and_redirect ()
+        )
+        | Ws_show game_id -> (
+            match session.player_id with
+            | Some player_id -> (
+                Db.player_exists pool player_id >>=? fun player_exists ->
+                if player_exists then (
+                    Db.can_join ~game_id ~player_id pool >>=? fun can_join ->
+                    if can_join then (
+                        Cohttp_lwt.Body.drain_body body >>= fun () ->
+                        Websocket_cohttp_lwt.upgrade_connection req (fst conn) (fun f -> (
+                            match f.opcode with
+                            | Frame.Opcode.Close ->
+                                (* websocket onclose *)
+                                Clients.remove clients game_id player_id;
+                                if not (Clients.game_has_players clients game_id) then Pubsub.unsubscribe pubsub game_id;
+                                Db.set_game_player_presence ~game_id ~player_id ~present:false pool >>=* fun () ->
+                                Lwt.return_unit
+                            | Frame.Opcode.Text ->
+                                (* websocket onmessage *)
+                                handle_message pool game_id player_id session.token f.content >>= fun () ->
+                                Lwt.return_unit
+                            | e -> Printf.sprintf "Unhandled websocket frame opcode: %s" (Frame.Opcode.to_string e) |> log
+                            ) |> ignore
+                        )
+                        >>= fun (resp, body, frames_out_fn) ->
+                        (* websocket onopen *)
+                        Pubsub.subscribe pubsub game_id;
+                        Clients.add clients game_id player_id frames_out_fn;
+                        Db.set_game_player_presence ~game_id ~player_id ~present:true pool >>=? fun () ->
+                        Lwt.return (resp, (body :> Cohttp_lwt.Body.t))
+                    ) else (
+                        render_not_found ()
+                    )
+                ) else (
+                    render_not_found ()
+                )
+            )
+            | None -> render_error "Unable to get player id from session!"
+        )
+        | Player_games -> (
+            match session.player_id with
+            | Some player_id ->
+                let open Server_api_messages.Server_api_message_converter in
+                Db.find_player_games pool player_id >>=? fun player_games ->
+                let content = player_games_to_json player_games in
+                render_content ~content_type:"application/json" content
+            | None -> render_content ~content_type:"application/json" "[]"
+        )
+        | CardSvg (theme, card) ->
+            let content = Shared.Theme.make_card_svg ~width:300.0 ~height:300.0 ~theme card in
+            render_content ~content_type:"image/svg+xml" content
+        | Static ->
+            File_server.serve ~info:"SetML File Server" ~docroot ~index:"index.html" uri path
+        | Route_not_found -> render_not_found ()
 
 let start_server (config: Config.t) =
     let conn_closed (ch,_) =

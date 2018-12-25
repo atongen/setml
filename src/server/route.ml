@@ -32,12 +32,16 @@ let of_meth_and_path meth path =
     else if n == 3 && String.equal parts.(0) "card" && meth == `GET then
         match Theme.of_string_opt parts.(1) with
         | Some theme -> (
-            match int_of_string_opt parts.(2) with
-            | Some card_id -> (
-                let card = Card.of_int_opt card_id in
-                CardSvg (theme, card)
-            )
-            | None -> Route_not_found
+            let ext = Filename.extension parts.(2) in
+            if String.equal ext ".svg" then
+                let card_id_str = Filename.remove_extension parts.(2) in
+                match int_of_string_opt card_id_str with
+                | Some card_id -> (
+                    let card = Card.of_int_opt card_id in
+                    CardSvg (theme, card)
+                )
+                | None -> Route_not_found
+            else Route_not_found
         )
         | None -> Route_not_found
     else if meth == `GET then

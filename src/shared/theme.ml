@@ -306,7 +306,7 @@ module Card_svg_hero : CARD_SVG_THEME = struct
                         </pattern>
                     </defs>
                 |eodefs}
-                id width height scale scale forground_color path_data
+                id width height scale scale forground_color (String.trim path_data)
             in
             let fill = Printf.sprintf "url(#%s)" id in
             (defs, fill)
@@ -336,7 +336,7 @@ module Card_svg_hero : CARD_SVG_THEME = struct
                     ("color", forground_color);
                     ("stroke", forground_color);
                     ("stroke-width", "5");
-                ] path_data)
+                ] (String.trim path_data))
             ]
         in
         (match Card.shape card with
