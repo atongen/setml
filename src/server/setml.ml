@@ -128,10 +128,10 @@ let make_handler pool pubsub clients crypto docroot =
                 if session.token = token then (
                     match Server_util.form_value_int_of_base36 my_body "previous_game_id" with
                     | Some previous_game_id ->
-                        Db.create_game_from_previous pool previous_game_id >>=? fun game_id ->
+                        Db.create_game_from_previous ~game_id:previous_game_id pool >>=? fun game_id ->
                         redirect ~headers (Route.game_show_uri game_id)
                     | None ->
-                        Db.create_game pool () >>=? fun game_id ->
+                        Db.create_game pool >>=? fun game_id ->
                         redirect ~headers (Route.game_show_uri game_id)
                 ) else render_forbidden ()
             | None -> render_forbidden ()

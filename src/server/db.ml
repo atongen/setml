@@ -685,9 +685,9 @@ let with_pool ?(priority=0.0) ?(mode=ReadCommitted) (pool: t) f arg =
 let make ?(max_size=8) uri_str: (t, Caqti_error.t) result Lwt.t =
     Lwt.return (Caqti_lwt.connect_pool ~max_size (Uri.of_string uri_str))
 
-let create_game p ?(dim0=3) ?(dim1=4) () = with_pool p I.create_game (dim0, dim1)
+let create_game ?(dim0=3) ?(dim1=4) p = with_pool p I.create_game (dim0, dim1)
 
-let create_game_from_previous p previous_game_id = with_pool p I.create_game_from_previous previous_game_id
+let create_game_from_previous ~game_id p = with_pool p I.create_game_from_previous game_id
 
 let game_exists p arg = with_pool p I.game_exists arg
 

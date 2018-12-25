@@ -31,13 +31,13 @@ let create_game_test db =
         List.iter (fun (dim0, dim1) ->
             if dim0 < 3 || dim0 > 4 || dim1 < 3 || dim1 > 4 then (
                 ignore (
-                    Db.create_game db ~dim0 ~dim1 () >>= fun _ ->
+                    Db.create_game ~dim0 ~dim1 db >>= fun _ ->
                     ignore(assert_failure "invalid game board dimensions");
                     Lwt.return_unit
                 );
             ) else (
                 ignore (
-                    Db.create_game db ~dim0 ~dim1 () >>=? fun game_id ->
+                    Db.create_game ~dim0 ~dim1 db >>=? fun game_id ->
                     Db.game_exists db game_id >>=? fun game_exists ->
                     assert_bool "game exists" game_exists;
                     Db.find_game_cards db (game_id, 0) >>=? fun game_cards ->
@@ -61,7 +61,7 @@ let create_player_test db =
 
 let game_player_presence_test db =
   fun () ->
-    Db.create_game db () >>=? fun game_id ->
+    Db.create_game db >>=? fun game_id ->
     Db.create_player db () >>=? fun player_id ->
 
     Db.find_game_player_presence ~game_id ~player_id db >>=? fun present_before ->
@@ -87,7 +87,7 @@ let create_move_test db =
   fun () ->
     let rec aux i dim0 dim1 =
         let board_size = dim0 * dim1 in
-        Db.create_game db ~dim0 ~dim1 () >>=? fun game_id ->
+        Db.create_game ~dim0 ~dim1 db >>=? fun game_id ->
         Db.create_player db () >>=? fun player_id ->
         Db.set_game_player_presence ~game_id ~player_id ~present:true db >>=? fun () ->
         Db.find_board_cards db game_id >>=? fun board_cards ->
@@ -125,7 +125,7 @@ let complete_game_test db =
     fun () ->
         let aux dim0 dim1 =
             let board_size = dim0 * dim1 in
-            Db.create_game db ~dim0 ~dim1 () >>=? fun game_id ->
+            Db.create_game ~dim0 ~dim1 db >>=? fun game_id ->
             Db.create_player db () >>=? fun player_id ->
             Db.set_game_player_presence ~game_id ~player_id ~present:true db >>=? fun () ->
             let rec make_move i j shuffled =
@@ -191,7 +191,7 @@ let complete_game_test db =
 
 let create_failed_move_test db =
     fun () ->
-        Db.create_game db () >>=? fun game_id ->
+        Db.create_game db >>=? fun game_id ->
         Db.create_player db () >>=? fun player_id ->
         Db.set_game_player_presence ~game_id ~player_id ~present:true db >>=? fun () ->
         Db.find_board_cards db game_id >>=? fun old_board_idxs ->
@@ -212,7 +212,7 @@ let create_failed_move_test db =
 
 let game_status_test db =
     fun () ->
-        Db.create_game db () >>=? fun game_id ->
+        Db.create_game db >>=? fun game_id ->
         Db.find_game_data db game_id >>=? fun game_data0 ->
         assert_equal Game_status.New game_data0.status;
         Db.start_game db game_id >>=? fun () ->
@@ -228,7 +228,7 @@ let is_game_active_test db =
         Db.is_game_active ~game_id:232424238948 db >>=? fun active ->
         refute_bool "non-existing game is not active" active;
 
-        Db.create_game db () >>=? fun game_id ->
+        Db.create_game db >>=? fun game_id ->
         Db.is_game_active ~game_id db >>=? fun active ->
         assert_bool "new game is active" active;
 
@@ -244,7 +244,7 @@ let is_game_active_test db =
 let can_join_test db =
     fun () ->
         let fake_game_id = 345623452362345 in
-        Db.create_game db () >>=? fun game_id ->
+        Db.create_game db >>=? fun game_id ->
         Db.create_player db () >>=? fun player0_id -> (* present membership *)
         Db.set_game_player_presence ~game_id ~player_id:player0_id ~present:true db >>=? fun () ->
         Db.create_player db () >>=? fun player1_id -> (* not-present membership *)
@@ -308,7 +308,7 @@ let update_player_name_test db =
 
 let update_game_theme_test db =
     fun () ->
-        Db.create_game db () >>=? fun game_id ->
+        Db.create_game db >>=? fun game_id ->
         Db.find_game_data db game_id >>=? fun game_data_before ->
         assert_equal Theme.Classic game_data_before.theme; (* classic is default *)
 
@@ -340,13 +340,13 @@ let player_games_test db =
         Db.find_player_games db player_id >>=? fun player_games0 ->
         assert_equal ~msg:"empty player games up" 0 (List.length player_games0);
 
-        Db.create_game db () >>=? fun game1_id ->
+        Db.create_game db >>=? fun game1_id ->
         Db.find_game_data db game1_id >>=? fun game_data1 ->
         Db.set_game_player_presence ~game_id:game1_id ~player_id ~present:true db >>=? fun () ->
         Db.find_player_games db player_id >>=? fun player_games1 ->
         assert_pg_equal [(game1_id, game_data1)] player_games1;
 
-        Db.create_game db () >>=? fun game2_id ->
+        Db.create_game db >>=? fun game2_id ->
         Db.start_game db game2_id >>=? fun () ->
         Db.find_game_data db game2_id >>=? fun game_data2 ->
         Db.set_game_player_presence ~game_id:game2_id ~player_id ~present:true db >>=? fun () ->
@@ -356,7 +356,7 @@ let player_games_test db =
             (game1_id, game_data1);
         ] player_games2;
 
-        Db.create_game db () >>=? fun game3_id ->
+        Db.create_game db >>=? fun game3_id ->
         Db.start_game db game3_id >>=? fun () ->
         Db.end_game db game3_id >>=? fun () ->
         Db.find_game_data db game3_id >>=? fun game_data3 ->
@@ -373,13 +373,13 @@ let player_games_test db =
 let create_game_from_previous_test db =
     fun () ->
         let t (dim0, dim1) theme =
-            Db.create_game db ~dim0 ~dim1 () >>=? fun game0_id ->
+            Db.create_game ~dim0 ~dim1 db >>=? fun game0_id ->
             Db.update_game_theme db (game0_id, theme) >>=? fun () ->
 
             (* first in chain *)
-            Db.create_game_from_previous db game0_id >>=? fun game1_id ->
-            Db.create_game_from_previous db game0_id >>=? fun game2_id ->
-            Db.create_game_from_previous db game0_id >>=? fun game3_id ->
+            Db.create_game_from_previous ~game_id:game0_id db >>=? fun game1_id ->
+            Db.create_game_from_previous ~game_id:game0_id db >>=? fun game2_id ->
+            Db.create_game_from_previous ~game_id:game0_id db >>=? fun game3_id ->
             assert_equal game1_id game2_id;
             assert_equal game2_id game3_id;
 
@@ -398,9 +398,9 @@ let create_game_from_previous_test db =
             assert_equal None game1_data.next_game_id;
 
             (* second in chain *)
-            Db.create_game_from_previous db game1_id >>=? fun game4_id ->
-            Db.create_game_from_previous db game1_id >>=? fun game5_id ->
-            Db.create_game_from_previous db game1_id >>=? fun game6_id ->
+            Db.create_game_from_previous ~game_id:game1_id db >>=? fun game4_id ->
+            Db.create_game_from_previous ~game_id:game1_id db >>=? fun game5_id ->
+            Db.create_game_from_previous ~game_id:game1_id db >>=? fun game6_id ->
             assert_equal game4_id game5_id;
             assert_equal game5_id game6_id;
 
@@ -419,7 +419,7 @@ let create_game_from_previous_test db =
             assert_equal None game4_data.next_game_id;
 
             (* invalid previous game *)
-            Db.create_game_from_previous db 1234567890 >>= function
+            Db.create_game_from_previous ~game_id:1234567890 db >>= function
             | Ok _game_id -> assert_failure "Created game from invalid previous game"
             | Error _e -> Lwt.return_unit
         in
@@ -436,7 +436,7 @@ let create_game_from_previous_test db =
 let create_many_games_test db =
     fun () ->
         let rec aux i n r =
-            Db.create_game db () >>=? fun game_id ->
+            Db.create_game db >>=? fun game_id ->
             if i mod r = 0 then begin
                 let b = Base_conv.base36_of_int game_id in
                 ignore(
