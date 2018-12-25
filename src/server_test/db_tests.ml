@@ -241,6 +241,60 @@ let is_game_active_test db =
         refute_bool "completed game is not active" active;
         Lwt.return_unit
 
+let can_join_test db =
+    fun () ->
+        let fake_game_id = 345623452362345 in
+        Db.create_game db () >>=? fun game_id ->
+        Db.create_player db () >>=? fun player0_id -> (* present membership *)
+        Db.set_game_player_presence ~game_id ~player_id:player0_id ~present:true db >>=? fun () ->
+        Db.create_player db () >>=? fun player1_id -> (* not-present membership *)
+        Db.set_game_player_presence ~game_id ~player_id:player1_id ~present:false db >>=? fun () ->
+        Db.create_player db () >>=? fun player2_id -> (* no membership *)
+
+        (* non-existing game *)
+        Db.can_join ~game_id:fake_game_id ~player_id:player0_id db >>=? fun p0 ->
+        refute_bool "present player cannot join non-existing game" p0;
+
+        Db.can_join ~game_id:fake_game_id ~player_id:player1_id db >>=? fun p1 ->
+        refute_bool "not-present player cannot join non-existing game" p1;
+
+        Db.can_join ~game_id:fake_game_id ~player_id:player2_id db >>=? fun p2 ->
+        refute_bool "non-member player cannot join non-existing game" p2;
+
+        (* new game *)
+        Db.can_join ~game_id ~player_id:player0_id db >>=? fun n0 ->
+        assert_bool "present player can join new game" n0;
+
+        Db.can_join ~game_id ~player_id:player1_id db >>=? fun n1 ->
+        assert_bool "non-present player can join new game" n1;
+
+        Db.can_join ~game_id ~player_id:player2_id db >>=? fun n2 ->
+        assert_bool "non-member player can join new game" n2;
+
+        (* started game *)
+        Db.start_game db game_id >>=? fun () ->
+        Db.can_join ~game_id ~player_id:player0_id db >>=? fun s0 ->
+        assert_bool "present player can join started game" s0;
+
+        Db.can_join ~game_id ~player_id:player1_id db >>=? fun s1 ->
+        assert_bool "non-present player can join started game" s1;
+
+        Db.can_join ~game_id ~player_id:player2_id db >>=? fun s2 ->
+        assert_bool "non-member player can join started game" s2;
+
+        (* completed game *)
+        Db.end_game db game_id >>=? fun () ->
+        Db.can_join ~game_id ~player_id:player0_id db >>=? fun c0 ->
+        assert_bool "present player can join completed game" c0;
+
+        Db.can_join ~game_id ~player_id:player1_id db >>=? fun c1 ->
+        assert_bool "non-present player can join completed game" c1;
+
+        Db.can_join ~game_id ~player_id:player2_id db >>=? fun c2 ->
+        refute_bool "non-member player cannot join completed game" c2;
+
+        Lwt.return_unit
+
 let update_player_name_test db =
     fun () ->
         let new_name = "Michael Scott" in

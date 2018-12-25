@@ -169,6 +169,22 @@ module Q = struct
             )
         |eos}
 
+    let can_join_query =
+        Caqti_request.find Caqti_type.(tup2 int int) Caqti_type.bool
+        {eos|
+            select exists (
+                select 1
+                from games g
+                left join games_players gp
+                on g.id = gp.game_id
+                where g.id = ?
+                and (
+                    g.status != 'complete'
+                    or gp.player_id = ?
+                )
+            )
+        |eos}
+
     let create_move_query =
         let args = Caqti_type.(tup3 int int (tup3 (tup2 int int) (tup2 int int) (tup2 int int))) in
         Caqti_request.exec args
@@ -438,6 +454,10 @@ module I = struct
         C.find Q.is_player_member_query args >>=? fun result ->
         Lwt.return_ok result
 
+    let can_join (module C : Caqti_lwt.CONNECTION) args =
+        C.find Q.can_join_query args >>=? fun result ->
+        Lwt.return_ok result
+
     let increment_game_card_idx (module C : Caqti_lwt.CONNECTION) (game_id, offset) =
         C.find Q.increment_game_card_idx_query (offset, game_id) >>=? fun card_idx ->
         Lwt.return_ok card_idx
@@ -684,6 +704,8 @@ let set_game_player_presence ~game_id ~player_id ~present p = with_pool p I.set_
 let find_game_player_presence ~game_id ~player_id p = with_pool p I.find_game_player_presence (game_id, player_id)
 
 let is_player_member ~game_id ~player_id p = with_pool p I.is_player_member (game_id, player_id)
+
+let can_join ~game_id ~player_id p = with_pool p I.can_join (game_id, player_id)
 
 let increment_game_card_idx p arg = with_pool p I.increment_game_card_idx arg
 
