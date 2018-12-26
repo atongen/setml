@@ -68,28 +68,28 @@ let handle_message pool game_id player_id player_token json =
         log "Server message recieved from client!"
     | Client_start_game in_token ->
         if in_token <> player_token then Lwt.return_unit else
-        Db.start_game pool game_id >>=* fun () ->
+        Db.start_game ~game_id pool >>=* fun () ->
         Lwt.return_unit
     | Client_move (in_token, d) ->
         if in_token <> player_token then Lwt.return_unit else
-        Db.create_move pool (game_id, player_id, (d.card0, d.card1, d.card2)) >>=* fun _ ->
-        Db.is_game_over pool game_id >>=* fun is_over ->
+        Db.create_move ~game_id ~player_id ~cards:(d.card0, d.card1, d.card2) pool >>=* fun _idx ->
+        Db.is_game_over ~game_id pool >>=* fun is_over ->
         if is_over then
-            Db.end_game pool game_id >>=* fun () ->
+            Db.end_game ~game_id pool >>=* fun () ->
             Lwt.return_unit
         else
             Lwt.return_unit
     | Client_shuffle in_token ->
         if in_token <> player_token then Lwt.return_unit else
-        Db.create_shuffle pool (game_id, player_id) >>=* fun _ ->
+        Db.create_shuffle ~game_id ~player_id pool >>=* fun _ ->
         Lwt.return_unit
     | Client_name (in_token, name) ->
         if in_token <> player_token then Lwt.return_unit else
-        Db.update_player_name pool (player_id, name) >>=* fun _ ->
+        Db.update_player_name ~player_id ~name pool >>=* fun _ ->
         Lwt.return_unit
     | Client_theme (in_token, theme) ->
         if in_token <> player_token then Lwt.return_unit else
-        Db.update_game_theme pool (game_id, theme) >>=* fun _ ->
+        Db.update_game_theme ~game_id ~theme pool >>=* fun _ ->
         Lwt.return_unit
 
 let get_manifest docroot =
@@ -138,13 +138,13 @@ let make_handler pool pubsub clients crypto docroot =
         )
         | Game_show game_id -> (
             let create_player_and_redirect () =
-                Db.create_player pool () >>=? fun player_id ->
+                Db.create_player pool >>=? fun player_id ->
                 let headers = Session.set_player_id_headers session crypto player_id in
                 redirect ~headers (Route.game_show_uri game_id)
             in
             match session.player_id with
             | Some player_id ->
-                Db.player_exists pool player_id >>=? fun player_exists ->
+                Db.player_exists ~player_id pool >>=? fun player_exists ->
                 if player_exists then (
                     Db.can_join ~game_id ~player_id pool >>=? fun can_join ->
                     if can_join then (
@@ -160,7 +160,7 @@ let make_handler pool pubsub clients crypto docroot =
         | Ws_show game_id -> (
             match session.player_id with
             | Some player_id -> (
-                Db.player_exists pool player_id >>=? fun player_exists ->
+                Db.player_exists ~player_id pool >>=? fun player_exists ->
                 if player_exists then (
                     Db.can_join ~game_id ~player_id pool >>=? fun can_join ->
                     if can_join then (
@@ -199,7 +199,7 @@ let make_handler pool pubsub clients crypto docroot =
             match session.player_id with
             | Some player_id ->
                 let open Server_api_messages.Server_api_message_converter in
-                Db.find_player_games pool player_id >>=? fun player_games ->
+                Db.find_player_games  ~player_id pool >>=? fun player_games ->
                 let content = player_games_to_json player_games in
                 render_content ~content_type:"application/json" content
             | None -> render_content ~content_type:"application/json" "[]"

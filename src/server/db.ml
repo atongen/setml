@@ -458,10 +458,6 @@ module I = struct
         C.find Q.can_join_query args >>=? fun result ->
         Lwt.return_ok result
 
-    let increment_game_card_idx (module C : Caqti_lwt.CONNECTION) (game_id, offset) =
-        C.find Q.increment_game_card_idx_query (offset, game_id) >>=? fun card_idx ->
-        Lwt.return_ok card_idx
-
     let create_move (module C : Caqti_lwt.CONNECTION) (game_id, player_id, ((cd0: Messages.card_data), (cd1: Messages.card_data), (cd2: Messages.card_data))) =
         if Card.is_set cd0.card cd1.card cd2.card then (
             let (idx0, card0_id, idx1, card1_id, idx2, card2_id) = (cd0.idx, Card.to_int cd0.card, cd1.idx, Card.to_int cd1.card, cd2.idx, Card.to_int cd2.card) in
@@ -689,15 +685,15 @@ let create_game ?(dim0=3) ?(dim1=4) p = with_pool p I.create_game (dim0, dim1)
 
 let create_game_from_previous ~game_id p = with_pool p I.create_game_from_previous game_id
 
-let game_exists p arg = with_pool p I.game_exists arg
+let game_exists ~game_id p = with_pool p I.game_exists game_id
 
 let is_game_active ~game_id p = with_pool p I.is_game_active game_id
 
-let find_game_card_idx p arg = with_pool p I.find_game_card_idx arg
+let find_game_card_idx ~game_id p = with_pool p I.find_game_card_idx game_id
 
-let create_player p arg = with_pool p I.create_player arg
+let create_player p = with_pool p I.create_player ()
 
-let player_exists p arg = with_pool p I.player_exists arg
+let player_exists ~player_id p = with_pool p I.player_exists player_id
 
 let set_game_player_presence ~game_id ~player_id ~present p = with_pool p I.set_game_player_presence (game_id, player_id, present)
 
@@ -707,32 +703,30 @@ let is_player_member ~game_id ~player_id p = with_pool p I.is_player_member (gam
 
 let can_join ~game_id ~player_id p = with_pool p I.can_join (game_id, player_id)
 
-let increment_game_card_idx p arg = with_pool p I.increment_game_card_idx arg
+let create_move ~game_id ~player_id ~cards p = with_pool ~priority:2.0 ~mode:Serializable p I.create_move (game_id, player_id, cards)
 
-let create_move p arg = with_pool ~priority:2.0 ~mode:Serializable p I.create_move arg
+let create_shuffle ~game_id ~player_id p = with_pool ~priority:1.0 ~mode:Serializable p I.create_shuffle (game_id, player_id)
 
-let create_shuffle p arg = with_pool ~priority:1.0 ~mode:Serializable p I.create_shuffle arg
+let is_game_over ~game_id p = with_pool p I.is_game_over game_id
 
-let is_game_over p arg = with_pool p I.is_game_over arg
+let start_game ~game_id p = with_pool p I.start_game game_id
 
-let start_game p arg = with_pool p I.start_game arg
+let end_game ~game_id p = with_pool p I.end_game game_id
 
-let end_game p arg = with_pool p I.end_game arg
+let update_game_theme ~game_id ~theme p = with_pool p I.update_game_theme (game_id, theme)
 
-let update_game_theme p arg = with_pool p I.update_game_theme arg
+let update_player_name ~player_id ~name p = with_pool p I.update_player_name (player_id, name)
 
-let update_player_name p arg = with_pool p I.update_player_name arg
+let get_player_name ~player_id p = with_pool p I.get_player_name player_id
 
-let get_player_name p arg = with_pool p I.get_player_name arg
+let find_board_cards ~game_id p = with_pool p I.find_board_cards game_id
 
-let find_board_cards p arg = with_pool p I.find_board_cards arg
+let find_game_cards ~game_id ?(offset=0) p = with_pool p I.find_game_cards (game_id, offset)
 
-let find_game_cards p arg = with_pool p I.find_game_cards arg
+let find_player_data ~game_id p = with_pool p I.find_player_data game_id
 
-let find_player_data p arg = with_pool p I.find_player_data arg
+let delete_all p = with_pool p I.delete_all ()
 
-let delete_all p arg = with_pool p I.delete_all arg
+let find_game_data ~game_id p = with_pool p I.find_game_data game_id
 
-let find_game_data p arg = with_pool p I.find_game_data arg
-
-let find_player_games p ?(limit=10) player_id = with_pool p I.find_player_games (player_id, limit)
+let find_player_games ?(limit=10) ~player_id p = with_pool p I.find_player_games (player_id, limit)

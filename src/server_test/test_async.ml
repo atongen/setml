@@ -31,6 +31,6 @@ let () =
     let config = Config.make_of_env () in
     Lwt_main.run (begin
         Db.make ~max_size:config.db_pool (Config.db_uri_str config) >>=? fun db ->
-        Db.delete_all db () >>=? fun () ->
+        Db.delete_all db >>=? fun () ->
         suite db >|= OUnit2.run_test_tt_main
     end)
