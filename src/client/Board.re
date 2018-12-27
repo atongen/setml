@@ -53,25 +53,27 @@ let shouldRedraw = (oldState: state, newState: state) =>
     Cards;
   } else if (oldState.game.status != newState.game.status) {
     Cards;
-  } else if (oldState.boardGrid.values != newState.boardGrid.values) {
-    let oldValues = Selected.of_array(oldState.boardGrid.values);
-    let newValues = Selected.of_array(newState.boardGrid.values);
-    let diff = Selected.symmetric_diff(oldValues, newValues);
-    Board(Selected.indexes(diff));
-  } else if (Selected.is_symmetric_diff(oldState.selected, newState.selected)) {
-    let idxs = Selected.union(oldState.selected, newState.selected) |> Selected.indexes;
-    Board(idxs);
-  } else if (! Option.eq(oldState.hovered, newState.hovered, (a, b) => a == b)) {
-    let idxs =
+  } else {
+    let valuesIdxs = {
+      let oldValues = Selected.of_array(oldState.boardGrid.values);
+      let newValues = Selected.of_array(newState.boardGrid.values);
+      let diff = Selected.symmetric_diff(oldValues, newValues);
+      Selected.indexes(diff);
+    };
+    let selectedIdxs = Selected.union(oldState.selected, newState.selected) |> Selected.indexes;
+    let hoveredIdxs =
       List.reduce([oldState.hovered, newState.hovered], Set.Int.empty, (s, o) =>
         switch (o) {
         | Some(bcd) => Set.Int.add(s, bcd.idx)
         | None => s
         }
       );
-    Board(idxs);
-  } else {
-    NoChange;
+    let diff = Set.Int.union(Set.Int.union(valuesIdxs, selectedIdxs), hoveredIdxs);
+    if (Set.Int.isEmpty(diff)) {
+      NoChange;
+    } else {
+      Board(diff);
+    };
   };
 
 let renderAllBoard = (srcCtx, dstCtx, state) =>
@@ -120,7 +122,7 @@ let make = (_children, ~rect, ~columns, ~rows, ~boardCards, ~game, ~sendMessage)
         | Some(_card) =>
           if (Selected.has(state.selected, bcd)) {
             let newSelected = Selected.remove(state.selected, bcd);
-            ReasonReact.Update({...state, selected: newSelected});
+            ReasonReact.Update({...state, selected: newSelected, hovered: None});
           } else {
             let newSelected = Selected.add(state.selected, bcd);
             let len = Selected.size(newSelected);
@@ -138,7 +140,7 @@ let make = (_children, ~rect, ~columns, ~rows, ~boardCards, ~game, ~sendMessage)
               } else {
                 newSelected;
               };
-            ReasonReact.Update({...state, selected: ns});
+            ReasonReact.Update({...state, selected: ns, hovered: None});
           }
         | None => ReasonReact.NoUpdate
         }
@@ -180,16 +182,21 @@ let make = (_children, ~rect, ~columns, ~rows, ~boardCards, ~game, ~sendMessage)
   },
   willReceiveProps: self => {
     let boardGrid = makeBoardGrid(rect.Rect.w, rect.h, columns, rows, boardCards);
-    let selected =
+    let (selected, hovered) =
       if (List.toArray(boardCards) == self.state.boardGrid.values) {
-        /* board has not changed, keep selected the same */
-        self.state.
-          selected;
+        (
+          /* board has not changed, keep selected, hovered the same */
+          self.state.selected,
+          self.state.hovered,
+        );
       } else {
-        /* board has changed, reset selected */
-        Selected.empty;
+        (
+          /* board has changed, reset selected, hovered */
+          Selected.empty,
+          None,
+        );
       };
-    {...self.state, boardGrid, cardGrid: CardRender.makeGrid(boardGrid.blockSize), selected, game};
+    {...self.state, boardGrid, cardGrid: CardRender.makeGrid(boardGrid.blockSize), selected, hovered, game};
   },
   didMount: self => {
     /* card render canvas */
@@ -247,6 +254,7 @@ let make = (_children, ~rect, ~columns, ~rows, ~boardCards, ~game, ~sendMessage)
         style
         onClick=(evt => send(getClick(evt, state.boardOffset)))
         onMouseMove=(evt => send(getHover(evt, state.boardOffset)))
+        onMouseOut=(_evt => send(Hover(((-1.0), (-1.0)))))
       />
     </div>;
   },
