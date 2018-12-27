@@ -1,7 +1,7 @@
 version: '3'
 services:
   web:
-    image: setml
+    image: atongen/setml
     ports:
       - "7000-7100:7777"
     depends_on:
@@ -11,7 +11,7 @@ services:
       - DB_USER=setml
       - DB_HOST=db
   db:
-    image: "postgres:10-alpine"
+    image: "postgres:11-alpine"
     environment:
       - POSTGRES_PASSWORD=abcd1234
       - POSTGRES_USER=setml

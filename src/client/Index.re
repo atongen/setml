@@ -16,7 +16,7 @@ module NewGameForm = {
             </div>
           </form>
           <Typography>
-            (ReasonReact.string("Once you've created a new game, you can share the URL to invite other players."))
+            (ReasonReact.string("Once a new game is created, share the URL to invite other players."))
           </Typography>
         </div>
       ),
