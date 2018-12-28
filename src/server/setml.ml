@@ -27,14 +27,14 @@ let render_content ~content_type content =
     ()
 
 let render_error ?headers msg =
-  Cohttp_lwt_unix.Server.respond_error
+  Cohttp_lwt_unix.Server.respond_string
     ?headers
     ~status:`Internal_server_error
     ~body:(Templates.error msg)
     ()
 
 let render_forbidden () =
-  Cohttp_lwt_unix.Server.respond_error
+  Cohttp_lwt_unix.Server.respond_string
     ~status:`Forbidden
     ~body:(Templates.error "Forbidden!")
     ()
@@ -113,7 +113,8 @@ let make_handler pool pubsub clients crypto docroot =
         let path = Uri.path uri in
         let meth = Cohttp.Request.meth req in
         let req_headers = Cohttp.Request.headers req in
-        let session = Session.of_header_or_new crypto req_headers in
+        let in_session = Session.of_header_or_new crypto req_headers in
+        let session = Session.refresh_token in_session in
         let headers = Session.to_headers session crypto in
 
         Lwt_io.eprintf "[REQ] (%s,%s)\n%!" (Cohttp.Code.string_of_method meth) path
@@ -125,7 +126,7 @@ let make_handler pool pubsub clients crypto docroot =
             Cohttp_lwt.Body.to_string body >>= fun my_body ->
             match Server_util.form_value my_body "token" with
             | Some (token) ->
-                if session.token = token then (
+                if in_session.token = token then (
                     match Server_util.form_value_int_of_base36 my_body "previous_game_id" with
                     | Some previous_game_id ->
                         Db.create_game_from_previous ~game_id:previous_game_id pool >>=? fun game_id ->
@@ -175,7 +176,7 @@ let make_handler pool pubsub clients crypto docroot =
                                 Lwt.return_unit
                             | Frame.Opcode.Text ->
                                 (* websocket onmessage *)
-                                handle_message pool game_id player_id session.token f.content >>= fun () ->
+                                handle_message pool game_id player_id in_session.token f.content >>= fun () ->
                                 Lwt.return_unit
                             | e -> Printf.sprintf "Unhandled websocket frame opcode: %s" (Frame.Opcode.to_string e) |> log
                             ) |> ignore

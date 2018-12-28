@@ -83,7 +83,7 @@ let of_header crypto header =
         match value with
         | Some (enc) -> (
             match Crypto.verify_and_decrypt crypto enc with
-            | Ok(_, msg) -> Ok (of_json msg |> refresh_token)
+            | Ok(_, msg) -> Ok (of_json msg)
             | Error(err) -> Error (Invalid_cookie ("Decryption error: " ^ err))
         )
         | None -> Ok (make ())
