@@ -91,6 +91,10 @@ let handle_message pool game_id player_id player_token json =
         if in_token <> player_token then Lwt.return_unit else
         Db.update_game_theme ~game_id ~theme pool >>=* fun _ ->
         Lwt.return_unit
+    | Client_ping in_token ->
+        if in_token <> player_token then Lwt.return_unit else
+        Db.set_game_player_presence ~game_id ~player_id ~present:true pool >>=* fun () ->
+        Lwt.return_unit
 
 let get_manifest docroot =
     let f = docroot ^ "/assets/manifest.json" in

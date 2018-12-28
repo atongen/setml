@@ -20,7 +20,7 @@ let playerDataRow =
         ReactDOMRe.Style.make();
       };
     } else {
-      ReactDOMRe.Style.make(~color="gray", ());
+      ReactDOMRe.Style.make(~color="lightgray", ());
     };
   let toggleDialogEvt = evt => {
     ReactEvent.Synthetic.preventDefault(evt);

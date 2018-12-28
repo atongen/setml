@@ -76,6 +76,7 @@ let convert_tests =
     make_client_theme "classic token" Theme.Classic;
     make_client_theme "open source token" Theme.Open_source;
     make_client_theme "other token" Theme.Hero;
+    make_client_ping "fadsqt98rr9gwhserpgu";
   ]
   in
   cases_of check messages

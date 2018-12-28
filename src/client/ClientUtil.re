@@ -70,6 +70,11 @@ let make_theme_msg = theme => {
   Messages.Client_theme((token, theme));
 };
 
+let make_ping_msg = () => {
+  let token = meta_content("token");
+  Messages.Client_ping(token);
+};
+
 [@bs.get] external location : Dom.window => Dom.location = "";
 
 [@bs.get] external pathname : Dom.location => string = "";

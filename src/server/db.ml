@@ -393,7 +393,6 @@ module Q = struct
         |eos}
 end
 
-
 module I = struct
     let create_game (module C : Caqti_lwt.CONNECTION) (dim0, dim1) =
         C.find Q.create_game_query (dim0, dim1) >>=? fun game_id ->
@@ -678,6 +677,7 @@ let with_pool ?(priority=0.0) ?(mode=ReadCommitted) (pool: t) f arg =
     Caqti_lwt.Pool.use ~priority (fun (module C : Caqti_lwt.CONNECTION) ->
         with_transaction ~mode (module C : Caqti_lwt.CONNECTION) f arg
     ) pool
+
 let make ?(max_size=8) uri_str: (t, Caqti_error.t) result Lwt.t =
     Lwt.return (Caqti_lwt.connect_pool ~max_size (Uri.of_string uri_str))
 

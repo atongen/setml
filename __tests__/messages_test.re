@@ -139,5 +139,8 @@ open ClientMessages;
     test("Client_theme_hero", () =>
       test_convert(make_client_theme("some other hero token y8", Theme.Hero))
     );
+    test("Client_ping", () =>
+      test_convert(make_client_ping("fw7tyfwho8wyt478fywth"))
+    );
   });
 };

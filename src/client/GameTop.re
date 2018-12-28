@@ -7,6 +7,11 @@ open ClientMessages;
 type action =
   | SendMessage(Messages.t)
   | ReceiveMessage(string)
+  | OpenMessage
+  | CloseMessage(string)
+  | ErrorMessage(string)
+  | Online
+  | Offline
 
 type state = {
   ws: ref(option(WebSockets.WebSocket.t)),
@@ -14,11 +19,7 @@ type state = {
   players: list(player_data),
   game: game_update_data,
   msgs: list(string),
-};
-
-let receiveMessage = (evt, self) => {
-  let str = WebSockets.MessageEvent.stringData(evt);
-  self.ReasonReact.send(ReceiveMessage(str));
+  online: bool,
 };
 
 let replaceBoardCard =
@@ -105,6 +106,8 @@ let msgIfNotCurrentPlayer = (player_id, msg) =>
     [msg];
   };
 
+let log = msg => ReasonReact.SideEffects(_self => Js.log(msg));
+
 let handleReceiveMessage = (state, msg) =>
   switch (msg) {
   | Server_game(d) =>
@@ -121,18 +124,12 @@ let handleReceiveMessage = (state, msg) =>
     let new_players = updatePlayerName(d, state.players);
     let msgs = msgIfNotCurrentPlayer(d.player_id, old_name ++ " is now called " ++ d.name)
     ReasonReact.Update({...state, players: new_players, msgs});
-  | Server_card(_) =>
-    Js.log("Received unhandled Server_card message");
-    ReasonReact.NoUpdate;
+  | Server_card(_) => log("Received unhandled Server_card message");
   | Server_board_card(d) =>
     ReasonReact.Update({...state, boardCards: replaceBoardCard(d, state.boardCards), msgs: []})
   | Server_game_update(d) => ReasonReact.Update({...state, game: d, msgs: []})
-  | Server_score(_) =>
-    Js.log("Received unhandled Server_score message");
-    ReasonReact.NoUpdate;
-  | Server_move(_) =>
-    Js.log("Received unhandled Server_move message");
-    ReasonReact.NoUpdate;
+  | Server_score(_) => log("Received unhandled Server_score message");
+  | Server_move(_) => log("Received unhandled Server_move message");
   | Server_presence(d) =>
     let action =
       if (d.presence) {
@@ -162,20 +159,70 @@ let handleReceiveMessage = (state, msg) =>
   | Client_shuffle(_)
   | Client_start_game(_)
   | Client_name(_)
-  | Client_theme(_) =>
-    Js.log("Client received a client message");
-    ReasonReact.NoUpdate;
+  | Client_theme(_)
+  | Client_ping(_) =>
+    log("Client received a client message");
   };
 
-let component = ReasonReact.reducerComponent("Game");
+let window = Webapi.Dom.window;
 
-[%mui.withStyles
-  "StyledAppBar"({
-    root: ReactDOMRe.Style.make(~flexGrow="1", ()),
-    grow: ReactDOMRe.Style.make(~flexGrow="1", ()),
-    menuButton: ReactDOMRe.Style.make(~marginLeft="-12", ~marginRight="20", ()),
-  })
-];
+let wsMessage = (evt, self) => {
+  let str = WebSockets.MessageEvent.stringData(evt);
+  self.ReasonReact.send(ReceiveMessage(str));
+};
+
+let wsOpen = ((), self) => {
+  self.ReasonReact.send(OpenMessage);
+};
+
+let wsClose = (evt, self) => {
+  let str = WebSockets.CloseEvent.reason(evt);
+  self.ReasonReact.send(CloseMessage(str));
+};
+
+let wsError = (msg, self) => {
+  self.ReasonReact.send(ErrorMessage(msg));
+};
+
+let setupWebsocket = (ws, self) => {
+  WebSockets.WebSocket.(
+    ws
+    |> on(Open(self.ReasonReact.handle(wsOpen)))
+    |> on(Close(self.handle(wsClose)))
+    |> on(Message(self.handle(wsMessage)))
+    |> on(Error(self.handle(wsError)))
+    |> ignore
+  );
+};
+
+let connectWebsocket = self => {
+  switch (ClientUtil.ws_url()) {
+  | Some(ws_url) => {
+    let ws = WebSockets.WebSocket.make(ws_url);
+    self.ReasonReact.state.ws := Some(ws);
+    setupWebsocket(ws, self)
+  };
+  | None => Js.log("Unable to get websocket url!")
+  };
+};
+
+let handleOnline = (_evt, self) => self.ReasonReact.send(Online);
+
+let handleOffline = (_evt, self) => self.ReasonReact.send(Offline);
+
+let wsSendMessage = (msg, ws) => {
+  switch (ws) {
+  | {contents: Some(ws)} => {
+      let str = ClientMessageConverter.to_json(msg);
+      WebSockets.WebSocket.sendString(str, ws)
+    }
+  | _ => Js.log("Unable to send: No websocket connection!")
+  };
+};
+
+let ping = self => wsSendMessage(ClientUtil.make_ping_msg(), self.ReasonReact.state.ws);
+
+let component = ReasonReact.reducerComponent("GameTop");
 
 let make = _children => {
   ...component,
@@ -183,15 +230,13 @@ let make = _children => {
     switch (action) {
     | ReceiveMessage(str) =>
       let msg = ClientMessageConverter.of_json(str);
-      /* Js.log(Messages.to_string(msg)); */
       handleReceiveMessage(state, msg);
-    | SendMessage(msg) =>
-      let str = ClientMessageConverter.to_json(msg);
-      switch (state.ws) {
-      | {contents: Some(ws)} => WebSockets.WebSocket.sendString(str, ws)
-      | _ => Js.log("Unable to send: No websocket connection!")
-      };
-      ReasonReact.NoUpdate;
+    | SendMessage(msg) => ReasonReact.SideEffects(self => wsSendMessage(msg, self.state.ws));
+    | OpenMessage => ReasonReact.SideEffects(self => ping(self));
+    | CloseMessage(msg) => log("Websocket connection closed: " ++ msg);
+    | ErrorMessage(msg) => log("Websocket error: " ++ msg);
+    | Online => ReasonReact.UpdateWithSideEffects({...state, online: true}, self => connectWebsocket(self));
+    | Offline => ReasonReact.Update({...state, ws: ref(None), online: false});
     },
   initialState: () => {
     ws: ref(None),
@@ -199,16 +244,18 @@ let make = _children => {
     players: [],
     game: make_game_update_data(0, "new", "classic", 3, 4, None),
     msgs: [],
+    online: true,
   },
   didMount: self => {
-    switch (ClientUtil.ws_url()) {
-    | Some(ws_url) =>
-      let ws = WebSockets.WebSocket.make(ws_url);
-      self.state.ws := Some(ws);
-      WebSockets.WebSocket.(ws |> on(Message(self.handle(receiveMessage))) |> ignore);
-    | None => Js.log("Unable to get websocket url!")
-    };
-    ();
+    connectWebsocket(self);
+    let online = self.handle(handleOnline);
+    let offline = self.handle(handleOffline);
+    WindowRe.addEventListener("online", online, window);
+    WindowRe.addEventListener("offline", offline, window);
+    self.onUnmount(() => {
+      WindowRe.removeEventListener("online", online, window);
+      WindowRe.removeEventListener("offline", offline, window);
+    });
   },
   render: self => {
     let sendMessage = msg => self.ReasonReact.send(SendMessage(msg));

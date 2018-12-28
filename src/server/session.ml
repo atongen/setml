@@ -5,7 +5,7 @@ type t = {
     token_expiration: float;
 }
 
-let token_lifetime = 3600.
+let token_lifetime = 60.0
 
 let make () = {
     session_id = Crypto.random_hex ();
