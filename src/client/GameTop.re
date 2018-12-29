@@ -7,11 +7,10 @@ open ClientMessages;
 type action =
   | SendMessage(Messages.t)
   | ReceiveMessage(string)
-  | OpenMessage
   | CloseMessage(string)
   | ErrorMessage(string)
-  | Online
-  | Offline
+  | CheckPing
+  | Ping
 
 type state = {
   ws: ref(option(WebSockets.WebSocket.t)),
@@ -19,7 +18,8 @@ type state = {
   players: list(player_data),
   game: game_update_data,
   msgs: list(string),
-  online: bool,
+  nextCheckPing: float,
+  lastPing: option(float),
 };
 
 let replaceBoardCard =
@@ -108,11 +108,18 @@ let msgIfNotCurrentPlayer = (player_id, msg) =>
 
 let log = msg => ReasonReact.SideEffects(_self => Js.log(msg));
 
+let nextCheckPing = () => {
+  let fuzz = (55.0 +. Random.float(10.0)) *. 1000.0;
+  Js.Date.now() +. fuzz;
+};
+
 let handleReceiveMessage = (state, msg) =>
   switch (msg) {
   | Server_game(d) =>
     ReasonReact.Update({
       ...state,
+      lastPing: None,
+      nextCheckPing: nextCheckPing(),
       boardCards: d.board_card_data,
       players: d.player_data,
       game: d.game_update_data,
@@ -164,7 +171,6 @@ let handleReceiveMessage = (state, msg) =>
     log("Client received a client message");
   };
 
-let window = Webapi.Dom.window;
 
 let wsMessage = (evt, self) => {
   let str = WebSockets.MessageEvent.stringData(evt);
@@ -172,7 +178,7 @@ let wsMessage = (evt, self) => {
 };
 
 let wsOpen = ((), self) => {
-  self.ReasonReact.send(OpenMessage);
+  self.ReasonReact.send(Ping);
 };
 
 let wsClose = (evt, self) => {
@@ -184,7 +190,7 @@ let wsError = (msg, self) => {
   self.ReasonReact.send(ErrorMessage(msg));
 };
 
-let setupWebsocket = (ws, self) => {
+let enableWebsocket = (ws, self) => {
   WebSockets.WebSocket.(
     ws
     |> on(Open(self.ReasonReact.handle(wsOpen)))
@@ -200,15 +206,11 @@ let connectWebsocket = self => {
   | Some(ws_url) => {
     let ws = WebSockets.WebSocket.make(ws_url);
     self.ReasonReact.state.ws := Some(ws);
-    setupWebsocket(ws, self)
+    enableWebsocket(ws, self)
   };
   | None => Js.log("Unable to get websocket url!")
   };
 };
-
-let handleOnline = (_evt, self) => self.ReasonReact.send(Online);
-
-let handleOffline = (_evt, self) => self.ReasonReact.send(Offline);
 
 let wsSendMessage = (msg, ws) => {
   switch (ws) {
@@ -222,6 +224,25 @@ let wsSendMessage = (msg, ws) => {
 
 let ping = self => wsSendMessage(ClientUtil.make_ping_msg(), self.ReasonReact.state.ws);
 
+let forceReload = () => LocationRe.reloadWithForce(DomRe.location);
+
+let checkPing = self => {
+  let now = Js.Date.now();
+  let check = () => {
+    if (now >= self.ReasonReact.state.nextCheckPing) {
+      self.send(Ping)
+    };
+  };
+  switch(self.ReasonReact.state.lastPing) {
+  | Some(ts) => if (now -. ts >= (5.0 *. 1000.0)) {
+    forceReload();
+  } else {
+    check();
+  }
+  | None => check();
+  };
+};
+
 let component = ReasonReact.reducerComponent("GameTop");
 
 let make = _children => {
@@ -232,11 +253,10 @@ let make = _children => {
       let msg = ClientMessageConverter.of_json(str);
       handleReceiveMessage(state, msg);
     | SendMessage(msg) => ReasonReact.SideEffects(self => wsSendMessage(msg, self.state.ws));
-    | OpenMessage => ReasonReact.SideEffects(self => ping(self));
-    | CloseMessage(msg) => log("Websocket connection closed: " ++ msg);
+    | CloseMessage(_msg) => ReasonReact.SideEffects(_self => forceReload());
     | ErrorMessage(msg) => log("Websocket error: " ++ msg);
-    | Online => ReasonReact.UpdateWithSideEffects({...state, online: true}, self => connectWebsocket(self));
-    | Offline => ReasonReact.Update({...state, ws: ref(None), online: false});
+    | CheckPing => ReasonReact.SideEffects(checkPing);
+    | Ping => ReasonReact.UpdateWithSideEffects({...state, lastPing: Some(Js.Date.now())}, ping);
     },
   initialState: () => {
     ws: ref(None),
@@ -244,17 +264,14 @@ let make = _children => {
     players: [],
     game: make_game_update_data(0, "new", "classic", 3, 4, None),
     msgs: [],
-    online: true,
+    nextCheckPing: nextCheckPing(),
+    lastPing: None,
   },
   didMount: self => {
     connectWebsocket(self);
-    let online = self.handle(handleOnline);
-    let offline = self.handle(handleOffline);
-    WindowRe.addEventListener("online", online, window);
-    WindowRe.addEventListener("offline", offline, window);
+    let checkPingIntervalId = Js.Global.setInterval(() => self.send(CheckPing), 5000);
     self.onUnmount(() => {
-      WindowRe.removeEventListener("online", online, window);
-      WindowRe.removeEventListener("offline", offline, window);
+      Js.Global.clearInterval(checkPingIntervalId);
     });
   },
   render: self => {
