@@ -334,13 +334,13 @@ begin
         ) data;
 
         perform pg_notify(concat('game_', NEW.game_id), msg);
+    else
+        perform pg_notify(concat('game_', NEW.game_id), json_build_object(
+            'type', 'server_presence',
+            'player_id', NEW.player_id,
+            'presence', NEW.presence
+        )::text);
     end if;
-
-    perform pg_notify(concat('game_', NEW.game_id), json_build_object(
-        'type', 'server_presence',
-        'player_id', NEW.player_id,
-        'presence', NEW.presence
-    )::text);
 
     return NEW;
 end;

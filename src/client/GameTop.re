@@ -11,6 +11,7 @@ type action =
   | ErrorMessage(string)
   | CheckPing
   | Ping
+  | Notifications(bool)
 
 type state = {
   ws: ref(option(WebSockets.WebSocket.t)),
@@ -20,6 +21,7 @@ type state = {
   msgs: list(string),
   nextCheckPing: float,
   lastPing: option(float),
+  notifications: bool,
 };
 
 let replaceBoardCard =
@@ -99,11 +101,11 @@ let moveDataToString = (theme, move_data) => {
   Printf.sprintf("(%s, %s, %s)", s0, s1, s2);
 };
 
-let msgIfNotCurrentPlayer = (player_id, msg) =>
-  if (ClientUtil.is_current_player(player_id)) {
-    [];
+let updateMsgs = (notifications, player_id, msgs) =>
+  if (notifications && !ClientUtil.is_current_player(player_id)) {
+    msgs;
   } else {
-    [msg];
+    [];
   };
 
 let log = msg => ReasonReact.SideEffects(_self => Js.log(msg));
@@ -113,7 +115,31 @@ let nextCheckPing = () => {
   Js.Date.now() +. fuzz;
 };
 
-let handleReceiveMessage = (state, msg) =>
+let playerDiffMsgs = (notifications, oldPlayers: list(Messages.player_data), newPlayers: list(Messages.player_data)) =>
+  if (notifications && List.length(oldPlayers) > 0) {
+    let open Set.Int;
+    let oldPlayerIds = fromArray(List.toArray(List.map(oldPlayers, op => op.player_id)));
+    let newPlayerIds = fromArray(List.toArray(List.map(newPlayers, np => np.player_id)));
+    let leftIds = toList(diff(oldPlayerIds, newPlayerIds));
+    let joinIds = toList(diff(newPlayerIds, oldPlayerIds));
+    let rec aux = (acc, playerIds, players, verb) =>
+      switch(playerIds) {
+      | [] => acc
+      | [hd, ...tl] =>
+        if (ClientUtil.is_current_player(hd)) {
+          aux(acc, tl, players, verb);
+        } else {
+          let msg = ClientUtil.player_name(players, hd) ++ " " ++ verb ++ "!";
+          aux([msg, ...acc], tl, players, verb);
+        };
+      };
+    aux(aux([], joinIds, newPlayers, "joined"), leftIds, oldPlayers, "left");
+  } else {
+    [];
+  };
+
+let handleReceiveMessage = (state, msg) => {
+  let uMsg = (player_id, msg) => updateMsgs(state.notifications, player_id, [msg]);
   switch (msg) {
   | Server_game(d) =>
     ReasonReact.Update({
@@ -123,13 +149,13 @@ let handleReceiveMessage = (state, msg) =>
       boardCards: d.board_card_data,
       players: d.player_data,
       game: d.game_update_data,
-      msgs: [],
+      msgs: playerDiffMsgs(state.notifications, state.players, d.player_data),
     })
   | Server_player(d) => ReasonReact.Update({...state, players: replacePlayer(d, state.players), msgs: []})
   | Server_name(d) =>
     let old_name = ClientUtil.player_name(state.players, d.player_id);
     let new_players = updatePlayerName(d, state.players);
-    let msgs = msgIfNotCurrentPlayer(d.player_id, old_name ++ " is now called " ++ d.name)
+    let msgs = uMsg(d.player_id, old_name ++ " is now called " ++ d.name)
     ReasonReact.Update({...state, players: new_players, msgs});
   | Server_card(_) => log("Received unhandled Server_card message");
   | Server_board_card(d) =>
@@ -144,19 +170,19 @@ let handleReceiveMessage = (state, msg) =>
       } else {
         "left";
       };
-    let msgs = msgIfNotCurrentPlayer(d.player_id, ClientUtil.player_name(state.players, d.player_id) ++ " " ++ action ++ "!");
+    let msgs = uMsg(d.player_id, ClientUtil.player_name(state.players, d.player_id) ++ " " ++ action ++ "!");
     ReasonReact.Update({...state, players: updatePlayerPresence(d, state.players), msgs});
   | Server_move_info(d) =>
     let playerName = ClientUtil.player_name(state.players, d.score_data.player_id)
     Js.log(playerName ++ ": " ++ moveDataToString(state.game.theme, d.move_data));
-    let msgs = msgIfNotCurrentPlayer(d.score_data.player_id, playerName ++ " scored!");
+    let msgs = uMsg(d.score_data.player_id, playerName ++ " scored!");
     ReasonReact.Update({
       ...state,
       players: updatePlayerScore(d.score_data, state.players),
       msgs,
     });
   | Server_shuffles(d) =>
-    let msgs = msgIfNotCurrentPlayer(d.player_id, ClientUtil.player_name(state.players, d.player_id) ++ " shuffled!");
+    let msgs = uMsg(d.player_id, ClientUtil.player_name(state.players, d.player_id) ++ " shuffled!");
     ReasonReact.Update({
       ...state,
       players: updatePlayerShuffles(d, state.players),
@@ -169,7 +195,8 @@ let handleReceiveMessage = (state, msg) =>
   | Client_theme(_)
   | Client_ping(_) =>
     log("Client received a client message");
-  };
+  }
+};
 
 
 let wsMessage = (evt, self) => {
@@ -257,6 +284,7 @@ let make = _children => {
     | ErrorMessage(msg) => log("Websocket error: " ++ msg);
     | CheckPing => ReasonReact.SideEffects(checkPing);
     | Ping => ReasonReact.UpdateWithSideEffects({...state, lastPing: Some(Js.Date.now())}, ping);
+    | Notifications(toggle) => ReasonReact.Update({...state, notifications: toggle});
     },
   initialState: () => {
     ws: ref(None),
@@ -266,6 +294,7 @@ let make = _children => {
     msgs: [],
     nextCheckPing: nextCheckPing(),
     lastPing: None,
+    notifications: true,
   },
   didMount: self => {
     connectWebsocket(self);
@@ -276,8 +305,9 @@ let make = _children => {
   },
   render: self => {
     let sendMessage = msg => self.ReasonReact.send(SendMessage(msg));
+    let setNotifications = toggle => self.ReasonReact.send(Notifications(toggle));
     <section className="main">
-      <GameLayout boardCards=self.state.boardCards players=self.state.players game=self.state.game sendMessage />
+      <GameLayout boardCards=self.state.boardCards players=self.state.players game=self.state.game sendMessage notifications=self.state.notifications setNotifications />
       <ConsecutiveSnackbars messages=self.state.msgs />
     </section>;
   },

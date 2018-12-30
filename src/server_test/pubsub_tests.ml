@@ -60,18 +60,14 @@ let presence_check pubsub =
                 Pubsub.empty_query pubsub (make_presence_query game_id player_id present);
                 let msgs = Pubsub.get_notifications pubsub |> Array.of_list in
                 if present then (
-                    assert_equal ~printer:string_of_int 2 (Array.length msgs);
+                    assert_equal ~printer:string_of_int 1 (Array.length msgs);
                     let expMsg0 = (Messages.make_server_game [
                             Messages.make_player_data player_id player_name present 0 0;
                         ] (make_board_cards_data (0 --^ 12))
                         (make_game_update_data 0 "new" "classic" 3 4 None)) in
-                    let expMsg1 = Messages.make_server_presence player_id true in
                     let json0 = msgs.(0).extra in
-                    let json1 = msgs.(1).extra in
                     let gotMsg0 = Server_message_converter.of_json json0 in
-                    let gotMsg1 = Server_message_converter.of_json json1 in
-                    assert_equal ~ctxt:test_ctx expMsg0 gotMsg0 ~printer:Messages.to_string;
-                    assert_equal ~ctxt:test_ctx expMsg1 gotMsg1 ~printer:Messages.to_string
+                    assert_equal ~ctxt:test_ctx expMsg0 gotMsg0 ~printer:Messages.to_string
                 ) else (
                     assert_equal ~printer:string_of_int 1 (Array.length msgs);
                     let expMsg = Messages.make_server_presence player_id false in
@@ -94,23 +90,19 @@ let presence_check_accum pubsub =
         Pubsub.empty_query pubsub (make_presence_query game_id player_id false);
 
         let msgs = Pubsub.get_notifications pubsub in
-        assert_equal ~printer:string_of_int 3 (List.length msgs);
+        assert_equal ~printer:string_of_int 2 (List.length msgs);
         let msgs_arr = Array.of_list msgs in
         let expMsg0 = (Messages.make_server_game [
             Messages.make_player_data player_id player_name true 0 0;
         ] (make_board_cards_data (0 --^ 12))
         (make_game_update_data 0 "new" "classic" 3 4 None)) in
-        let expMsg1 = Messages.make_server_presence player_id true in
-        let expMsg2 = Messages.make_server_presence player_id false in
+        let expMsg1 = Messages.make_server_presence player_id false in
         let json0 = msgs_arr.(0).extra in
         let json1 = msgs_arr.(1).extra in
-        let json2 = msgs_arr.(2).extra in
         let gotMsg0 = Server_message_converter.of_json json0 in
         let gotMsg1 = Server_message_converter.of_json json1 in
-        let gotMsg2 = Server_message_converter.of_json json2 in
         assert_equal ~ctxt:test_ctx expMsg0 gotMsg0 ~printer:Messages.to_string;
         assert_equal ~ctxt:test_ctx expMsg1 gotMsg1 ~printer:Messages.to_string;
-        assert_equal ~ctxt:test_ctx expMsg2 gotMsg2 ~printer:Messages.to_string;
 
         teardown_player pubsub player_id;
         teardown_game pubsub game_id
@@ -129,11 +121,11 @@ let player_name_check pubsub =
         Pubsub.empty_query pubsub @@ Printf.sprintf "update players set name = '%s' where id = %d;" new_name player_id;
 
         let msgs = Pubsub.get_notifications pubsub in
-        assert_equal ~printer:string_of_int 6 (List.length msgs);
+        assert_equal ~printer:string_of_int 4 (List.length msgs);
         let msgs_arr = Array.of_list msgs in
         let expMsg = Messages.make_server_name player_id new_name in
-        let json4 = msgs_arr.(4).extra in
-        let json5 = msgs_arr.(5).extra in
+        let json4 = msgs_arr.(2).extra in
+        let json5 = msgs_arr.(3).extra in
         let gotMsg4 = Server_message_converter.of_json json4 in
         let gotMsg5 = Server_message_converter.of_json json5 in
         assert_equal ~ctxt:test_ctx expMsg gotMsg4 ~printer:Messages.to_string;

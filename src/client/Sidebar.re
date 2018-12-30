@@ -48,7 +48,7 @@ let menuItems = () =>
 
 let gridItemStyle = ReactDOMRe.Style.make(~margin="5px", ());
 
-let make = (_children, ~rect, ~boardCards, ~players, ~game: Messages.game_update_data, ~sendMessage) => {
+let make = (_children, ~rect, ~boardCards, ~players, ~game: Messages.game_update_data, ~sendMessage, ~notifications, ~setNotifications) => {
   let setsOnBoard = Messages_util.board_cards_count_sets(boardCards);
   let cardsRemaining = 81 - game.card_idx + Messages_util.board_cards_count(boardCards);
   let button = makeButton(game, setsOnBoard, sendMessage);
@@ -74,7 +74,7 @@ let make = (_children, ~rect, ~boardCards, ~players, ~game: Messages.game_update
     let style=ClientUtil.rectToStyle(rect, ~overflowX="hidden", ~overflowY="auto", ~padding="0", ~margin="0", ~display="block", ~position="fixed", ());
   {
     ...component,
-    render: _self =>
+    render: self =>
       <section id="sidebar" style>
         MaterialUi.(
           <Grid container=true>
@@ -106,6 +106,19 @@ let make = (_children, ~rect, ~boardCards, ~players, ~game: Messages.game_update
                   <InputLabel> (ReasonReact.string("Theme")) </InputLabel>
                   <Select value=(`String(themeName)) onChange=themeChange> (menuItems()) </Select>
                 </FormControl>
+                <FormGroup>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked=`Bool(notifications)
+                        onChange={ (_evt, checked) => setNotifications(checked) }
+                        value="tryme"
+                        color=`Primary
+                      />
+                    }
+                    label=ReasonReact.string("Notifications")
+                  />
+                </FormGroup>
               </form>
             </Grid>
           </Grid>

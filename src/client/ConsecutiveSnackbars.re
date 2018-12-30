@@ -74,15 +74,17 @@ let make = (_children, ~messages) => {
       let msgEl = <span> (ReasonReact.string(msgInfo.message)) </span>;
       let actionEl =
         <span>
-          <MaterialUi.IconButton key="close" color=`Inherit onClick=click>
-            <MaterialUi.Icon> (ReasonReact.string("close")) </MaterialUi.Icon>
-          </MaterialUi.IconButton>
+          MaterialUi.(
+            <IconButton key="close" color=`Inherit onClick=click>
+              <Icon> (ReasonReact.string("close")) </Icon>
+            </IconButton>
+          )
         </span>;
       <MaterialUi.Snackbar
         key
         open_=self.state.open_
         message=msgEl
-        autoHideDuration=(`Int(6000))
+        autoHideDuration=(`Int(2000))
         onClose=close
         onExit=exit
         action=actionEl

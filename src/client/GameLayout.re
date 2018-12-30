@@ -38,7 +38,16 @@ let handleResize = (_evt, self) => self.ReasonReact.send(Resize);
 
 let component = ReasonReact.reducerComponent("GameLayout");
 
-let make = (_children, ~boardCards, ~players, ~game: Messages.game_update_data, ~sendMessage) => {
+let make =
+    (
+      _children,
+      ~boardCards,
+      ~players,
+      ~game: Messages.game_update_data,
+      ~sendMessage,
+      ~notifications,
+      ~setNotifications,
+    ) => {
   ...component,
   reducer: (action, _state) =>
     switch (action) {
@@ -83,7 +92,7 @@ let make = (_children, ~boardCards, ~players, ~game: Messages.game_update_data, 
     let sr = Rect.shrink(~i=5.0, sidebarRect);
     <MaterialUi.CssBaseline>
       <Board rect=br columns rows boardCards game sendMessage />
-      <Sidebar rect=sr boardCards players game sendMessage />
+      <Sidebar rect=sr boardCards players game sendMessage notifications setNotifications />
     </MaterialUi.CssBaseline>;
   },
 };
