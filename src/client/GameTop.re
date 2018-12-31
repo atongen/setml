@@ -115,13 +115,24 @@ let nextCheckPing = () => {
   Js.Date.now() +. fuzz;
 };
 
-let playerDiffMsgs = (notifications, oldPlayers: list(Messages.player_data), newPlayers: list(Messages.player_data)) =>
-  if (notifications && List.length(oldPlayers) > 0) {
-    let open Set.Int;
-    let oldPlayerIds = fromArray(List.toArray(List.map(oldPlayers, op => op.player_id)));
-    let newPlayerIds = fromArray(List.toArray(List.map(newPlayers, np => np.player_id)));
-    let leftIds = toList(diff(oldPlayerIds, newPlayerIds));
-    let joinIds = toList(diff(newPlayerIds, oldPlayerIds));
+let presentPlayerIds = (players: list(Messages.player_data)) => {
+  let rec aux = (acc, (p: list(Messages.player_data))) =>
+    switch(p) {
+      | [] => acc
+      | [hd, ...tl] => if (hd.presence) {
+        aux(Set.Int.add(acc, hd.player_id), tl);
+      } else {
+        aux(acc, tl);
+      }
+    };
+  aux(Set.Int.empty, players);
+};
+
+let playerJoinMsgs = (notifications, oldPlayers: list(Messages.player_data), newPlayers: list(Messages.player_data)) => {
+  if (notifications) {
+    let oldPlayerIds = presentPlayerIds(oldPlayers);
+    let newPlayerIds = presentPlayerIds(newPlayers);
+    let joinIds = Set.Int.(toList(diff(newPlayerIds, oldPlayerIds)));
     let rec aux = (acc, playerIds, players, verb) =>
       switch(playerIds) {
       | [] => acc
@@ -133,15 +144,16 @@ let playerDiffMsgs = (notifications, oldPlayers: list(Messages.player_data), new
           aux([msg, ...acc], tl, players, verb);
         };
       };
-    aux(aux([], joinIds, newPlayers, "joined"), leftIds, oldPlayers, "left");
+    aux([], joinIds, newPlayers, "joined");
   } else {
     [];
   };
+};
 
 let handleReceiveMessage = (state, msg) => {
   let uMsg = (player_id, msg) => updateMsgs(state.notifications, player_id, [msg]);
   switch (msg) {
-  | Server_game(d) =>
+  | Server_game(d) => {
     ReasonReact.Update({
       ...state,
       lastPing: None,
@@ -149,8 +161,9 @@ let handleReceiveMessage = (state, msg) => {
       boardCards: d.board_card_data,
       players: d.player_data,
       game: d.game_update_data,
-      msgs: playerDiffMsgs(state.notifications, state.players, d.player_data),
+      msgs: playerJoinMsgs(state.notifications, state.players, d.player_data),
     })
+  };
   | Server_player(d) => ReasonReact.Update({...state, players: replacePlayer(d, state.players), msgs: []})
   | Server_name(d) =>
     let old_name = ClientUtil.player_name(state.players, d.player_id);
@@ -270,6 +283,18 @@ let checkPing = self => {
   };
 };
 
+let setNotifications = toggle => {
+  let htmlDocument = DocumentRe.unsafeAsHtmlDocument(DomRe.document);
+  let str = if (toggle) { "1" } else { "0" };
+  HtmlDocumentRe.setCookie(htmlDocument, "notifications=" ++ str);
+};
+
+let getNotifications = () => {
+  let htmlDocument = DocumentRe.unsafeAsHtmlDocument(DomRe.document);
+  let cookie = HtmlDocumentRe.cookie(htmlDocument);
+  Js.String.includes("notifications=1", cookie);
+};
+
 let component = ReasonReact.reducerComponent("GameTop");
 
 let make = _children => {
@@ -284,7 +309,7 @@ let make = _children => {
     | ErrorMessage(msg) => log("Websocket error: " ++ msg);
     | CheckPing => ReasonReact.SideEffects(checkPing);
     | Ping => ReasonReact.UpdateWithSideEffects({...state, lastPing: Some(Js.Date.now())}, ping);
-    | Notifications(toggle) => ReasonReact.Update({...state, notifications: toggle});
+    | Notifications(toggle) => ReasonReact.UpdateWithSideEffects({...state, notifications: toggle}, _self => setNotifications(toggle));
     },
   initialState: () => {
     ws: ref(None),
@@ -294,7 +319,7 @@ let make = _children => {
     msgs: [],
     nextCheckPing: nextCheckPing(),
     lastPing: None,
-    notifications: true,
+    notifications: getNotifications(),
   },
   didMount: self => {
     connectWebsocket(self);
