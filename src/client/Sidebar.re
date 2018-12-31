@@ -74,7 +74,7 @@ let make = (_children, ~rect, ~boardCards, ~players, ~game: Messages.game_update
     let style=ClientUtil.rectToStyle(rect, ~overflowX="hidden", ~overflowY="auto", ~padding="0", ~margin="0", ~display="block", ~position="fixed", ());
   {
     ...component,
-    render: self =>
+    render: _self =>
       <section id="sidebar" style>
         MaterialUi.(
           <Grid container=true>
