@@ -309,7 +309,7 @@ let make = _children => {
     | ErrorMessage(msg) => log("Websocket error: " ++ msg);
     | CheckPing => ReasonReact.SideEffects(checkPing);
     | Ping => ReasonReact.UpdateWithSideEffects({...state, lastPing: Some(Js.Date.now())}, ping);
-    | Notifications(toggle) => ReasonReact.UpdateWithSideEffects({...state, notifications: toggle}, _self => setNotifications(toggle));
+    | Notifications(toggle) => ReasonReact.UpdateWithSideEffects({...state, notifications: toggle, msgs: []}, _self => setNotifications(toggle));
     },
   initialState: () => {
     ws: ref(None),

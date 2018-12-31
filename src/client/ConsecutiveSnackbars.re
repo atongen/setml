@@ -84,7 +84,7 @@ let make = (_children, ~messages) => {
         key
         open_=self.state.open_
         message=msgEl
-        autoHideDuration=(`Int(2000))
+        autoHideDuration=(`Int(1000))
         onClose=close
         onExit=exit
         action=actionEl
