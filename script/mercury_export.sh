@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+set -e
+
+cd "$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
+git gc --aggressive
 dir=/home/atongen/tmp/setml
 
 # Deploying to `Intel(R) Xeon(R) CPU E5504 @ 2.00GHz`
